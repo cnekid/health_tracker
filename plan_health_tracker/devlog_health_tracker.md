@@ -75,18 +75,25 @@
 ## 5. 현재 산출물 현황 (Deliverables Status)
 
 1. [plan_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md): 기획 명세서 (v1.3.0, 간결체 반영 완료)
-2. [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html): 단일 파일 통합 온디바이스 웹 애플리케이션 (Phase 1~4 완료)
+2. [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 및 [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html): 신장 176cm 반영, 모바일 헤더 간소화, 반응형 모바일 풀스크린 최적화 완료
 3. [devlog_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/devlog_health_tracker.md): 프로젝트 개발 로그 (본 문서)
+4. **실기기 접속용 정식 배포 URL:** `https://cnekid.github.io/health_tracker/` (GitHub Pages HTTPS 활성화 완료)
 
 ---
 
-## 6. 향후 진행 계획 (Next Steps / To-Do)
+## 6. 진행 현황 및 향후 계획 (Progress & Next Steps)
 
-1. **iPhone 실기기 Bluefy 환경 검증:**
-   * 로컬 웹 서버(`python3 -m http.server 8080`) 구동 후 동일 Wi-Fi 대역의 iPhone Bluefy 브라우저로 접속.
-   * BalansLab 체중계 실제 올라서서 BLE 수치 자동 수신 및 IndexedDB 적재 여부 테스트.
-2. **혈압계 OCR 인식률 튜닝:**
-   * WithWell 실제 혈압계 LCD 화면을 카메라로 촬영하여 3열 수치 인식 정확도 검증 및 전처리 임계값 미세 조정.
-3. **무료 호스팅 배포:**
-   * 필요 시 GitHub Pages 또는 Cloudflare Pages에 정적 배포하여 별도 로컬 서버 없이 영구적인 URL로 북마크 및 홈 화면 추가 지원.
+* **2026-11-09 진행 완료:**
+  * 사용자 신장(176cm) 기준 BMI/생체지표 공식 업데이트 완료.
+  * 모바일 상단 복잡도 최소화를 위해 OKOK 수동 업로드 버튼 제거 (추후 제공되는 CSV는 사전 탑재 방식으로 처리 예정).
+  * 실제 모바일 기기 접속 시 가짜 상태바 및 목업 베젤을 숨기고 네이티브 풀스크린으로 표시되도록 반응형 CSS 개선.
+  * `cnekid/health_tracker` GitHub 공개 저장소 생성 및 GitHub Pages 정식 배포 완료 (`https://cnekid.github.io/health_tracker/`).
+
+* **다음 테스트 과제:**
+  1. **iPhone Bluefy 실기기 접속 테스트:**
+     * App Store에서 무료 `Bluefy` 브라우저 설치 후 `https://cnekid.github.io/health_tracker/` 접속.
+     * 체중계 탭에서 시뮬레이션 및 실제 BLE 페어링 동작 확인.
+     * 혈압 탭에서 카메라 OCR 권한 허용 및 인식 테스트.
+  2. **OKOK 실제 CSV 파일 전달 시 일괄 변환 주입.**
+  3. **Apple 건강 단축어 원클릭 설치 링크 제공.**
 
