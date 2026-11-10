@@ -2915,14 +2915,37 @@
       const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       try {
-        document.getElementById("scaleStatusText").innerText = "장치 선택 중...";
+        document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
-        const reqOptions = {
-          acceptAllDevices: true,
-          optionalServices: [OKOK_SVC, WSS_SVC]
-        };
+        // 체중계 기기 필터 (주변의 불필요한 스마트기기, 차량, 비콘 등을 배제하고 체중계/맥북 시뮬레이터만 타겟팅)
+        const scaleFilterList = [
+          { namePrefix: "Moses" },
+          { namePrefix: "Mac" },
+          { namePrefix: "BalansLab" },
+          { namePrefix: "OKOK" },
+          { namePrefix: "Scale" },
+          { namePrefix: "Electronic" },
+          { services: [OKOK_SVC] },
+          { services: [WSS_SVC] }
+        ];
 
-        const device = await navigator.bluetooth.requestDevice(reqOptions);
+        let device = null;
+        try {
+          device = await navigator.bluetooth.requestDevice({
+            filters: scaleFilterList,
+            optionalServices: [OKOK_SVC, WSS_SVC]
+          });
+        } catch (filterErr) {
+          const errStr = String(filterErr?.message || filterErr);
+          if (filterErr?.name === "NotFoundError" || errStr.includes("cancel") || errStr.includes("cancelled") || errStr.includes("User cancelled")) {
+            throw filterErr;
+          }
+          console.warn("필터링 요청 실패, 전체 검색으로 전환 시도:", filterErr);
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [OKOK_SVC, WSS_SVC]
+          });
+        }
 
         bleDevice = device;
         device.addEventListener("gattserverdisconnected", onBleDisconnected);
@@ -2956,6 +2979,13 @@
         }
 
         if (!notifyChar) {
+          try {
+            const chars = await service.getCharacteristics();
+            notifyChar = chars.find(c => c.properties && (c.properties.notify || c.properties.indicate));
+          } catch (eChar) {}
+        }
+
+        if (!notifyChar) {
           throw new Error("체중계 측정 특성을 찾을 수 없습니다.");
         }
 
@@ -2968,8 +2998,12 @@
 
         // Bluefy 필수: startNotifications() 호출 전에 이벤트 리스너를 먼저 등록
         const handlePacket = (event) => {
-          const raw = event?.target?.value || event?.value || notifyChar?.value;
-          if (raw) onBleScalePacketReceived(raw);
+          try {
+            const raw = event?.target?.value || event?.value || notifyChar?.value;
+            if (raw) onBleScalePacketReceived(raw);
+          } catch (err) {
+            console.error("BLE 패킷 파싱 에러:", err);
+          }
         };
 
         notifyChar.addEventListener("characteristicvaluechanged", handlePacket);
@@ -2997,18 +3031,52 @@
       }
     }
 
-    // 데이터뷰 안전 변환기 (DataView / ArrayBuffer / Uint8Array 호환)
+    // 데이터뷰 안전 변환기 (iOS Bluefy / WebKit 크로스 렐름 DataView, TypedArray 완전 대응)
     function normalizeDataView(raw) {
       if (!raw) return null;
-      if (raw instanceof DataView) return raw;
-      if (raw.buffer instanceof ArrayBuffer) {
-        return new DataView(raw.buffer, raw.byteOffset || 0, raw.byteLength || raw.length);
-      }
-      if (raw instanceof ArrayBuffer) {
-        return new DataView(raw);
-      }
-      if (Array.isArray(raw)) {
-        return new DataView(new Uint8Array(raw).buffer);
+      try {
+        // 1) 덕 타이핑: getUint8 메서드가 있으면 크로스 렐름 DataView로 즉시 사용
+        if (typeof raw.getUint8 === "function") {
+          return raw;
+        }
+        // 2) buffer 속성이 있는 경우 (Uint8Array, TypedArray, 크로스 렐름 ArrayBufferView)
+        if (raw.buffer && typeof raw.buffer.byteLength === "number") {
+          const offset = raw.byteOffset || 0;
+          const len = raw.byteLength !== undefined ? raw.byteLength : (raw.length || 0);
+          return new DataView(raw.buffer, offset, len);
+        }
+        if (raw.buffer) {
+          try {
+            return new DataView(raw.buffer, raw.byteOffset || 0, raw.byteLength || raw.length);
+          } catch (eBuf) {}
+        }
+        // 3) raw 자체가 ArrayBuffer인 경우 (byteLength가 있고 slice 메서드 존재)
+        if (typeof raw.byteLength === "number" && typeof raw.slice === "function") {
+          try {
+            return new DataView(raw);
+          } catch (eAb) {}
+        }
+        // 4) 숫자 배열 또는 TypedArray 유사 객체 (length와 인덱스)
+        if (typeof raw.length === "number" && raw.length > 0) {
+          const u8 = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i++) {
+            u8[i] = Number(raw[i]) || 0;
+          }
+          return new DataView(u8.buffer);
+        }
+        // 5) 16진수 문자열인 경우 (일부 Web BLE 폴리필)
+        if (typeof raw === "string") {
+          const clean = raw.replace(/[^0-9A-Fa-f]/g, "");
+          if (clean.length >= 6) {
+            const u8 = new Uint8Array(clean.length / 2);
+            for (let i = 0; i < u8.length; i++) {
+              u8[i] = parseInt(clean.substr(i * 2, 2), 16);
+            }
+            return new DataView(u8.buffer);
+          }
+        }
+      } catch (err) {
+        console.error("normalizeDataView 변환 오류:", err);
       }
       return null;
     }
