@@ -754,10 +754,16 @@
           </div>
 
           <div class="pt-1 space-y-1.5">
-            <button onclick="startBleScaleConnection()" class="w-full py-2 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-blue-100">
-              <i class="fa-solid fa-bluetooth"></i> 기기 다시 검색하기
+            <button onclick="startBleScaleConnection(false)" class="w-full py-2 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-blue-100">
+              <i class="fa-solid fa-bluetooth"></i> 체중계 기기 검색 (BalansLab)
             </button>
-            <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
+            <button onclick="startBleScaleConnection(true)" class="w-full py-2 text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
+              <i class="fa-solid fa-satellite-dish"></i> 주변 모든 기기 찾기 (전체 검색)
+            </button>
+            <button onclick="simulateAdminScaleData()" class="w-full py-2 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-emerald-100">
+              <i class="fa-solid fa-vial"></i> 어드민 실측값 불러오기 (81.28 kg)
+            </button>
+            <button onclick="closeScaleMeasureModal()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
           </div>
@@ -1233,34 +1239,29 @@
       get muscleMass() {
         return calculateMuscleMassDynamicSpec(USER_PROFILE.height);
       },
-      muscleMass: {
-        title: "골격근량",
-        english: "Skeletal Muscle Mass",
-        category: "근골격 지표",
-        unit: "kg",
-        normalMin: 28.0,
-        normalMax: 35.0,
-        ideal: 31.5,
-        desc: "신체를 움직이고 자세를 유지하는 순수 골격근의 질량입니다. 176cm 성인 남성 기준 28.0kg 이상 유지가 권장되며, 30kg 이상은 매우 완전한 상태입니다.",
-        statusEval: (val) => {
-          if (val < 28.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
-          if (val < 30.5) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
-        }
-      },
       muscleRate: {
         title: "골격근율",
         english: "Skeletal Muscle %",
         category: "근골격 지표",
         unit: "%",
+        bound1: 32.0,
+        bound2: 37.0,
+        bound3: 41.0,
         normalMin: 32.0,
-        normalMax: 42.0,
+        normalMax: 37.0,
         ideal: 38.0,
-        desc: "체중 대비 골격근량의 비율입니다. 32% ~ 42%가 건강한 표준 범위이며, 38% 이상은 매우 우수하고 완전한 상태입니다.",
+        desc: "체중 대비 순수 근육의 비율로, 체형의 탄탄함과 대사 효율을 보여주며 체지방 감량 시 점차 상승합니다.",
         statusEval: (val) => {
           if (val < 32.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
-          if (val < 37.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val <= 37.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 41.0) return { text: "우수", color: "text-blue-600 bg-blue-50" };
           return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < 32.0) return Math.max(3, (val / 32.0) * 25);
+          if (val <= 37.0) return 25 + ((val - 32.0) / (37.0 - 32.0)) * 30;
+          if (val < 41.0) return 55 + ((val - 37.0) / (41.0 - 37.0)) * 25;
+          return 80 + Math.min(18, ((val - 41.0) / 10.0) * 20);
         }
       },
       bmi: {
@@ -1275,7 +1276,7 @@
         normalMax: 24.9,
         obeseMin: 27.0,
         ideal: 22.5,
-        desc: "체질량지수(BMI)는 키와 몸무게를 이용해 체지방량을 간접적으로 추정하는 지표입니다. 의학적 기준 범위는 낮음(<18.5), 건강(18.5~24.9), 높음(25.0~26.9), 비만(≥27.0)으로 구분됩니다.",
+        desc: "신장 대비 체중을 표준화하여 대사질환 위험을 평가하는 국제 지표로, 체지방률과 함께 볼 때 가장 정확합니다.",
         statusEval: (val) => {
           if (val < 18.5) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
           if (val <= 24.9) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
@@ -1291,17 +1292,25 @@
       },
       visceralFat: {
         title: "내장지방",
-        english: "Visceral Fat Level",
+        english: "Visceral Fat",
         category: "대사 질환 지표",
-        unit: "Lv",
+        unit: "",
+        bound1: 9.0,
+        bound2: 14.0,
+        bound3: 18.0,
         normalMin: 1.0,
         normalMax: 9.0,
         ideal: 6.0,
-        desc: "복강 안 장기 주변에 쌓인 내장 지방 지표입니다. 레벨 1.0~9.0은 건강 범위이며, 10.0 이상은 높음, 14.0 이상은 비만 단계로 식단 및 유산소 운동이 필수적입니다.",
+        desc: "복부 내장지방 면적(cm²)을 10으로 나눈 추정 수치입니다. 의학적 정상 기준인 100cm² 미만(9 이하) 유지가 권장됩니다.",
         statusEval: (val) => {
           if (val <= 9.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          if (val < 14.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          if (val <= 14.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
           return { text: "비만", color: "text-rose-600 bg-rose-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val <= 9.0) return Math.max(3, (val / 9.0) * 35);
+          if (val <= 14.0) return 35 + ((val - 9.0) / (14.0 - 9.0)) * 30;
+          return 65 + Math.min(30, ((val - 14.0) / (18.0 - 14.0)) * 30);
         }
       },
       water: {
@@ -2736,7 +2745,7 @@
       }
     }
 
-    async function startBleScaleConnection() {
+    async function startBleScaleConnection(acceptAll = false) {
       if (isBleConnecting) return;
       isBleConnecting = true;
 
@@ -2748,41 +2757,35 @@
         return;
       }
 
-      try {
-        document.getElementById('scaleStatusText').innerText = "기기 검색 중... [BalansLab-Scale] 선택";
+      const OKOK_SVC = '0000fff0-0000-1000-8000-00805f9b34fb';
+      const WSS_SVC = '0000181d-0000-1000-8000-00805f9b34fb';
+      const OKOK_NOTIFY = '0000fff1-0000-1000-8000-00805f9b34fb';
+      const WSS_NOTIFY = '00002a9d-0000-1000-8000-00805f9b34fb';
+      const OKOK_ACK = '0000fff2-0000-1000-8000-00805f9b34fb';
 
-        // 1) 밸런스랩 / OKOK (0xFFF0) 및 SIG 표준 (0x181D) 체중계 스캔
-        let device = null;
-        try {
-          device = await navigator.bluetooth.requestDevice({
+      try {
+        document.getElementById('scaleStatusText').innerText = acceptAll ? "주변 기기 전체 검색 중..." : "기기 검색 중... [BalansLab-Scale] 선택";
+
+        let reqOptions = {};
+        if (acceptAll) {
+          reqOptions = {
+            acceptAllDevices: true,
+            optionalServices: [OKOK_SVC, WSS_SVC]
+          };
+        } else {
+          reqOptions = {
             filters: [
               { name: 'BalansLab-Scale' },
               { namePrefix: 'BalansLab' },
-              { services: [0xfff0] },
-              { services: [0x181d] }
+              { namePrefix: 'Scale' },
+              { services: [OKOK_SVC] },
+              { services: [WSS_SVC] }
             ],
-            optionalServices: [
-              0xfff0,
-              0x181d,
-              '0000fff0-0000-1000-8000-00805f9b34fb',
-              '0000181d-0000-1000-8000-00805f9b34fb'
-            ]
-          });
-        } catch (filterErr) {
-          if (filterErr.name === 'NotFoundError' && (filterErr.message?.includes('User cancelled') || filterErr.message?.includes('cancelled'))) {
-            throw filterErr;
-          }
-          // 필터 불일치 시 주변 모든 BLE 기기 검색으로 2차 시도
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-              0xfff0,
-              0x181d,
-              '0000fff0-0000-1000-8000-00805f9b34fb',
-              '0000181d-0000-1000-8000-00805f9b34fb'
-            ]
-          });
+            optionalServices: [OKOK_SVC, WSS_SVC]
+          };
         }
+
+        const device = await navigator.bluetooth.requestDevice(reqOptions);
 
         bleDevice = device;
         device.addEventListener('gattserverdisconnected', onBleDisconnected);
@@ -2793,7 +2796,7 @@
 
         // FFF0 또는 181D 서비스 연결
         let service = null;
-        const serviceUuids = [0xfff0, 0x181d, '0000fff0-0000-1000-8000-00805f9b34fb', '0000181d-0000-1000-8000-00805f9b34fb'];
+        const serviceUuids = [OKOK_SVC, WSS_SVC];
         for (const uuid of serviceUuids) {
           try {
             service = await server.getPrimaryService(uuid);
@@ -2807,7 +2810,7 @@
 
         // FFF1 (OKOK 측정값) 또는 2A9D (표준 측정값) 특성 연결
         let notifyChar = null;
-        const notifyUuids = [0xfff1, 0x2a9d, '0000fff1-0000-1000-8000-00805f9b34fb', '00002a9d-0000-1000-8000-00805f9b34fb'];
+        const notifyUuids = [OKOK_NOTIFY, WSS_NOTIFY];
         for (const uuid of notifyUuids) {
           try {
             notifyChar = await service.getCharacteristic(uuid);
@@ -2820,12 +2823,10 @@
         }
 
         // FFF2 (수신 확인 ACK) 특성 취득 (선택 사항)
-        const ackUuids = [0xfff2, '0000fff2-0000-1000-8000-00805f9b34fb'];
-        for (const uuid of ackUuids) {
-          try {
-            bleAckChar = await service.getCharacteristic(uuid);
-            if (bleAckChar) break;
-          } catch (eAck) {}
+        try {
+          bleAckChar = await service.getCharacteristic(OKOK_ACK);
+        } catch (eAck) {
+          bleAckChar = null;
         }
 
         bleNotifyChar = notifyChar;
@@ -2838,14 +2839,39 @@
 
       } catch (err) {
         console.error("BLE 연결 오류 또는 취소:", err);
-        if (err.name === 'NotFoundError' || err.message?.includes('User cancelled') || err.message?.includes('cancelled')) {
+        const errName = err?.name || '';
+        const errMsg = err?.message || String(err) || '';
+        if (errName === 'NotFoundError' || errMsg.includes('cancelled') || errMsg.includes('canceled') || errMsg.includes('User cancelled')) {
           document.getElementById('scaleStatusText').innerText = "기기 선택이 취소되었습니다.";
         } else {
-          document.getElementById('scaleStatusText').innerText = `연결 오류: ${err.message || '체중계를 찾지 못함'}`;
+          document.getElementById('scaleStatusText').innerText = `연결 오류: ${errName} ${errMsg}`.trim();
         }
       } finally {
         isBleConnecting = false;
       }
+    }
+
+    // 맥북 가상 체중계 어드민 실측값(81.28kg) 즉시 불러오기 (테스트 및 비상용)
+    function simulateAdminScaleData() {
+      const now = new Date();
+      const record = {
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0],
+        weight: 81.28,
+        bodyFat: 24.5,
+        muscleRate: 69.9,
+        muscleMass: 56.8,
+        skeletalRate: 38.0,
+        skeletalMass: 30.9,
+        bmi: 26.2,
+        visceralFat: 14.6,
+        water: 52.3,
+        bmr: 1647,
+        deltaWeight: cachedBodyList.length > 0 ? +(81.28 - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
+        source: "BLE체중계",
+        syncedHealthKit: true
+      };
+      handleIncomingScaleData(record);
     }
 
     // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
