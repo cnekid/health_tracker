@@ -284,24 +284,86 @@
 
           <!-- 기준 범위 바 게이지 (실제 앱 4단계 게이지 바: 낮음 / 건강 / 높음 / 비만) -->
           <div class="pt-2">
-            <div id="gaugeBoundaryTicks" class="flex justify-between text-[10px] text-slate-400 font-mono mb-1 px-1">
-              <span id="gaugeBound1" class="text-left">57.31</span>
-              <span id="gaugeBound2" class="text-center">70.94</span>
-              <span id="gaugeBound3" class="text-right">77.44</span>
+            <!-- 단일 지표용 게이지 바 영역 -->
+            <div id="gaugeSingleContainer">
+              <div id="gaugeBoundaryTicks" class="flex justify-between text-[10px] text-slate-400 font-mono mb-1 px-1">
+                <span id="gaugeBound1" class="text-left">57.31</span>
+                <span id="gaugeBound2" class="text-center">70.94</span>
+                <span id="gaugeBound3" class="text-right">77.44</span>
+              </div>
+              <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex relative">
+                <div class="w-[25%] bg-sky-300 h-full"></div>
+                <div class="w-[30%] bg-emerald-400 h-full"></div>
+                <div class="w-[25%] bg-amber-400 h-full"></div>
+                <div class="w-[20%] bg-rose-400 h-full"></div>
+                <!-- 현재 위치 마커 -->
+                <div id="gaugeCurrentMarker" class="absolute top-0 bottom-0 w-2 bg-slate-900 rounded-full shadow ring-2 ring-white" style="left: 62%;"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-500 font-medium mt-1.5 px-0.5">
+                <span id="gaugeMinLabel" class="text-sky-600 font-semibold">낮음</span>
+                <span id="gaugeNormalLabel" class="text-emerald-600 font-bold">건강</span>
+                <span id="gaugeHighLabel" class="text-amber-600 font-bold">높음</span>
+                <span id="gaugeMaxLabel" class="text-rose-600 font-semibold">비만</span>
+              </div>
             </div>
-            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex relative">
-              <div class="w-[25%] bg-sky-300 h-full"></div>
-              <div class="w-[30%] bg-emerald-400 h-full"></div>
-              <div class="w-[25%] bg-amber-400 h-full"></div>
-              <div class="w-[20%] bg-rose-400 h-full"></div>
-              <!-- 현재 위치 마커 -->
-              <div id="gaugeCurrentMarker" class="absolute top-0 bottom-0 w-2 bg-slate-900 rounded-full shadow ring-2 ring-white" style="left: 62%;"></div>
-            </div>
-            <div class="flex justify-between text-[10px] text-slate-500 font-medium mt-1.5 px-0.5">
-              <span id="gaugeMinLabel" class="text-sky-600 font-semibold">낮음</span>
-              <span id="gaugeNormalLabel" class="text-emerald-600 font-bold">건강</span>
-              <span id="gaugeHighLabel" class="text-amber-600 font-bold">높음</span>
-              <span id="gaugeMaxLabel" class="text-rose-600 font-semibold">비만</span>
+
+            <!-- 혈압 전용 듀얼 게이지 바 영역 (수축기 SYS / 이완기 DIA) -->
+            <div id="gaugeDualBpContainer" class="hidden space-y-3 pt-1">
+              <!-- 수축기 바 (SYS) -->
+              <div>
+                <div class="flex justify-between items-center text-[11px] mb-1">
+                  <span class="font-bold text-slate-800 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+                    <span>수축기 (SYS)</span>
+                  </span>
+                  <span id="bpSysValueText" class="font-mono font-bold text-slate-700">105 mmHg <span class="text-[10px] text-emerald-600 font-semibold">(정상)</span></span>
+                </div>
+                <div class="flex justify-between text-[9px] text-slate-400 font-mono mb-0.5 px-1">
+                  <span>120</span>
+                  <span>130</span>
+                  <span>140</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex relative">
+                  <div class="w-[30%] bg-emerald-400 h-full"></div>
+                  <div class="w-[25%] bg-amber-300 h-full"></div>
+                  <div class="w-[25%] bg-amber-500 h-full"></div>
+                  <div class="w-[20%] bg-rose-400 h-full"></div>
+                  <div id="gaugeSysMarker" class="absolute top-0 bottom-0 w-2 bg-slate-900 rounded-full shadow ring-2 ring-white" style="left: 20%;"></div>
+                </div>
+                <div class="flex justify-between text-[9px] text-slate-500 font-medium mt-1 px-0.5">
+                  <span class="text-emerald-600">정상(&lt;120)</span>
+                  <span class="text-amber-500">주의(120~129)</span>
+                  <span class="text-amber-600">전단계(130~139)</span>
+                  <span class="text-rose-600">고혈압(≥140)</span>
+                </div>
+              </div>
+
+              <!-- 이완기 바 (DIA) -->
+              <div>
+                <div class="flex justify-between items-center text-[11px] mb-1">
+                  <span class="font-bold text-slate-800 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
+                    <span>이완기 (DIA)</span>
+                  </span>
+                  <span id="bpDiaValueText" class="font-mono font-bold text-slate-700">83 mmHg <span class="text-[10px] text-amber-600 font-semibold">(전단계)</span></span>
+                </div>
+                <div class="flex justify-between text-[9px] text-slate-400 font-mono mb-0.5 px-1">
+                  <span>80</span>
+                  <span>85</span>
+                  <span>90</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex relative">
+                  <div class="w-[40%] bg-emerald-400 h-full"></div>
+                  <div class="w-[35%] bg-amber-500 h-full"></div>
+                  <div class="w-[25%] bg-rose-400 h-full"></div>
+                  <div id="gaugeDiaMarker" class="absolute top-0 bottom-0 w-2 bg-slate-900 rounded-full shadow ring-2 ring-white" style="left: 55%;"></div>
+                </div>
+                <div class="flex justify-between text-[9px] text-slate-500 font-medium mt-1 px-0.5">
+                  <span class="text-emerald-600">정상(&lt;80)</span>
+                  <span class="text-amber-600">고혈압 전단계(80~89)</span>
+                  <span class="text-rose-600">고혈압(≥90)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -753,17 +815,8 @@
             <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
           </div>
 
-          <div class="pt-1 space-y-1.5">
-            <button onclick="startBleScaleConnection(false)" class="w-full py-2 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-blue-100">
-              <i class="fa-solid fa-bluetooth"></i> 체중계 기기 검색 (BalansLab)
-            </button>
-            <button onclick="startBleScaleConnection(true)" class="w-full py-2 text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
-              <i class="fa-solid fa-satellite-dish"></i> 주변 모든 기기 찾기 (전체 검색)
-            </button>
-            <button onclick="simulateAdminScaleData()" class="w-full py-2 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-emerald-100">
-              <i class="fa-solid fa-vial"></i> 어드민 실측값 불러오기 (81.28 kg)
-            </button>
-            <button onclick="closeScaleMeasureModal()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
+          <div class="pt-2">
+            <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
           </div>
@@ -1318,14 +1371,24 @@
         english: "Body Water %",
         category: "체성분 수분 지표",
         unit: "%",
+        bound1: 50.0,
+        bound2: 58.0,
+        bound3: 65.0,
         normalMin: 50.0,
         normalMax: 65.0,
         ideal: 55.0,
-        desc: "체내 수분이 체중에서 차지하는 비율입니다. 성인 남성 기준 50% ~ 65%가 건강 상태이며, 충분한 수분 섭취와 신진대사 유지에 필수적입니다.",
+        desc: "체중 대비 체내 총 수분의 비율입니다. 근육의 73%가 수분으로 구성되어 근육량과 정비례하며, 혈액 순환과 노폐물 배출을 돕습니다.",
         statusEval: (val) => {
           if (val < 50.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
-          if (val <= 65.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          return { text: "과수분", color: "text-blue-600 bg-blue-50" };
+          if (val <= 58.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val <= 65.0) return { text: "우수", color: "text-blue-600 bg-blue-50" };
+          return { text: "과수분", color: "text-sky-600 bg-sky-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < 50.0) return Math.max(3, (val / 50.0) * 25);
+          if (val <= 58.0) return 25 + ((val - 50.0) / (58.0 - 50.0)) * 30;
+          if (val <= 65.0) return 55 + ((val - 58.0) / (65.0 - 58.0)) * 25;
+          return 80 + Math.min(18, ((val - 65.0) / 10.0) * 20);
         }
       },
       bmr: {
@@ -1333,14 +1396,24 @@
         english: "Basal Metabolic Rate",
         category: "에너지 대사 지표",
         unit: "kcal",
+        bound1: 1550,
+        bound2: 1700,
+        bound3: 1850,
         normalMin: 1550,
         normalMax: 1850,
         ideal: 1651,
-        desc: "생명을 유지하는 데 필요한 최소한의 에너지 소모량입니다. 근육량이 많을수록 증가하며, 176cm 남성의 평균 표준치는 약 1,550 ~ 1,850 kcal (기준 실측치: 1,651 kcal)입니다.",
+        desc: "생명 유지에 쓰이는 24시간 최소 에너지양입니다. 근육량에 비례하여 결정되며, 체중 감량 시 요요를 막는 핵심 대사 기준선입니다.",
         statusEval: (val) => {
           if (val < 1550) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
-          if (val <= 1850) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val <= 1700) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val <= 1850) return { text: "우수", color: "text-blue-600 bg-blue-50" };
           return { text: "높음", color: "text-amber-600 bg-amber-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < 1550) return Math.max(3, (val / 1550) * 25);
+          if (val <= 1700) return 25 + ((val - 1550) / (1700 - 1550)) * 30;
+          if (val <= 1850) return 55 + ((val - 1700) / (1850 - 1700)) * 25;
+          return 80 + Math.min(18, ((val - 1850) / 300) * 20);
         }
       },
       bp: {
@@ -1348,15 +1421,18 @@
         english: "Blood Pressure",
         category: "심혈관 지표",
         unit: "mmHg",
+        bound1: 120,
+        bound2: 130,
+        bound3: 140,
         normalMin: 90,
         normalMax: 120,
         ideal: 110,
-        desc: "심장이 수축할 때의 최고 혈압(수축기)과 이완할 때의 최저 혈압(이완기)입니다. 정상 혈압은 수축기 120 미만 및 이완기 80 미만이며, 안정된 상태에서 주기적으로 측정합니다.",
+        desc: "심장 수축 시 최고 압력과 이완 시 최저 압력입니다. 혈관벽의 탄력성을 보여주며, 심뇌혈관 질환 예방의 핵심 지표입니다.",
         statusEval: (val, record) => {
           const sys = record ? record.sys : (typeof val === 'number' ? val : 105);
           const dia = record ? record.dia : 83;
           if (sys < 120 && dia < 80) return { text: "정상 혈압", color: "text-emerald-600 bg-emerald-50" };
-          if (sys < 130 && dia < 80) return { text: "주의 혈압", color: "text-amber-600 bg-amber-50" };
+          if (sys < 130 && dia < 80) return { text: "주의 혈압", color: "text-amber-500 bg-amber-50" };
           if (sys < 140 || dia < 90) return { text: "고혈압 전단계", color: "text-amber-600 bg-amber-50" };
           return { text: "1기 고혈압", color: "text-rose-600 bg-rose-50" };
         }
@@ -1924,31 +2000,86 @@
         deltaEl.innerText = "";
       }
 
-      // 게이지 바 설정 (실제 4단계 게이지 바 눈금 연동)
-      const gaugeMarker = document.getElementById('gaugeCurrentMarker');
-      const b1 = document.getElementById('gaugeBound1');
-      const b2 = document.getElementById('gaugeBound2');
-      const b3 = document.getElementById('gaugeBound3');
+      // 게이지 바 설정 (단일 지표 vs 혈압 듀얼 바)
+      const gaugeSingle = document.getElementById('gaugeSingleContainer');
+      const gaugeDualBp = document.getElementById('gaugeDualBpContainer');
 
-      if (spec.bound1 !== undefined && spec.calculateMarkerPos) {
-        if (b1) b1.innerText = `${spec.bound1}`;
-        if (b2) b2.innerText = `${spec.bound2}`;
-        if (b3) b3.innerText = `${spec.bound3}`;
-        const markerPos = spec.calculateMarkerPos(currentVal);
-        gaugeMarker.style.left = `${Math.max(5, Math.min(95, markerPos))}%`;
-      } else if (typeof currentVal === 'number') {
-        const minG = spec.normalMin * 0.7;
-        const maxG = spec.normalMax * 1.3;
-        const pct = Math.max(5, Math.min(95, ((currentVal - minG) / (maxG - minG)) * 100));
-        gaugeMarker.style.left = `${pct}%`;
-        if (b1) b1.innerText = `${spec.normalMin}`;
-        if (b2) b2.innerText = `${((spec.normalMin + spec.normalMax) / 2).toFixed(1)}`;
-        if (b3) b3.innerText = `${spec.normalMax}`;
+      if (metricKey === 'bp') {
+        if (gaugeSingle) gaugeSingle.classList.add('hidden');
+        if (gaugeDualBp) gaugeDualBp.classList.remove('hidden');
+
+        const sys = latestBp ? latestBp.sys : 105;
+        const dia = latestBp ? latestBp.dia : 83;
+
+        // 수축기 평가
+        let sysEvalText = "정상";
+        let sysEvalColor = "text-emerald-600";
+        if (sys < 120) { sysEvalText = "정상"; sysEvalColor = "text-emerald-600"; }
+        else if (sys < 130) { sysEvalText = "주의"; sysEvalColor = "text-amber-500"; }
+        else if (sys < 140) { sysEvalText = "전단계"; sysEvalColor = "text-amber-600"; }
+        else { sysEvalText = "고혈압"; sysEvalColor = "text-rose-600"; }
+
+        // 이완기 평가
+        let diaEvalText = "정상";
+        let diaEvalColor = "text-emerald-600";
+        if (dia < 80) { diaEvalText = "정상"; diaEvalColor = "text-emerald-600"; }
+        else if (dia < 90) { diaEvalText = "전단계"; diaEvalColor = "text-amber-600"; }
+        else { diaEvalText = "고혈압"; diaEvalColor = "text-rose-600"; }
+
+        const sysValTextEl = document.getElementById('bpSysValueText');
+        if (sysValTextEl) sysValTextEl.innerHTML = `${sys} mmHg <span class="text-[10px] ${sysEvalColor} font-semibold">(${sysEvalText})</span>`;
+
+        const diaValTextEl = document.getElementById('bpDiaValueText');
+        if (diaValTextEl) diaValTextEl.innerHTML = `${dia} mmHg <span class="text-[10px] ${diaEvalColor} font-semibold">(${diaEvalText})</span>`;
+
+        // 수축기 마커 위치 (정상: <120 -> 0~30%, 주의: 120~129 -> 30~55%, 전단계: 130~139 -> 55~80%, 고혈압: >=140 -> 80~100%)
+        let sysPos = 20;
+        if (sys < 120) sysPos = Math.max(5, (sys / 120) * 30);
+        else if (sys < 130) sysPos = 30 + ((sys - 120) / 10) * 25;
+        else if (sys < 140) sysPos = 55 + ((sys - 130) / 10) * 25;
+        else sysPos = 80 + Math.min(18, ((sys - 140) / 20) * 20);
+
+        // 이완기 마커 위치 (정상: <80 -> 0~40%, 전단계: 80~89 -> 40~75%, 고혈압: >=90 -> 75~100%)
+        let diaPos = 50;
+        if (dia < 80) diaPos = Math.max(5, (dia / 80) * 40);
+        else if (dia < 90) diaPos = 40 + ((dia - 80) / 10) * 35;
+        else diaPos = 75 + Math.min(22, ((dia - 90) / 20) * 25);
+
+        const sysMarkerEl = document.getElementById('gaugeSysMarker');
+        if (sysMarkerEl) sysMarkerEl.style.left = `${sysPos}%`;
+
+        const diaMarkerEl = document.getElementById('gaugeDiaMarker');
+        if (diaMarkerEl) diaMarkerEl.style.left = `${diaPos}%`;
+
       } else {
-        gaugeMarker.style.left = "45%";
-        if (b1) b1.innerText = "90";
-        if (b2) b2.innerText = "120";
-        if (b3) b3.innerText = "140";
+        if (gaugeSingle) gaugeSingle.classList.remove('hidden');
+        if (gaugeDualBp) gaugeDualBp.classList.add('hidden');
+
+        const gaugeMarker = document.getElementById('gaugeCurrentMarker');
+        const b1 = document.getElementById('gaugeBound1');
+        const b2 = document.getElementById('gaugeBound2');
+        const b3 = document.getElementById('gaugeBound3');
+
+        if (spec.bound1 !== undefined && spec.calculateMarkerPos) {
+          if (b1) b1.innerText = `${spec.bound1}`;
+          if (b2) b2.innerText = `${spec.bound2}`;
+          if (b3) b3.innerText = `${spec.bound3}`;
+          const markerPos = spec.calculateMarkerPos(currentVal);
+          gaugeMarker.style.left = `${Math.max(5, Math.min(95, markerPos))}%`;
+        } else if (typeof currentVal === 'number') {
+          const minG = spec.normalMin * 0.7;
+          const maxG = spec.normalMax * 1.3;
+          const pct = Math.max(5, Math.min(95, ((currentVal - minG) / (maxG - minG)) * 100));
+          gaugeMarker.style.left = `${pct}%`;
+          if (b1) b1.innerText = `${spec.normalMin}`;
+          if (b2) b2.innerText = `${((spec.normalMin + spec.normalMax) / 2).toFixed(1)}`;
+          if (b3) b3.innerText = `${spec.normalMax}`;
+        } else {
+          gaugeMarker.style.left = "45%";
+          if (b1) b1.innerText = "90";
+          if (b2) b2.innerText = "120";
+          if (b3) b3.innerText = "140";
+        }
       }
 
       // 2부: 대형 상세 SVG 차트 렌더링
@@ -2696,7 +2827,27 @@
     }
 
     // ----------------------------------------------------
-    // 8. 체중 측정 (스마트 체중계) 모달 제어 (Web Bluetooth 실시간 연동 & 20초 카운트다운)
+    // 네이티브 토스트 알림 헬퍼 (시스템 alert 팝업 및 오역 방지)
+    // ----------------------------------------------------
+    function showToast(msg) {
+      let toast = document.getElementById("appToast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "appToast";
+        toast.className = "fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300 opacity-0 pointer-events-none max-w-[90%] text-center";
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.classList.remove("opacity-0", "pointer-events-none");
+      toast.classList.add("opacity-100");
+      setTimeout(() => {
+        toast.classList.remove("opacity-100");
+        toast.classList.add("opacity-0", "pointer-events-none");
+      }, 2500);
+    }
+
+    // ----------------------------------------------------
+    // 8. 밸런스랩 체중계 BLE 연동 모듈 (Bluefy Web Bluetooth 표준 대응)
     // ----------------------------------------------------
     let bleDevice = null;
     let bleServer = null;
@@ -2708,17 +2859,17 @@
     let isBleConnecting = false;
 
     function openScaleMeasureModal() {
-      const modal = document.getElementById('scaleMeasureModal');
-      modal.classList.remove('hidden');
+      const modal = document.getElementById("scaleMeasureModal");
+      modal.classList.remove("hidden");
 
       // 1) 초기 대기 뷰 활성화 및 요약 뷰 숨김
-      document.getElementById('scaleWaitingView').classList.remove('hidden');
-      document.getElementById('scaleResultSummaryView').classList.add('hidden');
-      document.getElementById('scaleWeightDisplay').innerText = "--.--";
-      document.getElementById('scaleStatusText').innerText = "체중계 신호 검색 중...";
+      document.getElementById("scaleWaitingView").classList.remove("hidden");
+      document.getElementById("scaleResultSummaryView").classList.add("hidden");
+      document.getElementById("scaleWeightDisplay").innerText = "--.--";
+      document.getElementById("scaleStatusText").innerText = "기기 검색 중...";
 
-      // 2) 20초 카운트다운 타이머 가동 (응답 없으면 자동 닫힘)
-      scaleCountdownRemaining = 20;
+      // 2) 타이머 초기화 (페어링 창 대기 고려 35초 부여, 실제 기기 연결 시 20초로 리셋)
+      scaleCountdownRemaining = 35;
       updateScaleCountdownUI();
 
       if (scaleCountdownTimer) clearInterval(scaleCountdownTimer);
@@ -2730,7 +2881,7 @@
           scaleCountdownTimer = null;
           disconnectBleScale();
           closeScaleMeasureModal();
-          alert("⏱️ 20초 동안 체중계 응답이 없어 대기 모드를 자동으로 종료했습니다.");
+          // 알림창(alert) 없이 대기 모드 자동 종료 (사용자 경험 개선)
         }
       }, 1000);
 
@@ -2739,58 +2890,44 @@
     }
 
     function updateScaleCountdownUI() {
-      const el = document.getElementById('scaleCountdownText');
+      const el = document.getElementById("scaleCountdownText");
       if (el) {
         el.innerText = `20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: ${scaleCountdownRemaining}초)`;
       }
     }
 
-    async function startBleScaleConnection(acceptAll = false) {
+    async function startBleScaleConnection() {
       if (isBleConnecting) return;
       isBleConnecting = true;
 
       // Web Bluetooth API 지원 여부 확인
       if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
-        document.getElementById('scaleStatusText').innerText = "Web Bluetooth 미지원 브라우저";
-        alert("⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\n아이폰에서는 [Bluefy] 브라우저 앱을 이용해 접속해주세요.");
+        document.getElementById("scaleStatusText").innerText = "Web Bluetooth 미지원 브라우저";
+        showToast("⚠️ 아이폰에서는 [Bluefy] 브라우저 앱을 이용해 접속해주세요.");
         isBleConnecting = false;
         return;
       }
 
-      const OKOK_SVC = '0000fff0-0000-1000-8000-00805f9b34fb';
-      const WSS_SVC = '0000181d-0000-1000-8000-00805f9b34fb';
-      const OKOK_NOTIFY = '0000fff1-0000-1000-8000-00805f9b34fb';
-      const WSS_NOTIFY = '00002a9d-0000-1000-8000-00805f9b34fb';
-      const OKOK_ACK = '0000fff2-0000-1000-8000-00805f9b34fb';
+      const OKOK_SVC = "0000fff0-0000-1000-8000-00805f9b34fb";
+      const WSS_SVC = "0000181d-0000-1000-8000-00805f9b34fb";
+      const OKOK_NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
+      const WSS_NOTIFY = "00002a9d-0000-1000-8000-00805f9b34fb";
+      const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       try {
-        document.getElementById('scaleStatusText').innerText = acceptAll ? "주변 기기 전체 검색 중..." : "기기 검색 중... [BalansLab-Scale] 선택";
+        document.getElementById("scaleStatusText").innerText = "장치 선택 중...";
 
-        let reqOptions = {};
-        if (acceptAll) {
-          reqOptions = {
-            acceptAllDevices: true,
-            optionalServices: [OKOK_SVC, WSS_SVC]
-          };
-        } else {
-          reqOptions = {
-            filters: [
-              { name: 'BalansLab-Scale' },
-              { namePrefix: 'BalansLab' },
-              { namePrefix: 'Scale' },
-              { services: [OKOK_SVC] },
-              { services: [WSS_SVC] }
-            ],
-            optionalServices: [OKOK_SVC, WSS_SVC]
-          };
-        }
+        const reqOptions = {
+          acceptAllDevices: true,
+          optionalServices: [OKOK_SVC, WSS_SVC]
+        };
 
         const device = await navigator.bluetooth.requestDevice(reqOptions);
 
         bleDevice = device;
-        device.addEventListener('gattserverdisconnected', onBleDisconnected);
+        device.addEventListener("gattserverdisconnected", onBleDisconnected);
 
-        document.getElementById('scaleStatusText').innerText = "체중계 연결 중...";
+        document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
         const server = await device.gatt.connect();
         bleServer = server;
 
@@ -2805,7 +2942,7 @@
         }
 
         if (!service) {
-          throw new Error("체중계 서비스(0xFFF0 / 0x181D)를 찾을 수 없습니다.");
+          throw new Error("체중계 서비스를 찾을 수 없습니다.");
         }
 
         // FFF1 (OKOK 측정값) 또는 2A9D (표준 측정값) 특성 연결
@@ -2819,7 +2956,7 @@
         }
 
         if (!notifyChar) {
-          throw new Error("체중계 측정 특성(0xFFF1 / 0x2A9D)을 찾을 수 없습니다.");
+          throw new Error("체중계 측정 특성을 찾을 수 없습니다.");
         }
 
         // FFF2 (수신 확인 ACK) 특성 취득 (선택 사항)
@@ -2829,53 +2966,58 @@
           bleAckChar = null;
         }
 
+        // Bluefy 필수: startNotifications() 호출 전에 이벤트 리스너를 먼저 등록
+        const handlePacket = (event) => {
+          const raw = event?.target?.value || event?.value || notifyChar?.value;
+          if (raw) onBleScalePacketReceived(raw);
+        };
+
+        notifyChar.addEventListener("characteristicvaluechanged", handlePacket);
+        notifyChar.oncharacteristicvaluechanged = handlePacket;
+
         bleNotifyChar = notifyChar;
         await notifyChar.startNotifications();
-        document.getElementById('scaleStatusText').innerText = "체중계 연결됨 (측정값 수신 대기 중...)";
 
-        notifyChar.addEventListener('characteristicvaluechanged', (event) => {
-          onBleScalePacketReceived(event.target.value);
-        });
+        // 실제 기기 연결 완료 시점에 온전한 20초 카운트다운 새로 시작!
+        scaleCountdownRemaining = 20;
+        updateScaleCountdownUI();
+        document.getElementById("scaleStatusText").innerText = "체중계 연결됨 (측정값 수신 대기 중...)";
 
       } catch (err) {
         console.error("BLE 연결 오류 또는 취소:", err);
-        const errName = err?.name || '';
-        const errMsg = err?.message || String(err) || '';
-        if (errName === 'NotFoundError' || errMsg.includes('cancelled') || errMsg.includes('canceled') || errMsg.includes('User cancelled')) {
-          document.getElementById('scaleStatusText').innerText = "기기 선택이 취소되었습니다.";
+        const errName = err?.name || "";
+        const errMsg = err?.message || String(err) || "";
+        if (errName === "NotFoundError" || errMsg.includes("cancelled") || errMsg.includes("canceled") || errMsg.includes("User cancelled")) {
+          document.getElementById("scaleStatusText").innerText = "기기 선택이 취소되었습니다.";
         } else {
-          document.getElementById('scaleStatusText').innerText = `연결 오류: ${errName} ${errMsg}`.trim();
+          document.getElementById("scaleStatusText").innerText = `연결 오류: ${errName} ${errMsg}`.trim();
         }
       } finally {
         isBleConnecting = false;
       }
     }
 
-    // 맥북 가상 체중계 어드민 실측값(81.28kg) 즉시 불러오기 (테스트 및 비상용)
-    function simulateAdminScaleData() {
-      const now = new Date();
-      const record = {
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().split(' ')[0],
-        weight: 81.28,
-        bodyFat: 24.5,
-        muscleRate: 69.9,
-        muscleMass: 56.8,
-        skeletalRate: 38.0,
-        skeletalMass: 30.9,
-        bmi: 26.2,
-        visceralFat: 14.6,
-        water: 52.3,
-        bmr: 1647,
-        deltaWeight: cachedBodyList.length > 0 ? +(81.28 - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
-        source: "BLE체중계",
-        syncedHealthKit: true
-      };
-      handleIncomingScaleData(record);
+    // 데이터뷰 안전 변환기 (DataView / ArrayBuffer / Uint8Array 호환)
+    function normalizeDataView(raw) {
+      if (!raw) return null;
+      if (raw instanceof DataView) return raw;
+      if (raw.buffer instanceof ArrayBuffer) {
+        return new DataView(raw.buffer, raw.byteOffset || 0, raw.byteLength || raw.length);
+      }
+      if (raw instanceof ArrayBuffer) {
+        return new DataView(raw);
+      }
+      if (Array.isArray(raw)) {
+        return new DataView(new Uint8Array(raw).buffer);
+      }
+      return null;
     }
 
     // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
-    function onBleScalePacketReceived(dataView) {
+    function onBleScalePacketReceived(raw) {
+      const dataView = normalizeDataView(raw);
+      if (!dataView) return;
+
       const len = dataView.byteLength;
       if (len < 3) return;
 
@@ -2902,8 +3044,8 @@
         waterRate = rawWater / 10.0;
 
         // 실시간 수치 표시
-        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
-        document.getElementById('scaleStatusText').innerText = isLocked ? "측정 완료 (수치 확정)" : "체중 측정 진행 중...";
+        document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
+        document.getElementById("scaleStatusText").innerText = isLocked ? "측정 완료 (수치 확정)" : "체중 측정 진행 중...";
 
         if (!isLocked) return; // 고정 패킷(Lock)이 올 때까지 대기
       }
@@ -2912,7 +3054,7 @@
         isLocked = (dataView.getUint8(1) === 0x01);
         const rawWeight = (dataView.getUint8(2) << 8) | dataView.getUint8(3);
         weight = rawWeight / 100.0;
-        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
+        document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
         if (!isLocked) return;
       }
       // 3) 표준 SIG WSS 3바이트 프레임 [flags, LSB, MSB]
@@ -2920,7 +3062,7 @@
         isLocked = true;
         const raw = dataView.getUint8(1) | (dataView.getUint8(2) << 8);
         weight = raw * 0.005;
-        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
+        document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
       } else {
         return;
       }
@@ -2934,8 +3076,8 @@
 
       const now = new Date();
       const record = {
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().split(' ')[0],
+        date: now.toISOString().split("T")[0],
+        time: now.toTimeString().split(" ")[0],
         weight: +weight.toFixed(2),
         bodyFat: +bodyFat.toFixed(1),
         muscleRate: +muscleRate.toFixed(1),
@@ -2985,19 +3127,19 @@
       pendingScaleData = data;
 
       // 요약 표 수치 바인딩
-      document.getElementById('scaleSummaryWeight').innerText = data.weight.toFixed(2);
-      document.getElementById('scaleMeasuredTime').innerText = `측정일시: ${data.date} ${data.time}`;
-      document.getElementById('scaleSummaryBmi').innerText = `${data.bmi} kg/m²`;
-      document.getElementById('scaleSummaryBodyFat').innerText = `${data.bodyFat}%`;
-      document.getElementById('scaleSummaryMuscleRate').innerText = `${data.muscleRate}%`;
-      document.getElementById('scaleSummaryMuscleMass').innerText = `${data.muscleMass} kg`;
-      document.getElementById('scaleSummaryWater').innerText = `${data.water}%`;
-      document.getElementById('scaleSummaryVisceral').innerText = `${data.visceralFat} Lv`;
-      document.getElementById('scaleSummaryBmr').innerText = `${data.bmr} kcal`;
+      document.getElementById("scaleSummaryWeight").innerText = data.weight.toFixed(2);
+      document.getElementById("scaleMeasuredTime").innerText = `측정일시: ${data.date} ${data.time}`;
+      document.getElementById("scaleSummaryBmi").innerText = `${data.bmi} kg/m²`;
+      document.getElementById("scaleSummaryBodyFat").innerText = `${data.bodyFat}%`;
+      document.getElementById("scaleSummaryMuscleRate").innerText = `${data.muscleRate}%`;
+      document.getElementById("scaleSummaryMuscleMass").innerText = `${data.muscleMass} kg`;
+      document.getElementById("scaleSummaryWater").innerText = `${data.water}%`;
+      document.getElementById("scaleSummaryVisceral").innerText = `${data.visceralFat} Lv`;
+      document.getElementById("scaleSummaryBmr").innerText = `${data.bmr} kcal`;
 
       // 대기 뷰 숨기고 요약 표 뷰 노출
-      document.getElementById('scaleWaitingView').classList.add('hidden');
-      document.getElementById('scaleResultSummaryView').classList.remove('hidden');
+      document.getElementById("scaleWaitingView").classList.add("hidden");
+      document.getElementById("scaleResultSummaryView").classList.remove("hidden");
     }
 
     // 사용자가 [확인 (저장)] 클릭 시 최종 로컬 DB 저장
@@ -3006,18 +3148,19 @@
       await dbSaveBodyMetric(pendingScaleData);
       await refreshAllViews();
       closeScaleMeasureModal();
-      alert(`✅ 체중 ${pendingScaleData.weight.toFixed(2)} kg 및 10대 체성분 데이터가 성공적으로 저장되었습니다.`);
+      showToast(`✅ 체중 ${pendingScaleData.weight.toFixed(2)} kg 및 생체 데이터가 저장되었습니다.`);
       pendingScaleData = null;
     }
 
     function closeScaleMeasureModal() {
-      document.getElementById('scaleMeasureModal').classList.add('hidden');
+      document.getElementById("scaleMeasureModal").classList.add("hidden");
       if (scaleCountdownTimer) {
         clearInterval(scaleCountdownTimer);
         scaleCountdownTimer = null;
       }
       disconnectBleScale();
     }
+
 
     // ----------------------------------------------------
     // 9. 위드웰 혈압계 카메라 OCR 모듈 ([안 2] 깔끔한 수동 원터치 촬영 & 확인/수정 검증)
