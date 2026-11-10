@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>HealthTracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -76,9 +79,12 @@
       
       <!-- ================= 1. [홈] 탭 (HealthTracker 메인 대시보드) ================= -->
       <section id="view-home" class="space-y-2.5">
-        <!-- 상단 헤더: 타이틀 (날짜/요일 삭제, 컴팩트 여백) -->
-        <div class="pt-1 pb-0.5">
+        <!-- 상단 헤더: 타이틀 & BLE 실시간 연동 버전 뱃지 -->
+        <div class="pt-1 pb-0.5 flex justify-between items-center">
           <h1 class="text-xl font-black text-slate-900 tracking-tight">HealthTracker</h1>
+          <span class="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-bluetooth text-[9px]"></i> BLE 실시간 연동
+          </span>
         </div>
 
         <!-- 1) 체중 카드 (모바일 1화면 최적화 컴팩트) -->
@@ -736,19 +742,22 @@
           <div class="relative w-40 h-40 mx-auto flex items-center justify-center my-1">
             <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-4 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
             <div class="w-32 h-32 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
-              <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">체중계 대기 중</span>
-              <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">80.30</span>
+              <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">체중계 검색 대기</span>
+              <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">--.--</span>
               <span class="text-xs text-slate-500 font-medium">kg</span>
             </div>
           </div>
 
           <div class="space-y-1">
             <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
-            <p id="scaleCountdownText" class="text-[11px] text-slate-400">10초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 10초)</p>
+            <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
           </div>
 
-          <div class="pt-1">
-            <button onclick="closeScaleMeasureModal()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
+          <div class="pt-1 space-y-1.5">
+            <button onclick="startBleScaleConnection()" class="w-full py-2 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center gap-1.5 border border-blue-100">
+              <i class="fa-solid fa-bluetooth"></i> 기기 다시 검색하기
+            </button>
+            <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
           </div>
@@ -1116,15 +1125,15 @@
       gender: 'male' // 성별
     };
 
-    // [지표 1: 체중] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (대한비만학회 KSSO 한국인 기준)
+    // [지표 1: 체중] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (국민건강보험공단 2024 빅데이터 표준)
     function calculateWeightDynamicSpec(heightCm = USER_PROFILE.height) {
       const hM = heightCm / 100;
       const h2 = hM * hM;
-      // 대한비만학회 기준: 저체중 < 18.5, 건강(정상) 18.5 ~ 22.9, 높음(비만전단계) 23.0 ~ 24.9, 비만 ≥ 25.0
+      // 건보공단 빅데이터 실증 기준: 저체중 < 18.5, 건강(정상) 18.5 ~ 24.9, 높음(과체중) 25.0 ~ 26.9, 비만 ≥ 27.0
       const b1 = +(18.5 * h2).toFixed(2); // 저체중 상한선 (176cm: 57.31kg)
-      const b2 = +(22.9 * h2).toFixed(2); // 건강 정상 상한선 (176cm: 70.94kg)
-      const b3 = +(25.0 * h2).toFixed(2); // 비만 기준 하한선 (176cm: 77.44kg)
-      const ideal = +(22.0 * h2).toFixed(1); // 이상적 표준 체중 (176cm: 68.1kg)
+      const b2 = +(25.0 * h2).toFixed(2); // 건강 정상 상한선 (176cm: 77.44kg)
+      const b3 = +(27.0 * h2).toFixed(2); // 비만 기준 하한선 (176cm: 83.64kg)
+      const ideal = +(22.5 * h2).toFixed(1); // 최적 건강 체중 (176cm: 69.7kg)
 
       return {
         title: "체중",
@@ -1138,8 +1147,7 @@
         normalMax: b2,
         obeseMin: b3,
         ideal: ideal,
-        // 사용자 양식 100% 동일 유지 (신장 및 경계 수치 자동 동적 치환)
-        desc: `체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 ${heightCm}cm 기준 의학적 기준 범위는 낮음(<${b1}kg), 건강(${b1}~${b2}kg), 높음(${b2}~${b3}kg), 비만(≥${b3}kg)으로 구분됩니다.`,
+        desc: "체수분·근육·지방의 총합으로 대사 건강의 기본 지표입니다. 단순 감량보다 근육량을 유지하며 체지방을 줄이는 것이 핵심입니다.",
         statusEval: (val) => {
           if (val < b1) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
           if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
@@ -1151,6 +1159,43 @@
           if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
           if (val < b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
           return 80 + Math.min(18, ((val - b3) / 15) * 20);
+        }
+      };
+    }
+
+    // [지표 4: 골격근량] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (인바디 및 스포츠의학 표준)
+    function calculateMuscleMassDynamicSpec(heightCm = USER_PROFILE.height) {
+      const hM = heightCm / 100;
+      const h2 = hM * hM;
+      // 인바디 표준: 낮음(90% 미만) < 28.5kg, 건강(90~110%) 28.5 ~ 34.5kg, 우수(110~120%) 34.5 ~ 37.5kg, 완전한(120% 이상) ≥ 37.5kg
+      const b1 = +(9.20 * h2).toFixed(1);  // 낮음 상한 (176cm: 28.5kg)
+      const b2 = +(11.14 * h2).toFixed(1); // 건강 정상 상한 (176cm: 34.5kg)
+      const b3 = +(12.10 * h2).toFixed(1); // 우수 상한 (176cm: 37.5kg)
+      const ideal = +(10.17 * h2).toFixed(1); // 표준 중심치 (176cm: 31.5kg)
+
+      return {
+        title: "골격근량",
+        english: "Skeletal Muscle Mass",
+        category: "근골격 지표",
+        unit: "kg",
+        bound1: b1,
+        bound2: b2,
+        bound3: b3,
+        normalMin: b1,
+        normalMax: b2,
+        ideal: ideal,
+        desc: "뼈에 붙어 몸을 움직이는 순수 근육량으로, 혈당을 조절하고 기초대사량을 지켜주는 핵심 대사 자산입니다.",
+        statusEval: (val) => {
+          if (val < b1) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
+          if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < b3) return { text: "우수", color: "text-blue-600 bg-blue-50" };
+          return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < b1) return Math.max(3, (val / b1) * 25);
+          if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
+          if (val < b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
+          return 80 + Math.min(18, ((val - b3) / 10.0) * 20);
         }
       };
     }
@@ -1171,7 +1216,7 @@
         normalMax: 20.0,
         obeseMin: 25.0,
         ideal: 16.0,
-        desc: "체지방률은 체중에서 체지방이 차지하는 비율입니다. 성인 남성 기준 의학적 기준 범위는 낮음(<10.0%), 건강(10.0~20.0%), 높음(20.1~25.0%), 비만(≥25.0%)으로 구분됩니다.",
+        desc: "체중에서 순수 지방이 차지하는 비율로, 체중계 숫자보다 실질적인 비만도와 혈관 대사 위험을 직접 반영합니다.",
         statusEval: (val) => {
           if (val < 10.0) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
           if (val <= 20.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
@@ -1184,6 +1229,9 @@
           if (val < 25.0) return 55 + ((val - 20.0) / (25.0 - 20.0)) * 25;
           return 80 + Math.min(18, ((val - 25.0) / 10.0) * 20);
         }
+      },
+      get muscleMass() {
+        return calculateMuscleMassDynamicSpec(USER_PROFILE.height);
       },
       muscleMass: {
         title: "골격근량",
@@ -1221,24 +1269,24 @@
         category: "체격 평가 지표",
         unit: "kg/m²",
         bound1: 18.5,
-        bound2: 23.0,
-        bound3: 25.0,
+        bound2: 25.0,
+        bound3: 27.0,
         normalMin: 18.5,
-        normalMax: 22.9,
-        obeseMin: 25.0,
-        ideal: 22.0,
-        desc: "체질량지수(BMI)는 키와 몸무게를 이용해 체지방량을 간접적으로 추정하는 지표입니다. 의학적 기준 범위는 낮음(<18.5), 건강(18.5~22.9), 높음(23.0~24.9), 비만(≥25.0)으로 구분됩니다.",
+        normalMax: 24.9,
+        obeseMin: 27.0,
+        ideal: 22.5,
+        desc: "체질량지수(BMI)는 키와 몸무게를 이용해 체지방량을 간접적으로 추정하는 지표입니다. 의학적 기준 범위는 낮음(<18.5), 건강(18.5~24.9), 높음(25.0~26.9), 비만(≥27.0)으로 구분됩니다.",
         statusEval: (val) => {
           if (val < 18.5) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
-          if (val <= 22.9) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          if (val < 25.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          if (val <= 24.9) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 27.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
           return { text: "비만", color: "text-rose-600 bg-rose-50" };
         },
         calculateMarkerPos: (val) => {
           if (val < 18.5) return Math.max(3, (val / 18.5) * 25);
-          if (val <= 22.9) return 25 + ((val - 18.5) / (22.9 - 18.5)) * 30;
-          if (val < 25.0) return 55 + ((val - 22.9) / (25.0 - 22.9)) * 25;
-          return 80 + Math.min(18, ((val - 25.0) / 10) * 20);
+          if (val <= 25.0) return 25 + ((val - 18.5) / (25.0 - 18.5)) * 30;
+          if (val < 27.0) return 55 + ((val - 25.0) / (27.0 - 25.0)) * 25;
+          return 80 + Math.min(18, ((val - 27.0) / 10) * 20);
         }
       },
       visceralFat: {
@@ -2639,14 +2687,16 @@
     }
 
     // ----------------------------------------------------
-    // 8. 체중 측정 (스마트 체중계) 모달 제어 (10초 자동 닫힘 & 요약 표 검증 저장)
+    // 8. 체중 측정 (스마트 체중계) 모달 제어 (Web Bluetooth 실시간 연동 & 20초 카운트다운)
     // ----------------------------------------------------
     let bleDevice = null;
     let bleServer = null;
+    let bleNotifyChar = null;
+    let bleAckChar = null;
     let scaleCountdownTimer = null;
-    let scaleCountdownRemaining = 10;
-    let scaleSimulateTimer = null;
+    let scaleCountdownRemaining = 20;
     let pendingScaleData = null;
+    let isBleConnecting = false;
 
     function openScaleMeasureModal() {
       const modal = document.getElementById('scaleMeasureModal');
@@ -2655,11 +2705,11 @@
       // 1) 초기 대기 뷰 활성화 및 요약 뷰 숨김
       document.getElementById('scaleWaitingView').classList.remove('hidden');
       document.getElementById('scaleResultSummaryView').classList.add('hidden');
-      document.getElementById('scaleWeightDisplay').innerText = "80.30";
-      document.getElementById('scaleStatusText').innerText = "체중계 대기 중";
+      document.getElementById('scaleWeightDisplay').innerText = "--.--";
+      document.getElementById('scaleStatusText').innerText = "체중계 신호 검색 중...";
 
-      // 2) 10초 카운트다운 타이머 가동 (응답 없으면 자동 닫힘)
-      scaleCountdownRemaining = 10;
+      // 2) 20초 카운트다운 타이머 가동 (응답 없으면 자동 닫힘)
+      scaleCountdownRemaining = 20;
       updateScaleCountdownUI();
 
       if (scaleCountdownTimer) clearInterval(scaleCountdownTimer);
@@ -2669,48 +2719,234 @@
         if (scaleCountdownRemaining <= 0) {
           clearInterval(scaleCountdownTimer);
           scaleCountdownTimer = null;
+          disconnectBleScale();
           closeScaleMeasureModal();
-          alert("⏱️ 10초 동안 체중계 응답이 없어 대기 모드를 자동으로 종료했습니다.");
+          alert("⏱️ 20초 동안 체중계 응답이 없어 대기 모드를 자동으로 종료했습니다.");
         }
       }, 1000);
 
-      // 3) 체중계 패킷 수신 대기 (브라우저 상에서 체중계에 올라섰을 때의 데이터 연동 시뮬레이션: 3.5초 후 안정화 수신)
-      if (scaleSimulateTimer) clearTimeout(scaleSimulateTimer);
-      scaleSimulateTimer = setTimeout(() => {
-        if (!modal.classList.contains('hidden') && scaleCountdownTimer) {
-          const now = new Date();
-          const record = {
-            date: now.toISOString().split('T')[0],
-            time: now.toTimeString().split(' ')[0],
-            weight: 80.30,
-            bodyFat: 25.0,
-            muscleRate: 38.0,
-            muscleMass: 30.6,
-            bmi: 25.9,
-            visceralFat: 14.5,
-            water: 52.9,
-            bmr: 1651.0,
-            deltaWeight: -0.25,
-            source: "BLE체중계",
-            syncedHealthKit: true
-          };
-          handleIncomingScaleData(record);
-        }
-      }, 3500);
-
-      // Web BLE 지원 브라우저(Bluefy 등) 백그라운드 스캔 시도
-      if (navigator.bluetooth && navigator.bluetooth.getAvailability) {
-        navigator.bluetooth.getAvailability().then(available => {
-          if (available) console.log("Web BLE 환경 감지됨: 체중계 광고 패킷 대기");
-        });
-      }
+      // 3) Web Bluetooth 실시간 기기 연결 시도 (Bluefy 등 Web BLE 브라우저)
+      startBleScaleConnection();
     }
 
     function updateScaleCountdownUI() {
       const el = document.getElementById('scaleCountdownText');
       if (el) {
-        el.innerText = `10초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: ${scaleCountdownRemaining}초)`;
+        el.innerText = `20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: ${scaleCountdownRemaining}초)`;
       }
+    }
+
+    async function startBleScaleConnection() {
+      if (isBleConnecting) return;
+      isBleConnecting = true;
+
+      // Web Bluetooth API 지원 여부 확인
+      if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
+        document.getElementById('scaleStatusText').innerText = "Web Bluetooth 미지원 브라우저";
+        alert("⚠️ 현재 브라우저는 Web Bluetooth API를 지원하지 않습니다.\n아이폰에서는 [Bluefy] 브라우저 앱을 이용해 접속해주세요.");
+        isBleConnecting = false;
+        return;
+      }
+
+      try {
+        document.getElementById('scaleStatusText').innerText = "기기 검색 중... [BalansLab-Scale] 선택";
+
+        // 1) 밸런스랩 / OKOK (0xFFF0) 및 SIG 표준 (0x181D) 체중계 스캔
+        let device = null;
+        try {
+          device = await navigator.bluetooth.requestDevice({
+            filters: [
+              { name: 'BalansLab-Scale' },
+              { namePrefix: 'BalansLab' },
+              { services: [0xfff0] },
+              { services: [0x181d] }
+            ],
+            optionalServices: [
+              0xfff0,
+              0x181d,
+              '0000fff0-0000-1000-8000-00805f9b34fb',
+              '0000181d-0000-1000-8000-00805f9b34fb'
+            ]
+          });
+        } catch (filterErr) {
+          if (filterErr.name === 'NotFoundError' && (filterErr.message?.includes('User cancelled') || filterErr.message?.includes('cancelled'))) {
+            throw filterErr;
+          }
+          // 필터 불일치 시 주변 모든 BLE 기기 검색으로 2차 시도
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [
+              0xfff0,
+              0x181d,
+              '0000fff0-0000-1000-8000-00805f9b34fb',
+              '0000181d-0000-1000-8000-00805f9b34fb'
+            ]
+          });
+        }
+
+        bleDevice = device;
+        device.addEventListener('gattserverdisconnected', onBleDisconnected);
+
+        document.getElementById('scaleStatusText').innerText = "체중계 연결 중...";
+        const server = await device.gatt.connect();
+        bleServer = server;
+
+        // FFF0 또는 181D 서비스 연결
+        let service = null;
+        const serviceUuids = [0xfff0, 0x181d, '0000fff0-0000-1000-8000-00805f9b34fb', '0000181d-0000-1000-8000-00805f9b34fb'];
+        for (const uuid of serviceUuids) {
+          try {
+            service = await server.getPrimaryService(uuid);
+            if (service) break;
+          } catch (e) {}
+        }
+
+        if (!service) {
+          throw new Error("체중계 서비스(0xFFF0 / 0x181D)를 찾을 수 없습니다.");
+        }
+
+        // FFF1 (OKOK 측정값) 또는 2A9D (표준 측정값) 특성 연결
+        let notifyChar = null;
+        const notifyUuids = [0xfff1, 0x2a9d, '0000fff1-0000-1000-8000-00805f9b34fb', '00002a9d-0000-1000-8000-00805f9b34fb'];
+        for (const uuid of notifyUuids) {
+          try {
+            notifyChar = await service.getCharacteristic(uuid);
+            if (notifyChar) break;
+          } catch (e) {}
+        }
+
+        if (!notifyChar) {
+          throw new Error("체중계 측정 특성(0xFFF1 / 0x2A9D)을 찾을 수 없습니다.");
+        }
+
+        // FFF2 (수신 확인 ACK) 특성 취득 (선택 사항)
+        const ackUuids = [0xfff2, '0000fff2-0000-1000-8000-00805f9b34fb'];
+        for (const uuid of ackUuids) {
+          try {
+            bleAckChar = await service.getCharacteristic(uuid);
+            if (bleAckChar) break;
+          } catch (eAck) {}
+        }
+
+        bleNotifyChar = notifyChar;
+        await notifyChar.startNotifications();
+        document.getElementById('scaleStatusText').innerText = "체중계 연결됨 (측정값 수신 대기 중...)";
+
+        notifyChar.addEventListener('characteristicvaluechanged', (event) => {
+          onBleScalePacketReceived(event.target.value);
+        });
+
+      } catch (err) {
+        console.error("BLE 연결 오류 또는 취소:", err);
+        if (err.name === 'NotFoundError' || err.message?.includes('User cancelled') || err.message?.includes('cancelled')) {
+          document.getElementById('scaleStatusText').innerText = "기기 선택이 취소되었습니다.";
+        } else {
+          document.getElementById('scaleStatusText').innerText = `연결 오류: ${err.message || '체중계를 찾지 못함'}`;
+        }
+      } finally {
+        isBleConnecting = false;
+      }
+    }
+
+    // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
+    function onBleScalePacketReceived(dataView) {
+      const len = dataView.byteLength;
+      if (len < 3) return;
+
+      let weight = 0;
+      let bodyFat = 25.0;
+      let skeletalRate = 38.0;
+      let visceralFat = 14.5;
+      let bmr = 1651;
+      let waterRate = 52.9;
+      let isLocked = false;
+
+      // 1) OKOK v1.1 정밀 19바이트 프로토콜 프레임 (0xCA 0x11 ...)
+      if (len >= 19 && dataView.getUint8(0) === 0xCA) {
+        isLocked = (dataView.getUint8(3) === 0x01);
+        const rawWeight = (dataView.getUint8(5) << 8) | dataView.getUint8(6);
+        weight = rawWeight / 100.0;
+        const rawFat = (dataView.getUint8(7) << 8) | dataView.getUint8(8);
+        bodyFat = rawFat / 10.0;
+        const rawSkeletal = (dataView.getUint8(9) << 8) | dataView.getUint8(10);
+        skeletalRate = rawSkeletal / 10.0;
+        visceralFat = dataView.getUint8(11);
+        bmr = (dataView.getUint8(12) << 8) | dataView.getUint8(13);
+        const rawWater = (dataView.getUint8(14) << 8) | dataView.getUint8(15);
+        waterRate = rawWater / 10.0;
+
+        // 실시간 수치 표시
+        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
+        document.getElementById('scaleStatusText').innerText = isLocked ? "측정 완료 (수치 확정)" : "체중 측정 진행 중...";
+
+        if (!isLocked) return; // 고정 패킷(Lock)이 올 때까지 대기
+      }
+      // 2) App 호환 4바이트 프레임 [0x00, status, MSB, LSB]
+      else if (len === 4) {
+        isLocked = (dataView.getUint8(1) === 0x01);
+        const rawWeight = (dataView.getUint8(2) << 8) | dataView.getUint8(3);
+        weight = rawWeight / 100.0;
+        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
+        if (!isLocked) return;
+      }
+      // 3) 표준 SIG WSS 3바이트 프레임 [flags, LSB, MSB]
+      else if (len === 3) {
+        isLocked = true;
+        const raw = dataView.getUint8(1) | (dataView.getUint8(2) << 8);
+        weight = raw * 0.005;
+        document.getElementById('scaleWeightDisplay').innerText = weight.toFixed(2);
+      } else {
+        return;
+      }
+
+      // 신장 176cm 기준 BMI 및 파생 질량 지표 연산
+      const hM = (USER_PROFILE?.height || 176) / 100;
+      const bmi = +(weight / (hM * hM)).toFixed(1);
+      const muscleMass = +((weight * ((100 - bodyFat) * 0.94)) / 100).toFixed(1);
+      const muscleRate = +((muscleMass / weight) * 100).toFixed(1);
+      const skeletalMass = +((weight * skeletalRate) / 100).toFixed(1);
+
+      const now = new Date();
+      const record = {
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0],
+        weight: +weight.toFixed(2),
+        bodyFat: +bodyFat.toFixed(1),
+        muscleRate: +muscleRate.toFixed(1),
+        muscleMass: +muscleMass.toFixed(1),
+        skeletalRate: +skeletalRate.toFixed(1),
+        skeletalMass: +skeletalMass.toFixed(1),
+        bmi: +bmi.toFixed(1),
+        visceralFat: +visceralFat.toFixed(1),
+        water: +waterRate.toFixed(1),
+        bmr: Math.round(bmr),
+        deltaWeight: cachedBodyList.length > 0 ? +(weight - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
+        source: "BLE체중계",
+        syncedHealthKit: true
+      };
+
+      // 체중계로 수신 확인(ACK) 역전송 (FFF2)
+      if (bleAckChar) {
+        bleAckChar.writeValueWithoutResponse(new Uint8Array([0x01])).catch(() => {});
+      }
+
+      handleIncomingScaleData(record);
+    }
+
+    function disconnectBleScale() {
+      if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+        try {
+          bleDevice.gatt.disconnect();
+        } catch (e) {}
+      }
+      bleDevice = null;
+      bleServer = null;
+      bleNotifyChar = null;
+      bleAckChar = null;
+    }
+
+    function onBleDisconnected() {
+      console.log("BLE 체중계 연결 해제됨");
     }
 
     // 체중/체성분 데이터 수신 시 요약 표 표시 및 확인 대기
@@ -2718,10 +2954,6 @@
       if (scaleCountdownTimer) {
         clearInterval(scaleCountdownTimer);
         scaleCountdownTimer = null;
-      }
-      if (scaleSimulateTimer) {
-        clearTimeout(scaleSimulateTimer);
-        scaleSimulateTimer = null;
       }
 
       pendingScaleData = data;
@@ -2758,10 +2990,7 @@
         clearInterval(scaleCountdownTimer);
         scaleCountdownTimer = null;
       }
-      if (scaleSimulateTimer) {
-        clearTimeout(scaleSimulateTimer);
-        scaleSimulateTimer = null;
-      }
+      disconnectBleScale();
     }
 
     // ----------------------------------------------------
