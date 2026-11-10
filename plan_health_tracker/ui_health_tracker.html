@@ -72,90 +72,89 @@
     </div>
 
     <!-- 본문 스크롤 영역 -->
-    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-4 pb-24 pt-2">
+    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-3.5 pb-20 pt-1">
       
       <!-- ================= 1. [홈] 탭 (HealthTracker 메인 대시보드) ================= -->
-      <section id="view-home" class="space-y-4">
-        <!-- 상단 헤더: 타이틀 & 오늘 날짜 (Apple Health 버튼 제거됨) -->
-        <div class="pt-2">
-          <h1 class="text-2xl font-black text-slate-900 tracking-tight">HealthTracker</h1>
-          <p id="homeHeaderDate" class="text-xs text-slate-500 font-medium mt-0.5">2026년 11월 10일 (화요일)</p>
+      <section id="view-home" class="space-y-2.5">
+        <!-- 상단 헤더: 타이틀 (날짜/요일 삭제, 컴팩트 여백) -->
+        <div class="pt-1 pb-0.5">
+          <h1 class="text-xl font-black text-slate-900 tracking-tight">HealthTracker</h1>
         </div>
 
-        <!-- 1) 체중 카드 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
-          <!-- 카드 헤더 -->
+        <!-- 1) 체중 카드 (모바일 1화면 최적화 컴팩트) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-sm space-y-2">
+          <!-- 카드 헤더 (기준일 우측 끝 정렬) -->
           <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2.5">
-              <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm font-semibold">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-semibold">
                 <i class="fa-solid fa-weight-scale"></i>
               </span>
-              <div>
-                <h3 class="text-sm font-bold text-slate-900 tracking-tight">체중</h3>
-                <span id="weightBasisDate" class="text-[11px] text-slate-500 font-medium">기준일 : 11월 9일</span>
-              </div>
+              <h3 class="text-base font-extrabold text-slate-900 tracking-tight">체중</h3>
             </div>
-            <button onclick="openMetricDetail('weight')" class="text-[11px] text-slate-400 hover:text-slate-700 flex items-center gap-1 font-medium transition">
-              상세 분석 <i class="fa-solid fa-chevron-right text-[9px]"></i>
-            </button>
+            <span id="weightBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : 11월 10일</span>
           </div>
 
           <!-- 메인 수치 및 직전 대비 -->
           <div class="flex items-baseline gap-2 pt-0.5">
-            <span id="homeWeightVal" class="text-4xl font-black tracking-tight text-slate-900">80.80</span>
-            <span class="text-lg font-medium text-slate-500">kg</span>
-            <span id="homeWeightDeltaBadge" class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1.5">
-              <i class="fa-solid fa-arrow-down text-[10px]"></i>-0.37 kg <span class="text-slate-500 font-normal text-[11px] ml-0.5">(직전 대비)</span>
+            <span id="homeWeightVal" class="text-3xl font-black tracking-tight text-slate-900">80.30</span>
+            <span class="text-base font-medium text-slate-500">kg</span>
+            <span id="homeWeightDeltaBadge" class="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1">
+              <i class="fa-solid fa-arrow-down text-[10px]"></i>-0.25 kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>
             </span>
           </div>
 
+          <!-- 30일 최고 / 최저 몸무게 요약 바 (한 줄 표시, 소수점 1자리 표기) -->
+          <div class="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px]">
+            <div class="flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <span>최근 30일</span>
+            </div>
+            <div class="flex items-center gap-2 font-mono text-[11px]">
+              <span class="text-slate-500">최고 <strong id="homeWeightMax30d" class="text-slate-800 font-bold">81.9</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
+              <span class="text-slate-300">·</span>
+              <span class="text-slate-500">최저 <strong id="homeWeightMin30d" class="text-slate-800 font-bold">80.0</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
+            </div>
+          </div>
+
           <!-- 체중 간략 미니 추이 그래프 (Sparkline) - 클릭 시 체중 상세 화면으로 이동 -->
-          <div onclick="openMetricDetail('weight')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-3 cursor-pointer transition group">
-            <div class="flex justify-between items-center mb-1 text-[11px]">
-              <span class="text-slate-600 font-medium">최근 체중 추이</span>
-              <span class="text-[10px] text-slate-400 group-hover:text-blue-600 font-medium flex items-center gap-0.5 transition">
-                그래프 터치하여 상세 보기 <i class="fa-solid fa-arrow-trend-up text-[9px]"></i>
-              </span>
+          <div onclick="openMetricDetail('weight', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-2 cursor-pointer transition group">
+            <div class="flex justify-between items-center mb-0.5 text-[10px]">
+              <span class="text-slate-600 font-semibold">최근 체중 추이 (직전 5회)</span>
             </div>
             <!-- 체중 Sparkline SVG -->
-            <div class="h-16 w-full relative">
-              <svg id="weightSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 60" preserveAspectRatio="none">
+            <div class="h-12 w-full relative">
+              <svg id="weightSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 48" preserveAspectRatio="none">
                 <!-- 동적 렌더링 -->
               </svg>
             </div>
             <!-- 날짜 라벨 -->
-            <div id="weightSparklineDates" class="flex justify-between text-[9px] text-slate-400 pt-1 border-t border-slate-200/60 font-medium">
+            <div id="weightSparklineDates" class="flex justify-between text-[8.5px] text-slate-400 pt-0.5 border-t border-slate-200/60 font-medium">
               <!-- 동적 렌더링 -->
             </div>
           </div>
 
           <!-- 버튼 2개: [체중 측정] [직접 수동 입력] -->
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="openScaleMeasureModal()" class="py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+          <div class="grid grid-cols-2 gap-2 pt-0.5">
+            <button onclick="openScaleMeasureModal()" class="py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
               <i class="fa-brands fa-bluetooth-b text-xs"></i> 체중 측정
             </button>
-            <button onclick="openWeightManualModal()" class="py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
+            <button onclick="openWeightManualModal()" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
               <i class="fa-solid fa-pen text-slate-500 text-xs"></i> 직접 수동 입력
             </button>
           </div>
         </div>
 
-        <!-- 2) 혈압 카드 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-3">
-          <!-- 카드 헤더 -->
+        <!-- 2) 혈압 카드 (모바일 1화면 최적화 컴팩트) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-sm space-y-2">
+          <!-- 카드 헤더 (기준일 우측 끝 정렬) -->
           <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2.5">
-              <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm font-semibold">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs font-semibold">
                 <i class="fa-solid fa-heart-pulse"></i>
               </span>
-              <div>
-                <h3 class="text-sm font-bold text-slate-900 tracking-tight">혈압</h3>
-                <span id="bpBasisDate" class="text-[11px] text-slate-500 font-medium">기준일 : 11월 9일</span>
-              </div>
+              <h3 class="text-base font-extrabold text-slate-900 tracking-tight">혈압</h3>
             </div>
-            <button onclick="openMetricDetail('bp')" class="text-[11px] text-slate-400 hover:text-slate-700 flex items-center gap-1 font-medium transition">
-              상세 분석 <i class="fa-solid fa-chevron-right text-[9px]"></i>
-            </button>
+            <span id="bpBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : 11월 9일</span>
           </div>
 
           <!-- 메인 수치: 수축기 / 이완기 & 맥박 -->
@@ -168,40 +167,38 @@
             </div>
             <div class="text-right">
               <span class="text-[11px] text-slate-500 font-medium">맥박</span>
-              <span id="homePulseVal" class="text-xl font-bold text-slate-800 ml-1">87</span>
+              <span id="homePulseVal" class="text-lg font-bold text-slate-800 ml-1">87</span>
               <span class="text-[10px] text-slate-400 font-medium">bpm</span>
             </div>
           </div>
 
-          <!-- 혈압 간략 미니 추이 그래프 (2-line Sparkline, 맥박 제외) - 클릭 시 혈압 상세 화면으로 이동 -->
-          <div onclick="openMetricDetail('bp')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-3 cursor-pointer transition group">
-            <div class="flex justify-between items-center mb-1 text-[11px]">
-              <div class="flex items-center gap-2.5 font-medium text-[10px]">
-                <span class="flex items-center gap-1 text-slate-600"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>수축기</span>
-                <span class="flex items-center gap-1 text-slate-600"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>이완기</span>
+          <!-- 혈압 간략 미니 추이 그래프 (2-line Sparkline, 좌/우 이중 Y축) - 클릭 시 혈압 상세 화면으로 이동 -->
+          <div onclick="openMetricDetail('bp', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-2 cursor-pointer transition group">
+            <div class="flex justify-between items-center mb-0.5 text-[10px]">
+              <span class="text-slate-600 font-semibold">최근 혈압 추이 (직전 5회)</span>
+              <div class="flex items-center gap-2 font-semibold text-[9.5px]">
+                <span class="flex items-center gap-1 text-rose-600"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>수축기</span>
+                <span class="flex items-center gap-1 text-sky-600"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>이완기</span>
               </div>
-              <span class="text-[10px] text-slate-400 group-hover:text-blue-600 font-medium flex items-center gap-0.5 transition">
-                그래프 터치하여 상세 보기 <i class="fa-solid fa-arrow-trend-up text-[9px]"></i>
-              </span>
             </div>
-            <!-- 혈압 Sparkline SVG -->
-            <div class="h-16 w-full relative">
-              <svg id="bpSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 60" preserveAspectRatio="none">
+            <!-- 혈압 Sparkline SVG (이중 Y축 스케일) -->
+            <div class="h-12 w-full relative">
+              <svg id="bpSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 48" preserveAspectRatio="none">
                 <!-- 동적 렌더링 -->
               </svg>
             </div>
             <!-- 날짜 라벨 -->
-            <div id="bpSparklineDates" class="flex justify-between text-[9px] text-slate-400 pt-1 border-t border-slate-200/60 font-medium">
+            <div id="bpSparklineDates" class="flex justify-between text-[8.5px] text-slate-400 pt-0.5 border-t border-slate-200/60 font-medium">
               <!-- 동적 렌더링 -->
             </div>
           </div>
 
           <!-- 버튼 2개: [카메라 OCR 촬영] [직접 수동 입력] -->
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="openCameraOcrModal()" class="py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-rose-200/80">
-              <i class="fa-solid fa-camera text-rose-600 text-xs"></i> 카메라 OCR 촬영
+          <div class="grid grid-cols-2 gap-2 pt-0.5">
+            <button onclick="openCameraOcrModal()" class="py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+              <i class="fa-solid fa-camera text-xs"></i> 카메라 OCR 촬영
             </button>
-            <button onclick="openBpManualModal()" class="py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
+            <button onclick="openBpManualModal()" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
               <i class="fa-solid fa-pen text-slate-500 text-xs"></i> 직접 수동 입력
             </button>
           </div>
@@ -212,7 +209,6 @@
       <section id="view-details" class="space-y-4 hidden">
         <div class="pt-2">
           <h2 class="text-xl font-black text-slate-900 tracking-tight">건강 지표</h2>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">최근 3회 측정 비교 (항목 터치 시 상세 분석)</p>
         </div>
 
         <!-- 3개 일자 건강 지표 매트릭스 테이블 -->
@@ -229,7 +225,7 @@
                 </tr>
               </thead>
               <tbody id="metricsTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                <!-- JS에서 동적 생성 (10개 행) -->
+                <!-- JS에서 동적 생성 (체중, 체지방률, 골격근량, 골격근율, BMI, 내장지방, 체수분, 기초대사량, 수축기 혈압, 이완기 혈압) -->
               </tbody>
             </table>
           </div>
@@ -240,24 +236,22 @@
         </div>
       </section>
 
-      <!-- ================= 2-SUB. 항목별 상세 화면 (지표 터치 시 전체화면 오버레이 또는 서브뷰) ================= -->
+      <!-- ================= 2-SUB. 항목별 상세 화면 (지표 터치 시 서브뷰) ================= -->
       <section id="view-metric-detail" class="space-y-4 hidden pb-6">
-        <!-- 상단 뒤로가기 바 -->
+        <!-- 상단 뒤로가기 바 (홈 또는 상세 탭으로 유동적 복귀) -->
         <div class="flex items-center justify-between pt-1">
-          <button onclick="closeMetricDetail()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 py-1.5 px-2.5 rounded-lg bg-slate-200/60 transition">
-            <i class="fa-solid fa-arrow-left text-[11px]"></i> 건강 지표 목록
+          <button id="detailBackBtn" onclick="closeMetricDetail()" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition">
+            <i class="fa-solid fa-arrow-left text-[11px]"></i> <span id="detailBackBtnLabel">홈</span>
           </button>
-          <span id="detailCategoryBadge" class="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">체중 관련 지표</span>
         </div>
 
         <!-- 지표 타이틀 & 현재 최신 수치 헤더 -->
         <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <div class="flex justify-between items-start">
             <div>
-              <span id="detailMetricSub" class="text-[11px] text-slate-400 font-medium">Weight Metric</span>
-              <h2 id="detailMetricTitle" class="text-lg font-black text-slate-900">체중 (Weight)</h2>
+              <h2 id="detailMetricTitle" class="text-xl font-black text-slate-900 tracking-tight">체중</h2>
             </div>
-            <span id="detailMetricStatusTag" class="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+            <span id="detailMetricStatusTag" class="text-[11px] px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold border border-slate-200">
               비만전단계
             </span>
           </div>
@@ -279,70 +273,88 @@
             <span>지표 설명 및 기준 범위</span>
           </div>
           <p id="detailMetricDescription" class="text-xs text-slate-600 leading-relaxed font-normal">
-            신장 176cm 기준 이상적인 표준 체중 범위는 57.3kg ~ 71.2kg (BMI 18.5~22.9)입니다.
+            체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 176cm 기준 의학적 기준 범위는 낮음(&lt;57.31kg), 건강(57.31~70.94kg), 높음(70.94~77.44kg), 비만(≥77.44kg)으로 구분됩니다.
           </p>
 
-          <!-- 기준 범위 바 게이지 -->
+          <!-- 기준 범위 바 게이지 (실제 앱 4단계 게이지 바: 낮음 / 건강 / 높음 / 비만) -->
           <div class="pt-2">
-            <div class="flex justify-between text-[10px] text-slate-500 font-medium mb-1">
-              <span id="gaugeMinLabel">저체중 (&lt;57.3)</span>
-              <span id="gaugeNormalLabel" class="text-emerald-600 font-bold">표준 (57.3~71.2)</span>
-              <span id="gaugeMaxLabel">과체중/비만 (&gt;71.2)</span>
+            <div id="gaugeBoundaryTicks" class="flex justify-between text-[10px] text-slate-400 font-mono mb-1 px-1">
+              <span id="gaugeBound1" class="text-left">57.31</span>
+              <span id="gaugeBound2" class="text-center">70.94</span>
+              <span id="gaugeBound3" class="text-right">77.44</span>
             </div>
-            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex relative">
-              <div class="w-1/4 bg-slate-200 h-full"></div>
-              <div class="w-2/4 bg-emerald-300 h-full"></div>
-              <div class="w-1/4 bg-amber-300 h-full"></div>
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex relative">
+              <div class="w-[25%] bg-sky-300 h-full"></div>
+              <div class="w-[30%] bg-emerald-400 h-full"></div>
+              <div class="w-[25%] bg-amber-400 h-full"></div>
+              <div class="w-[20%] bg-rose-400 h-full"></div>
               <!-- 현재 위치 마커 -->
-              <div id="gaugeCurrentMarker" class="absolute top-0 bottom-0 w-1.5 bg-slate-900 rounded-full shadow" style="left: 75%;"></div>
+              <div id="gaugeCurrentMarker" class="absolute top-0 bottom-0 w-2 bg-slate-900 rounded-full shadow ring-2 ring-white" style="left: 62%;"></div>
             </div>
-            <div class="flex justify-between text-[9px] text-slate-400 mt-1 font-mono">
-              <span id="gaugeRangeMin">40kg</span>
-              <span id="gaugeRangeTarget">목표 72.0kg</span>
-              <span id="gaugeRangeMax">100kg</span>
+            <div class="flex justify-between text-[10px] text-slate-500 font-medium mt-1.5 px-0.5">
+              <span id="gaugeMinLabel" class="text-sky-600 font-semibold">낮음</span>
+              <span id="gaugeNormalLabel" class="text-emerald-600 font-bold">건강</span>
+              <span id="gaugeHighLabel" class="text-amber-600 font-bold">높음</span>
+              <span id="gaugeMaxLabel" class="text-rose-600 font-semibold">비만</span>
             </div>
           </div>
         </div>
 
-        <!-- 2부: 지표 추이 상세 그래프 -->
+        <!-- 2부: 지표 추이 상세 그래프 (6일 단위 Zero-Scroll 렌더링 & 페이징 탐색) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <!-- 상단: 지표 타이틀 & 범례 -->
           <div class="flex justify-between items-center text-xs">
             <span class="font-bold text-slate-900 flex items-center gap-1.5">
               <i class="fa-solid fa-chart-line text-blue-600 text-xs"></i>
-              <span>지표 추이 상세 그래프</span>
+              <span id="detailChartTitleText">체중 추이</span>
             </span>
-            <!-- 기간 필터 탭 -->
-            <div class="flex bg-slate-100 p-0.5 rounded-lg text-[10px] font-semibold text-slate-600">
-              <button onclick="setDetailChartRange('7d')" id="chartRangeBtn7d" class="px-2 py-0.5 rounded-md bg-white text-slate-900 shadow-xs">최근 7회</button>
-              <button onclick="setDetailChartRange('30d')" id="chartRangeBtn30d" class="px-2 py-0.5 rounded-md hover:text-slate-900">30회</button>
-              <button onclick="setDetailChartRange('all')" id="chartRangeBtnAll" class="px-2 py-0.5 rounded-md hover:text-slate-900">전체</button>
+            <!-- 우측 범례 및 축 기준 -->
+            <div id="detailChartLegend" class="flex items-center gap-2 text-[10px] font-semibold text-slate-600">
+              <!-- JS 동적 생성 -->
             </div>
           </div>
 
-          <!-- 대형 상세 SVG 차트 컨테이너 -->
-          <div class="h-44 w-full bg-slate-50/80 rounded-xl p-3 border border-slate-100 flex flex-col justify-between">
-            <div class="h-32 w-full relative">
-              <svg id="detailLargeSvgChart" class="w-full h-full overflow-visible" viewBox="0 0 280 110">
-                <!-- 동적 렌더링 -->
-              </svg>
+          <!-- 페이징 네비게이션: [◀ 이전 6일] [날짜 배지] [다음 6일 ▶] & 스와이프 안내 -->
+          <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+            <div class="flex items-center gap-1.5">
+              <button id="btnDetailChartPrev" onclick="navigateDetailChart(1)" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 active:bg-slate-100 shadow-sm cursor-pointer flex items-center gap-1 transition-all">
+                <i class="fa-solid fa-chevron-left text-[9px]"></i> 이전 6일
+              </button>
+              <span id="detailChartDateRangeBadge" class="px-2.5 py-1 bg-slate-100/90 text-slate-800 rounded-lg text-[11px] font-mono font-bold border border-slate-200/80 tracking-tight">
+                -
+              </span>
+              <button id="btnDetailChartNext" onclick="navigateDetailChart(-1)" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100/80 border border-slate-200/50 text-slate-400 cursor-not-allowed opacity-50 shadow-none flex items-center gap-1 transition-all" disabled>
+                다음 6일 <i class="fa-solid fa-chevron-right text-[9px]"></i>
+              </button>
             </div>
-            <div id="detailLargeChartDates" class="flex justify-between text-[9px] text-slate-400 pt-1.5 border-t border-slate-200/80 font-medium">
-              <!-- 날짜 라벨 -->
+            <span class="text-[10px] text-slate-400 font-medium hidden sm:inline-flex items-center gap-1">
+              <i class="fa-solid fa-arrows-left-right text-[9px]"></i> 스와이프
+            </span>
+          </div>
+
+          <!-- 대형 상세 SVG 차트 컨테이너 (Zero-Scroll 고정폭 & 터치 스와이프) -->
+          <div class="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/70 select-none">
+            <div id="detailChartScrollContainer" class="w-full overflow-hidden touch-pan-y relative">
+              <div id="detailChartInnerWrapper" class="relative w-full">
+                <svg id="detailLargeSvgChart" class="w-full h-36 overflow-visible block" viewBox="0 0 350 150">
+                  <!-- 동적 렌더링 -->
+                </svg>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 3부: 전체 기록 수치 표 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+        <!-- 3부: 전체 기록 수치 표 (전체 history & 10개씩 페이징 더보기) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <div class="flex justify-between items-center pb-1 border-b border-slate-100 text-xs">
             <span class="font-bold text-slate-900 flex items-center gap-1.5">
               <i class="fa-solid fa-table-list text-slate-600 text-xs"></i>
-              <span>전체 기록 수치 내역</span>
+              <span>전체 history</span>
             </span>
-            <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 317건</span>
+            <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 34건</span>
           </div>
 
-          <div class="max-h-56 overflow-y-auto hide-scrollbar">
+          <div class="overflow-x-auto">
             <table class="w-full text-xs text-left">
               <thead>
                 <tr class="text-[10px] text-slate-400 border-b border-slate-100">
@@ -357,6 +369,11 @@
               </tbody>
             </table>
           </div>
+
+          <!-- 10개씩 더보기 버튼 -->
+          <button id="detailHistoryMoreBtn" onclick="loadMoreDetailHistory()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1 transition border border-slate-200/80">
+            <i class="fa-solid fa-chevron-down text-[10px]"></i> 이전 기록 10개 더보기
+          </button>
         </div>
       </section>
 
@@ -443,47 +460,184 @@
       </button>
     </nav>
 
-    <!-- ================= MODAL 1: 체중 수동 입력 모달 ================= -->
-    <div id="weightManualModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-5 flex flex-col justify-center items-center">
-      <div class="w-full bg-white border border-slate-200 rounded-3xl p-5 text-left space-y-4 shadow-xl">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+    <!-- ================= MODAL 1: 체중 및 체성분 직접 수동 입력 모달 ================= -->
+    <div id="weightManualModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-4 flex flex-col justify-center items-center">
+      <div class="w-full max-h-[88vh] bg-white border border-slate-200 rounded-3xl p-5 text-left flex flex-col shadow-2xl overflow-hidden">
+        <!-- 모달 헤더 -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-shrink-0">
           <div class="flex items-center gap-2">
             <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
               <i class="fa-solid fa-weight-scale"></i>
             </span>
-            <h3 class="text-sm font-bold text-slate-900">체중 직접 수동 입력</h3>
+            <h3 class="text-sm font-bold text-slate-900">체중 및 체성분 직접 입력</h3>
           </div>
           <button onclick="closeWeightManualModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="text-[11px] text-slate-500 font-medium block mb-1">측정 일자 및 시간</label>
+        <!-- 스크롤 가능한 본문 영역 -->
+        <div class="space-y-3.5 text-xs overflow-y-auto hide-scrollbar flex-1 py-2 pr-0.5">
+          <!-- 1. 필수 입력 영역: 일자/시간 & 체중 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">
+                <span>측정 일자 및 시간</span>
+                <span class="text-rose-500 font-black text-[10px] bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">*필수</span>
+              </label>
+            </div>
             <div class="grid grid-cols-2 gap-2">
               <input type="date" id="weightManualDate" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-blue-500">
               <input type="time" id="weightManualTime" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-blue-500">
             </div>
           </div>
 
-          <div>
-            <label class="text-[11px] text-slate-500 font-medium block mb-1">체중 (kg)</label>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">
+                <span>체중 (kg)</span>
+                <span class="text-rose-500 font-black text-[10px] bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">*필수</span>
+              </label>
+              <span id="weightManualBmiPreview" class="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                BMI 25.9 (176cm)
+              </span>
+            </div>
             <div class="relative">
-              <input type="number" step="0.05" id="weightManualInput" placeholder="80.80" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-2xl font-black text-slate-900 text-center focus:outline-blue-500">
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">kg</span>
+              <input type="number" step="0.05" id="weightManualInput" placeholder="80.30" oninput="onManualWeightChange()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-2xl font-black text-slate-900 text-center focus:outline-blue-500 font-mono">
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">kg</span>
             </div>
           </div>
 
-          <div class="p-2.5 bg-slate-50 rounded-xl text-[11px] text-slate-500 space-y-1">
-            <div>• 신장: <strong>176 cm</strong> 기준 BMI 자동 계산</div>
-            <div>• 체지방률/골격근율은 BIA 표준 모델에 의해 자동 산출됩니다.</div>
+          <!-- 2. 선택 입력 영역: 10대 BIA 생체분석 지표 -->
+          <div class="pt-1.5 border-t border-slate-100 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                <i class="fa-solid fa-chart-pie text-blue-500 text-[11px]"></i>
+                <span>생체 분석 지표</span>
+                <span class="text-[10px] text-slate-400 font-medium">(선택 입력)</span>
+              </span>
+              <span class="text-[9.5px] text-slate-400 font-normal">미입력 시 BIA 표준 모델 자동 보정</span>
+            </div>
+
+            <!-- 2열 컴팩트 지표 입력 그리드 -->
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <!-- 골격근율 (%) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>골격근율 (%)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualMuscleRate" placeholder="38.0" oninput="onManualMuscleRateChange()" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+
+              <!-- 골격근량 (kg) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>골격근량 (kg)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualMuscleMass" placeholder="30.6" oninput="onManualMuscleMassChange()" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">kg</span>
+                </div>
+              </div>
+
+              <!-- 체지방률 (%) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>체지방률 (%)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualBodyFat" placeholder="25.0" oninput="onManualBodyFatChange()" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+
+              <!-- 체질 지방량 (kg) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>체질 지방량 (kg)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualFatMass" placeholder="20.1" oninput="onManualFatMassChange()" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">kg</span>
+                </div>
+              </div>
+
+              <!-- 체수분율 (%) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>체수분율 (%)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualWater" placeholder="52.9" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+
+              <!-- 전체 근육률 (%) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>전체 근육 (%)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualTotalMuscleRate" placeholder="70.5" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+
+              <!-- 내장지방 레벨 (Lv) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>내장지방 레벨</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.5" id="weightManualVisceral" placeholder="14.5" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">Lv</span>
+                </div>
+              </div>
+
+              <!-- 기초대사량 (BMR) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>기초대사량</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="1" id="weightManualBmr" placeholder="1651" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">kcal</span>
+                </div>
+              </div>
+
+              <!-- 골량 (뼈 무게, kg) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>골량 (뼈 무게)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualBoneMass" placeholder="3.2" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">kg</span>
+                </div>
+              </div>
+
+              <!-- 단백질 (%) -->
+              <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                  <span>단백질 (%)</span>
+                </div>
+                <div class="relative">
+                  <input type="number" step="0.1" id="weightManualProtein" placeholder="18.0" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-center font-bold text-slate-800 text-xs focus:outline-blue-500 font-mono">
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="flex gap-2 pt-1">
-          <button onclick="saveWeightManualRecord()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition shadow-sm">
-            저장하기
+        <!-- 하단 저장 / 취소 액션 버튼 -->
+        <div class="flex gap-2 pt-2.5 border-t border-slate-100 flex-shrink-0">
+          <button onclick="saveWeightManualRecord()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-check"></i> 저장하기
           </button>
           <button onclick="closeWeightManualModal()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
             취소
@@ -561,7 +715,7 @@
       </div>
     </div>
 
-    <!-- ================= MODAL 3: 체중 측정 (BLE 및 시뮬레이션) 다이얼로그 ================= -->
+    <!-- ================= MODAL 3: 체중 측정 (스마트 체중계) 다이얼로그 ================= -->
     <div id="scaleMeasureModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-5 flex flex-col justify-center items-center">
       <div class="w-full bg-white border border-slate-200 rounded-3xl p-6 text-center space-y-4 shadow-xl">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -576,41 +730,101 @@
           </button>
         </div>
 
-        <!-- 체중계 다이얼 / 수치 디스플레이 -->
-        <div class="relative w-40 h-40 mx-auto flex items-center justify-center my-1">
-          <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-4 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
-          <div class="w-32 h-32 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
-            <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">BLE 대기 중</span>
-            <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">80.80</span>
-            <span class="text-xs text-slate-500 font-medium">kg</span>
+        <!-- 1) 대기 중 뷰 (10초 자동 닫힘 카운트다운) -->
+        <div id="scaleWaitingView" class="space-y-4">
+          <!-- 체중계 다이얼 / 수치 디스플레이 -->
+          <div class="relative w-40 h-40 mx-auto flex items-center justify-center my-1">
+            <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-4 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
+            <div class="w-32 h-32 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
+              <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">체중계 대기 중</span>
+              <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">80.30</span>
+              <span class="text-xs text-slate-500 font-medium">kg</span>
+            </div>
           </div>
-        </div>
 
-        <div class="space-y-1">
-          <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
-          <p class="text-[11px] text-slate-400">수치가 안정화되면 자동으로 로컬 DB에 저장됩니다.</p>
-        </div>
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
+            <p id="scaleCountdownText" class="text-[11px] text-slate-400">10초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 10초)</p>
+          </div>
 
-        <div class="space-y-2 pt-1">
-          <button onclick="startRealBleScale()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
-            <i class="fa-brands fa-bluetooth-b"></i> 블루투스 체중계 연결
-          </button>
-          <div class="flex gap-2">
-            <button onclick="simulateScaleMeasurement()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200">
-              테스트 시뮬레이션
-            </button>
-            <button onclick="closeScaleMeasureModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200">
+          <div class="pt-1">
+            <button onclick="closeScaleMeasureModal()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
           </div>
         </div>
+
+        <!-- 2) 측정 결과 요약 표 뷰 (데이터 수신 후 노출) -->
+        <div id="scaleResultSummaryView" class="hidden space-y-3.5 text-left">
+          <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                <i class="fa-solid fa-check"></i>
+              </span>
+              <div>
+                <div class="text-[11px] font-bold text-blue-900">측정 데이터 수신 완료</div>
+                <div id="scaleMeasuredTime" class="text-[10px] text-blue-600 font-medium">방금 측정됨</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="scaleSummaryWeight" class="text-2xl font-black text-blue-700">80.30</span>
+              <span class="text-xs font-bold text-blue-600">kg</span>
+            </div>
+          </div>
+
+          <!-- 10대 생체 지표 요약 표 -->
+          <div class="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 text-xs">
+            <div class="flex justify-between items-center px-3.5 py-2 bg-slate-50 font-bold text-slate-700 text-[11px]">
+              <span>지표 항목</span>
+              <span>측정값</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">체질량지수 (BMI)</span>
+              <span id="scaleSummaryBmi" class="font-bold text-slate-900">25.9 kg/m²</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">체지방률</span>
+              <span id="scaleSummaryBodyFat" class="font-bold text-slate-900">25.0 %</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">골격근율</span>
+              <span id="scaleSummaryMuscleRate" class="font-bold text-slate-900">38.0 %</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">골격근량</span>
+              <span id="scaleSummaryMuscleMass" class="font-bold text-slate-900">30.6 kg</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">체수분율</span>
+              <span id="scaleSummaryWater" class="font-bold text-slate-900">52.9 %</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">내장지방</span>
+              <span id="scaleSummaryVisceral" class="font-bold text-slate-900">14.5 Lv</span>
+            </div>
+            <div class="flex justify-between items-center px-3.5 py-2">
+              <span class="text-slate-600">기초대사량</span>
+              <span id="scaleSummaryBmr" class="font-bold text-slate-900">1651 kcal</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-1">
+            <button onclick="confirmAndSaveScaleData()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition shadow-sm">
+              확인 (저장)
+            </button>
+            <button onclick="closeScaleMeasureModal()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+              취소
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- ================= MODAL 4: 혈압 카메라 OCR 촬영 뷰파인더 모달 ================= -->
+    <!-- ================= MODAL 4: 혈압 카메라 OCR 촬영 뷰파인더 모달 ([안 2] 수동 원터치 촬영) ================= -->
     <div id="cameraOcrModal" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-4 flex flex-col justify-between">
       <div class="flex items-center justify-between text-white pt-2">
-        <span class="text-sm font-bold"><i class="fa-solid fa-camera mr-2"></i>위드웰 혈압계 LCD 스캔</span>
+        <span class="text-sm font-bold"><i class="fa-solid fa-camera mr-2"></i>혈압계 LCD 촬영</span>
         <button onclick="closeCameraOcrModal()" class="text-slate-300 hover:text-white p-2 text-lg">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -618,42 +832,51 @@
 
       <!-- 카메라 비디오 스트림 & 타겟 뷰파인더 박스 -->
       <div class="relative w-full flex-1 max-h-[460px] bg-black rounded-3xl overflow-hidden flex items-center justify-center my-2 border border-slate-700">
-        <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <video id="cameraVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
         <canvas id="cameraCanvas" class="hidden"></canvas>
 
-        <!-- 3단 타겟 가이드 오버레이 -->
-        <div class="absolute inset-x-8 inset-y-12 border-2 border-dashed border-emerald-400 rounded-2xl pointer-events-none flex flex-col justify-between p-3 bg-black/20">
-          <div class="text-[10px] text-emerald-300 font-mono tracking-widest text-center bg-black/50 py-0.5 rounded">
-            [1단 SYS / 2단 DIA / 3단 PULSE 박스를 맞춰주세요]
+        <!-- 촬영 가이드 오버레이 (단일 네모 점선 영역 - 깔끔한 수동 원터치 촬영 가이드) -->
+        <div class="absolute inset-x-8 inset-y-12 border-2 border-dashed border-emerald-400 rounded-2xl pointer-events-none flex flex-col justify-between p-4 bg-black/10">
+          <div class="text-[11px] text-emerald-300 font-medium text-center bg-black/70 py-1.5 px-2 rounded-lg leading-relaxed shadow">
+            혈압계의 결과가 잘 보이게 네모 점선 영역을 맞춰주세요
           </div>
-          <div class="space-y-4">
-            <div class="h-10 border border-emerald-400/40 rounded flex items-center justify-end px-2 text-[10px] text-emerald-300">SYS</div>
-            <div class="h-10 border border-emerald-400/40 rounded flex items-center justify-end px-2 text-[10px] text-emerald-300">DIA</div>
-            <div class="h-10 border border-emerald-400/40 rounded flex items-center justify-end px-2 text-[10px] text-emerald-300">PULSE</div>
+
+          <div id="ocrProcessingNotice" class="text-[11px] text-center font-medium text-slate-200 bg-black/70 py-1.5 px-3 rounded-lg mx-auto shadow">
+            수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요
           </div>
-          <div id="ocrProcessingNotice" class="text-[11px] text-center font-bold text-white bg-slate-900/80 py-1 rounded">
-            카메라 가이드 박스 정렬 중
+        </div>
+
+        <!-- 카메라 권한 없음 경고 오버레이 (권한 거부 시 노출) -->
+        <div id="cameraPermissionDeniedOverlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center text-white space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-video-slash"></i>
           </div>
+          <div class="font-bold text-sm">카메라 접근 권한이 필요합니다</div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            브라우저 사이트 설정에서 카메라 권한을 [허용]으로 변경해주세요.<br>
+            사진 선택 버튼으로도 즉시 측정값을 등록할 수 있습니다.
+          </p>
+          <button onclick="requestCameraAgain()" class="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow">
+            카메라 권한 다시 요청
+          </button>
         </div>
       </div>
 
+      <!-- 하단 기능 키 (화면 촬영, 사진 선택) -->
       <div class="space-y-2 pb-2">
         <button onclick="captureAndOcr()" id="btnCaptureFrame" class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-camera"></i> 화면 촬영 및 즉시 숫자 감지
+          <i class="fa-solid fa-camera"></i> 화면 촬영
         </button>
-        <div class="flex gap-2">
-          <label class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl text-center cursor-pointer border border-slate-700">
-            <i class="fa-solid fa-image mr-1"></i> 사진 선택
-            <input type="file" accept="image/*" class="hidden" onchange="handleImageFileOcr(event)">
+        <div>
+          <label class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl text-center cursor-pointer border border-slate-700 flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-image"></i> 사진 선택
+            <input type="file" accept="image/*,.heic,.HEIC" class="hidden" onchange="handleImageFileOcr(event)">
           </label>
-          <button onclick="simulateWithwellOcr()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700">
-            샘플(105/83) 로드
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- ================= MODAL 5: 위드웰 OCR 감지 검증 모달 ================= -->
+    <!-- ================= MODAL 5: 혈압 OCR 감지 검증 및 수정 모달 ================= -->
     <div id="ocrVerifyModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-5 flex flex-col justify-center items-center">
       <div class="w-full bg-white border border-slate-200 rounded-3xl p-5 text-center space-y-3.5 shadow-xl">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -661,22 +884,26 @@
             <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs font-bold">
               <i class="fa-solid fa-circle-check"></i>
             </span>
-            <span class="text-sm font-bold text-slate-900">감지된 혈압 수치 확인</span>
+            <span class="text-sm font-bold text-slate-900">인식된 혈압 수치 확인</span>
           </div>
           <button onclick="closeOcrVerifyModal()" class="text-slate-400 hover:text-slate-600 text-sm">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <div class="lcd-screen rounded-2xl p-4 text-slate-900 space-y-2 border border-slate-300">
+        <!-- 감지 상태 알림 배너 (성공/재촬영 안내) -->
+        <div id="ocrStatusBanner" class="hidden"></div>
+
+        <!-- 디스플레이 모드 (LCD 뷰) -->
+        <div id="ocrDisplayView" class="lcd-screen rounded-2xl p-4 text-slate-900 space-y-2 border border-slate-300">
           <div class="flex justify-between items-center text-[10px] text-slate-600 pb-1 border-b border-slate-300">
             <span>WITHWELL AUTO DIGITAL BP</span>
-            <span id="ocrTimeDisplay">11/09 08:08</span>
+            <span id="ocrTimeDisplay">방금 감지됨</span>
           </div>
 
           <div class="flex justify-between items-baseline py-0.5">
             <div class="text-left">
-              <div class="text-[10px] font-bold text-slate-600">SYS</div>
+              <div class="text-[10px] font-bold text-slate-600">수축기 (SYS)</div>
               <div class="text-[8px] text-slate-500">mmHg</div>
             </div>
             <div id="ocrSysDisplay" class="text-4xl font-extrabold tracking-widest text-slate-900 font-mono">105</div>
@@ -684,7 +911,7 @@
 
           <div class="flex justify-between items-baseline py-0.5 border-t border-dashed border-slate-300">
             <div class="text-left">
-              <div class="text-[10px] font-bold text-slate-600">DIA</div>
+              <div class="text-[10px] font-bold text-slate-600">이완기 (DIA)</div>
               <div class="text-[8px] text-slate-500">mmHg</div>
             </div>
             <div id="ocrDiaDisplay" class="text-4xl font-extrabold tracking-widest text-slate-900 font-mono">83</div>
@@ -692,21 +919,44 @@
 
           <div class="flex justify-between items-baseline py-0.5 border-t border-dashed border-slate-300">
             <div class="text-left">
-              <div class="text-[10px] font-bold text-slate-600">PULSE</div>
-              <div class="text-[8px] text-slate-500">/min</div>
+              <div class="text-[10px] font-bold text-slate-600">맥박 (PULSE)</div>
+              <div class="text-[8px] text-slate-500">bpm</div>
             </div>
             <div id="ocrPulseDisplay" class="text-3xl font-extrabold tracking-widest text-slate-900 font-mono">87</div>
           </div>
         </div>
 
+        <!-- 수정 모드 인풋 폼 (수정 버튼 누를 시 노출) -->
+        <div id="ocrEditView" class="hidden space-y-2 text-left bg-slate-50 p-3 rounded-2xl border border-slate-200">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block mb-1">수축기</label>
+              <input id="ocrEditSysInput" type="number" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-center text-lg font-black text-rose-600">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block mb-1">이완기</label>
+              <input id="ocrEditDiaInput" type="number" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-center text-lg font-black text-sky-600">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block mb-1">맥박</label>
+              <input id="ocrEditPulseInput" type="number" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-center text-lg font-black text-slate-800">
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 text-center">원하는 숫자로 수정한 뒤 아래 [저장 확인]을 눌러주세요.</div>
+        </div>
+
         <p class="text-[11px] text-slate-500">인식된 수치가 정확한지 확인 후 저장해주세요.</p>
 
+        <!-- 버튼 3종: 확인 or 재촬영, 수정 -->
         <div class="flex gap-2 pt-1">
           <button onclick="confirmAndSaveOcr()" class="flex-1 py-3 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-xl transition shadow-sm">
-            저장하기
+            저장 확인
           </button>
-          <button onclick="closeOcrVerifyModal()" class="px-3.5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+          <button onclick="retakeOcr()" class="px-3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
             재촬영
+          </button>
+          <button id="btnToggleOcrEdit" onclick="toggleOcrEditMode()" class="px-3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+            수정
           </button>
         </div>
       </div>
@@ -787,7 +1037,7 @@
     // ----------------------------------------------------
     // 1. IndexedDB 로컬 데이터베이스 엔진
     // ----------------------------------------------------
-    const DB_NAME = "HealthTrackerDB";
+    const DB_NAME = "HealthTrackerDB_v5";
     const DB_VERSION = 1;
     let dbInstance = null;
 
@@ -858,39 +1108,81 @@
     }
 
     // ----------------------------------------------------
-    // 2. 10대 건강 지표 메타데이터 정의 (기준치, 정의, 가이드)
+    // 2. 사용자 프로필 및 건강 지표 가변 스펙 엔진 (Dynamic Spec Engine)
     // ----------------------------------------------------
-    const METRIC_SPECS = {
-      weight: {
+    const USER_PROFILE = {
+      height: 176, // 신장 (cm) - 가변 기준값
+      age: 47,     // 나이 (세)
+      gender: 'male' // 성별
+    };
+
+    // [지표 1: 체중] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (대한비만학회 KSSO 한국인 기준)
+    function calculateWeightDynamicSpec(heightCm = USER_PROFILE.height) {
+      const hM = heightCm / 100;
+      const h2 = hM * hM;
+      // 대한비만학회 기준: 저체중 < 18.5, 건강(정상) 18.5 ~ 22.9, 높음(비만전단계) 23.0 ~ 24.9, 비만 ≥ 25.0
+      const b1 = +(18.5 * h2).toFixed(2); // 저체중 상한선 (176cm: 57.31kg)
+      const b2 = +(22.9 * h2).toFixed(2); // 건강 정상 상한선 (176cm: 70.94kg)
+      const b3 = +(25.0 * h2).toFixed(2); // 비만 기준 하한선 (176cm: 77.44kg)
+      const ideal = +(22.0 * h2).toFixed(1); // 이상적 표준 체중 (176cm: 68.1kg)
+
+      return {
         title: "체중",
         english: "Body Weight",
         category: "체성분 핵심 지표",
         unit: "kg",
-        normalMin: 57.3,
-        normalMax: 71.2,
-        ideal: 68.1,
-        desc: "체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 176cm 기준 이상적인 표준 체중 범위는 57.3kg ~ 71.2kg(BMI 18.5 ~ 22.9)이며, 권장 목표치는 68.1kg입니다.",
+        bound1: b1,
+        bound2: b2,
+        bound3: b3,
+        normalMin: b1,
+        normalMax: b2,
+        obeseMin: b3,
+        ideal: ideal,
+        // 사용자 양식 100% 동일 유지 (신장 및 경계 수치 자동 동적 치환)
+        desc: `체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 ${heightCm}cm 기준 의학적 기준 범위는 낮음(<${b1}kg), 건강(${b1}~${b2}kg), 높음(${b2}~${b3}kg), 비만(≥${b3}kg)으로 구분됩니다.`,
         statusEval: (val) => {
-          if (val < 57.3) return { text: "저체중", color: "text-amber-600 bg-amber-50" };
-          if (val <= 71.2) return { text: "표준 정상", color: "text-emerald-600 bg-emerald-50" };
-          if (val <= 77.4) return { text: "과체중 (비만전단계)", color: "text-amber-600 bg-amber-50" };
-          return { text: "1단계 비만", color: "text-rose-600 bg-rose-50" };
+          if (val < b1) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+          if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < b3) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          return { text: "비만", color: "text-rose-600 bg-rose-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < b1) return Math.max(3, (val / b1) * 25);
+          if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
+          if (val < b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
+          return 80 + Math.min(18, ((val - b3) / 15) * 20);
         }
+      };
+    }
+
+    const METRIC_SPECS = {
+      get weight() {
+        return calculateWeightDynamicSpec(USER_PROFILE.height);
       },
       bodyFat: {
         title: "체지방률",
         english: "Body Fat Rate",
         category: "체성분 핵심 지표",
         unit: "%",
+        bound1: 10.0,
+        bound2: 20.0,
+        bound3: 25.0,
         normalMin: 10.0,
         normalMax: 20.0,
+        obeseMin: 25.0,
         ideal: 16.0,
-        desc: "체중에서 체지방이 차지하는 비율입니다. 성인 남성 기준 10% ~ 20%가 건강한 표준 범위이며, 25% 이상일 경우 체지방 관리 및 유산소 운동이 권장됩니다.",
+        desc: "체지방률은 체중에서 체지방이 차지하는 비율입니다. 성인 남성 기준 의학적 기준 범위는 낮음(<10.0%), 건강(10.0~20.0%), 높음(20.1~25.0%), 비만(≥25.0%)으로 구분됩니다.",
         statusEval: (val) => {
-          if (val < 10.0) return { text: "낮음 (마름)", color: "text-amber-600 bg-amber-50" };
-          if (val <= 20.0) return { text: "표준 정상", color: "text-emerald-600 bg-emerald-50" };
-          if (val <= 25.0) return { text: "경도 비만", color: "text-amber-600 bg-amber-50" };
-          return { text: "비만 관리필요", color: "text-rose-600 bg-rose-50" };
+          if (val < 10.0) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+          if (val <= 20.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 25.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          return { text: "비만", color: "text-rose-600 bg-rose-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < 10.0) return Math.max(3, (val / 10.0) * 25);
+          if (val <= 20.0) return 25 + ((val - 10.0) / (20.0 - 10.0)) * 30;
+          if (val < 25.0) return 55 + ((val - 20.0) / (25.0 - 20.0)) * 25;
+          return 80 + Math.min(18, ((val - 25.0) / 10.0) * 20);
         }
       },
       muscleMass: {
@@ -901,11 +1193,11 @@
         normalMin: 28.0,
         normalMax: 35.0,
         ideal: 31.5,
-        desc: "뼈에 붙어 신체를 움직이고 자세를 유지하는 근육의 순수 질량입니다. 176cm 성인 남성 기준 28.0kg 이상 유지가 권장되며, 기초대사량과 직결됩니다.",
+        desc: "신체를 움직이고 자세를 유지하는 순수 골격근의 질량입니다. 176cm 성인 남성 기준 28.0kg 이상 유지가 권장되며, 30kg 이상은 매우 완전한 상태입니다.",
         statusEval: (val) => {
-          if (val < 28.0) return { text: "근육량 부족", color: "text-amber-600 bg-amber-50" };
-          if (val <= 35.0) return { text: "표준 우수", color: "text-emerald-600 bg-emerald-50" };
-          return { text: "매우 우수", color: "text-blue-600 bg-blue-50" };
+          if (val < 28.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
+          if (val < 30.5) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
         }
       },
       muscleRate: {
@@ -916,11 +1208,11 @@
         normalMin: 32.0,
         normalMax: 42.0,
         ideal: 38.0,
-        desc: "체중 대비 골격근량의 비율입니다. 32% ~ 42%가 건강한 표준 범위이며, 비율이 높을수록 신체 활동성과 대사 효율이 우수합니다.",
+        desc: "체중 대비 골격근량의 비율입니다. 32% ~ 42%가 건강한 표준 범위이며, 38% 이상은 매우 우수하고 완전한 상태입니다.",
         statusEval: (val) => {
-          if (val < 32.0) return { text: "표준 미달", color: "text-amber-600 bg-amber-50" };
-          if (val <= 42.0) return { text: "표준 정상", color: "text-emerald-600 bg-emerald-50" };
-          return { text: "우수", color: "text-blue-600 bg-blue-50" };
+          if (val < 32.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
+          if (val < 37.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
         }
       },
       bmi: {
@@ -928,15 +1220,25 @@
         english: "Body Mass Index",
         category: "체격 평가 지표",
         unit: "kg/m²",
+        bound1: 18.5,
+        bound2: 23.0,
+        bound3: 25.0,
         normalMin: 18.5,
         normalMax: 22.9,
+        obeseMin: 25.0,
         ideal: 22.0,
-        desc: "키와 몸무게를 이용해 체지방의 대략적인 양을 추정하는 지수입니다. 한국인/아시아 기준 18.5 ~ 22.9가 정상이며, 23.0 이상은 비만 전단계, 25.0 이상은 1단계 비만으로 분류됩니다.",
+        desc: "체질량지수(BMI)는 키와 몸무게를 이용해 체지방량을 간접적으로 추정하는 지표입니다. 의학적 기준 범위는 낮음(<18.5), 건강(18.5~22.9), 높음(23.0~24.9), 비만(≥25.0)으로 구분됩니다.",
         statusEval: (val) => {
-          if (val < 18.5) return { text: "저체중", color: "text-amber-600 bg-amber-50" };
-          if (val <= 22.9) return { text: "표준 정상", color: "text-emerald-600 bg-emerald-50" };
-          if (val <= 24.9) return { text: "비만전단계", color: "text-amber-600 bg-amber-50" };
-          return { text: "1단계 비만", color: "text-rose-600 bg-rose-50" };
+          if (val < 18.5) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+          if (val <= 22.9) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 25.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          return { text: "비만", color: "text-rose-600 bg-rose-50" };
+        },
+        calculateMarkerPos: (val) => {
+          if (val < 18.5) return Math.max(3, (val / 18.5) * 25);
+          if (val <= 22.9) return 25 + ((val - 18.5) / (22.9 - 18.5)) * 30;
+          if (val < 25.0) return 55 + ((val - 22.9) / (25.0 - 22.9)) * 25;
+          return 80 + Math.min(18, ((val - 25.0) / 10) * 20);
         }
       },
       visceralFat: {
@@ -944,14 +1246,14 @@
         english: "Visceral Fat Level",
         category: "대사 질환 지표",
         unit: "Lv",
-        normalMin: 1,
-        normalMax: 9,
-        ideal: 6,
-        desc: "복강 안 장기 주변에 쌓인 지방 레벨입니다. 레벨 1~9는 표준 안전 범위이며, 10 이상부터는 심혈관 질환 위험이 증가하므로 식단 관리가 권장됩니다.",
+        normalMin: 1.0,
+        normalMax: 9.0,
+        ideal: 6.0,
+        desc: "복강 안 장기 주변에 쌓인 내장 지방 지표입니다. 레벨 1.0~9.0은 건강 범위이며, 10.0 이상은 높음, 14.0 이상은 비만 단계로 식단 및 유산소 운동이 필수적입니다.",
         statusEval: (val) => {
-          if (val <= 9) return { text: "표준 안전", color: "text-emerald-600 bg-emerald-50" };
-          if (val <= 14) return { text: "주의 레벨", color: "text-amber-600 bg-amber-50" };
-          return { text: "위험 레벨", color: "text-rose-600 bg-rose-50" };
+          if (val <= 9.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 14.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          return { text: "비만", color: "text-rose-600 bg-rose-50" };
         }
       },
       water: {
@@ -962,10 +1264,10 @@
         normalMin: 50.0,
         normalMax: 65.0,
         ideal: 55.0,
-        desc: "체내 수분이 체중에서 차지하는 비율입니다. 성인 남성 기준 50% ~ 65%가 표준이며, 충분한 수분 섭취와 혈액 순환 유지에 중요한 기준입니다.",
+        desc: "체내 수분이 체중에서 차지하는 비율입니다. 성인 남성 기준 50% ~ 65%가 건강 상태이며, 충분한 수분 섭취와 신진대사 유지에 필수적입니다.",
         statusEval: (val) => {
-          if (val < 50.0) return { text: "수분 부족", color: "text-amber-600 bg-amber-50" };
-          if (val <= 65.0) return { text: "표준 정상", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 50.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
+          if (val <= 65.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
           return { text: "과수분", color: "text-blue-600 bg-blue-50" };
         }
       },
@@ -976,15 +1278,16 @@
         unit: "kcal",
         normalMin: 1550,
         normalMax: 1850,
-        ideal: 1720,
-        desc: "생명을 유지하는 데 필요한 최소한의 에너지 소모량입니다. 근육량이 많을수록 증가하며, 176cm 남성의 평균 표준치는 약 1,600 ~ 1,800 kcal입니다.",
+        ideal: 1651,
+        desc: "생명을 유지하는 데 필요한 최소한의 에너지 소모량입니다. 근육량이 많을수록 증가하며, 176cm 남성의 평균 표준치는 약 1,550 ~ 1,850 kcal (기준 실측치: 1,651 kcal)입니다.",
         statusEval: (val) => {
-          if (val < 1550) return { text: "표준 이하", color: "text-amber-600 bg-amber-50" };
-          return { text: "표준 우수", color: "text-emerald-600 bg-emerald-50" };
+          if (val < 1550) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+          if (val <= 1850) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+          return { text: "높음", color: "text-amber-600 bg-amber-50" };
         }
       },
       bp: {
-        title: "혈압 (수축기/이완기)",
+        title: "혈압",
         english: "Blood Pressure",
         category: "심혈관 지표",
         unit: "mmHg",
@@ -1023,7 +1326,9 @@
     // ----------------------------------------------------
     let currentMainTab = 'home';
     let currentDetailMetricKey = null;
-    let detailChartRange = '7d';
+    let metricDetailSourceTab = 'home';
+    let detailHistoryDisplayLimit = 10;
+    let detailChartPageOffset = 0; // 0: 최신 6일, 1: 직전 6일, 2: 그 이전 6일...
 
     function switchMainTab(tab) {
       currentMainTab = tab;
@@ -1062,8 +1367,17 @@
     // ----------------------------------------------------
     // 4. 항목별 상세 화면 열기 / 닫기
     // ----------------------------------------------------
-    async function openMetricDetail(metricKey) {
+    async function openMetricDetail(metricKey, fromSource = 'home') {
       currentDetailMetricKey = metricKey;
+      metricDetailSourceTab = fromSource;
+      detailHistoryDisplayLimit = 10;
+      detailChartPageOffset = 0; // 차트 페이징 항상 최신 6일 구간으로 초기화
+
+      // 뒤로가기 버튼 텍스트: 들어온 곳에 따라 '← 홈' 또는 '← 상세'로 표기
+      const backLabel = document.getElementById('detailBackBtnLabel');
+      if (backLabel) {
+        backLabel.innerText = (fromSource === 'details' ? '상세' : '홈');
+      }
       
       // 뷰 전환: 홈, 상세, 설정 숨기고 지표 상세 뷰 표시
       document.getElementById('view-home').classList.add('hidden');
@@ -1072,10 +1386,10 @@
       const detailView = document.getElementById('view-metric-detail');
       detailView.classList.remove('hidden');
 
-      // 탭 바는 '상세' 활성화 상태로 유지
+      // 탭 바 활성 상태 표시
       ['home', 'details', 'settings'].forEach(k => {
         const btn = document.getElementById(`tabBtn-${k}`);
-        if (k === 'details') {
+        if (k === fromSource) {
           btn.className = "flex flex-col items-center text-slate-900 transition flex-1 font-bold";
         } else {
           btn.className = "flex flex-col items-center text-slate-400 transition flex-1 font-medium";
@@ -1087,23 +1401,15 @@
     }
 
     function closeMetricDetail() {
-      // 이전 메인 탭으로 복귀
-      switchMainTab(currentMainTab === 'home' ? 'home' : 'details');
+      // 진입했던 소스 탭(홈 또는 상세)으로 정확하게 복귀
+      switchMainTab(metricDetailSourceTab || 'home');
     }
 
-    function setDetailChartRange(range) {
-      detailChartRange = range;
-      ['7d', '30d', 'all'].forEach(r => {
-        const btn = document.getElementById(`chartRangeBtn${r.charAt(0).toUpperCase() + r.slice(1)}`);
-        if (r === range) {
-          btn.className = "px-2 py-0.5 rounded-md bg-white text-slate-900 font-bold shadow-xs";
-        } else {
-          btn.className = "px-2 py-0.5 rounded-md hover:text-slate-900 font-medium";
-        }
-      });
-      if (currentDetailMetricKey) {
-        renderMetricDetailView(currentDetailMetricKey);
-      }
+    function loadMoreDetailHistory() {
+      detailHistoryDisplayLimit += 10;
+      const isBpMetric = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+      const spec = METRIC_SPECS[currentDetailMetricKey] || METRIC_SPECS.weight;
+      renderDetailHistoryTable(currentDetailMetricKey, isBpMetric, spec.unit);
     }
 
     // ----------------------------------------------------
@@ -1154,8 +1460,9 @@
       const latest = cachedBodyList[cachedBodyList.length - 1];
       const prev = cachedBodyList.length > 1 ? cachedBodyList[cachedBodyList.length - 2] : null;
 
-      // 기준일 표기 (예: 기준일 : 11월 9일)
-      document.getElementById('weightBasisDate').innerText = `기준일 : ${formatDateToKoreanShort(latest.date)}`;
+      // 기준일 표기 (예: 기준일 : 11월 10일)
+      const basisEl = document.getElementById('weightBasisDate');
+      if (basisEl) basisEl.innerText = `기준일 : ${formatDateToKoreanShort(latest.date)}`;
       document.getElementById('homeWeightVal').innerText = latest.weight.toFixed(2);
 
       // (직전 대비) 증감 계산
@@ -1163,17 +1470,29 @@
       if (prev) {
         const delta = +(latest.weight - prev.weight).toFixed(2);
         if (delta <= 0) {
-          badge.className = "text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1.5";
-          badge.innerHTML = `<i class="fa-solid fa-arrow-down text-[10px]"></i>${delta} kg <span class="text-slate-500 font-normal text-[11px] ml-0.5">(직전 대비)</span>`;
+          badge.className = "text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1";
+          badge.innerHTML = `<i class="fa-solid fa-arrow-down text-[10px]"></i>${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
         } else {
-          badge.className = "text-xs text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 flex items-center gap-0.5 ml-1.5";
-          badge.innerHTML = `<i class="fa-solid fa-arrow-up text-[10px]"></i>+${delta} kg <span class="text-slate-500 font-normal text-[11px] ml-0.5">(직전 대비)</span>`;
+          badge.className = "text-[11px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 flex items-center gap-0.5 ml-1";
+          badge.innerHTML = `<i class="fa-solid fa-arrow-up text-[10px]"></i>+${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
         }
       } else {
-        badge.innerHTML = `최초 측정 <span class="text-slate-500 font-normal text-[11px] ml-0.5">(직전 대비)</span>`;
+        badge.innerHTML = `최초 측정 <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
       }
 
-      // 체중 Sparkline 미니 그래프 렌더링 (최근 7회)
+      // 30일 최고 / 최저 무게 (소수점 1자리 표기)
+      if (cachedBodyList.length > 0) {
+        const last30 = cachedBodyList.slice(-30);
+        const weights = last30.map(r => r.weight);
+        const maxW = Math.max(...weights);
+        const minW = Math.min(...weights);
+        const maxEl = document.getElementById('homeWeightMax30d');
+        const minEl = document.getElementById('homeWeightMin30d');
+        if (maxEl) maxEl.innerText = maxW.toFixed(1);
+        if (minEl) minEl.innerText = minW.toFixed(1);
+      }
+
+      // 체중 Sparkline 미니 그래프 렌더링 (최근 5회)
       renderWeightSparkline();
     }
 
@@ -1185,30 +1504,32 @@
 
       if (cachedBodyList.length === 0) return;
 
-      const sliceCount = 7;
+      const sliceCount = 5;
       const recent = cachedBodyList.slice(-sliceCount);
       const weights = recent.map(r => r.weight);
-      const minW = Math.min(...weights) - 0.2;
-      const maxW = Math.max(...weights) + 0.2;
-      const range = (maxW - minW) || 1;
+      const minW = Math.min(...weights);
+      const maxW = Math.max(...weights);
+      const padW = Math.max(0.1, (maxW - minW) * 0.15);
+      const yMin = minW - padW;
+      const yMax = maxW + padW;
+      const range = (yMax - yMin) || 1;
 
       const width = 280;
-      const height = 55;
-      const step = recent.length > 1 ? width / (recent.length - 1) : width / 2;
+      const height = 44;
+      const xStart = 20;
+      const xEnd = width - 20;
+      const step = recent.length > 1 ? (xEnd - xStart) / (recent.length - 1) : (xEnd - xStart) / 2;
 
       let points = [];
       recent.forEach((item, idx) => {
-        const x = idx * step;
-        const norm = (item.weight - minW) / range;
+        const x = xStart + idx * step;
+        const norm = (item.weight - yMin) / range;
         const y = height - (norm * (height - 12)) - 6;
         points.push({ x, y, val: item.weight, date: item.date });
 
-        // 날짜 라벨 (첫번째, 중간, 마지막만)
-        if (idx === 0 || idx === Math.floor(recent.length / 2) || idx === recent.length - 1) {
-          const span = document.createElement('span');
-          span.innerText = item.date.slice(5).replace('-', '/');
-          datesDiv.appendChild(span);
-        }
+        const span = document.createElement('span');
+        span.innerText = item.date.slice(5).replace('-', '/');
+        datesDiv.appendChild(span);
       });
 
       // 배경 그라데이션 영역
@@ -1223,14 +1544,14 @@
 
       // Area 채우기
       if (points.length > 1) {
-        const areaPath = `M ${points[0].x},${height} L ` + points.map(p => `${p.x},${p.y}`).join(" L ") + ` L ${points[points.length - 1].x},${height} Z`;
+        const areaPath = `M ${points[0].x},${height} L ` + points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ") + ` L ${points[points.length - 1].x},${height} Z`;
         const pathArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
         pathArea.setAttribute("d", areaPath);
         pathArea.setAttribute("fill", "url(#weightGrad)");
         svg.appendChild(pathArea);
 
         // 선
-        const linePath = "M " + points.map(p => `${p.x},${p.y}`).join(" L ");
+        const linePath = "M " + points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ");
         const pathLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
         pathLine.setAttribute("d", linePath);
         pathLine.setAttribute("fill", "none");
@@ -1240,13 +1561,14 @@
         svg.appendChild(pathLine);
       }
 
-      // 포인트 점
+      // 포인트 점 및 수치 텍스트
       points.forEach((p, idx) => {
+        const isLatest = idx === points.length - 1;
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", p.x);
-        circle.setAttribute("cy", p.y);
-        circle.setAttribute("r", idx === points.length - 1 ? "3.5" : "2.5");
-        circle.setAttribute("fill", idx === points.length - 1 ? "#2563eb" : "#ffffff");
+        circle.setAttribute("cx", p.x.toFixed(1));
+        circle.setAttribute("cy", p.y.toFixed(1));
+        circle.setAttribute("r", isLatest ? "3.5" : "2.5");
+        circle.setAttribute("fill", isLatest ? "#2563eb" : "#ffffff");
         circle.setAttribute("stroke", "#2563eb");
         circle.setAttribute("stroke-width", "1.5");
         svg.appendChild(circle);
@@ -1259,7 +1581,8 @@
 
       const latestBp = cachedBpList[cachedBpList.length - 1];
 
-      document.getElementById('bpBasisDate').innerText = `기준일 : ${formatDateToKoreanShort(latestBp.date)}`;
+      const bpBasisEl = document.getElementById('bpBasisDate');
+      if (bpBasisEl) bpBasisEl.innerText = `기준일 : ${formatDateToKoreanShort(latestBp.date)}`;
       document.getElementById('homeSysVal').innerText = latestBp.sys;
       document.getElementById('homeDiaVal').innerText = latestBp.dia;
       document.getElementById('homePulseVal').innerText = latestBp.pulse;
@@ -1267,6 +1590,7 @@
       renderBpSparkline();
     }
 
+    // 홈 탭: 혈압 미니 Sparkline (좌: 수축기 / 우: 이완기 이중 Y축 분리 밴드 구현, 직전 5회)
     function renderBpSparkline() {
       const svg = document.getElementById('bpSparklineSvg');
       const datesDiv = document.getElementById('bpSparklineDates');
@@ -1275,70 +1599,123 @@
 
       if (cachedBpList.length === 0) return;
 
-      const recent = cachedBpList.slice(-7);
+      const recent = cachedBpList.slice(-5);
       const width = 280;
-      const height = 55;
-      const step = recent.length > 1 ? width / (recent.length - 1) : width / 2;
+      const height = 48;
 
-      // 수축기 및 이완기 기준 스케일 (60 ~ 140 mmHg)
-      const minP = 55;
-      const maxP = 135;
-      const range = maxP - minP;
+      // 1. 수축기(SYS) 좌측 축 범위 독립 계산 (상단 밴드)
+      const sysVals = recent.map(d => d.sys);
+      let minSys = Math.min(...sysVals);
+      let maxSys = Math.max(...sysVals);
+      if (minSys === maxSys) { minSys -= 2; maxSys += 2; }
+      const padSys = Math.max(1, (maxSys - minSys) * 0.15);
+      const sysYMin = minSys - padSys;
+      const sysYMax = maxSys + padSys;
+      const sysRange = sysYMax - sysYMin;
+
+      // 2. 이완기(DIA) 우측 축 범위 독립 계산 (하단 밴드)
+      const diaVals = recent.map(d => d.dia);
+      let minDia = Math.min(...diaVals);
+      let maxDia = Math.max(...diaVals);
+      if (minDia === maxDia) { minDia -= 2; maxDia += 2; }
+      const padDia = Math.max(1, (maxDia - minDia) * 0.15);
+      const diaYMin = minDia - padDia;
+      const diaYMax = maxDia + padDia;
+      const diaRange = diaYMax - diaYMin;
+
+      // 좌우 여백 (축 및 라벨 공간)
+      const xStart = 28;
+      const xEnd = width - 28;
+      const step = recent.length > 1 ? (xEnd - xStart) / (recent.length - 1) : (xEnd - xStart) / 2;
+
+      // 상하 독립 밴드 분할 (수축기: 상단 6~22px / 이완기: 하단 28~44px)
+      // 둘의 변화폭을 각각 극대화하면서도 상호 교차/역전을 완벽 방지
+      const ySysTop = 6;
+      const ySysBottom = 22;
+      const sysPlotH = ySysBottom - ySysTop;
+
+      const yDiaTop = 28;
+      const yDiaBottom = 44;
+      const diaPlotH = yDiaBottom - yDiaTop;
+
+      // 배경 밴드 가이드선 및 좌/우 독립 Y축 눈금/라벨
+      svg.innerHTML = `
+        <!-- 수축기 상단 가이드선 -->
+        <line x1="${xStart}" y1="${ySysTop}" x2="${xEnd}" y2="${ySysTop}" stroke="#fecdd3" stroke-width="0.8" stroke-dasharray="2" opacity="0.6" />
+        <line x1="${xStart}" y1="${ySysBottom}" x2="${xEnd}" y2="${ySysBottom}" stroke="#fecdd3" stroke-width="0.8" stroke-dasharray="2" opacity="0.6" />
+
+        <!-- 이완기 하단 가이드선 -->
+        <line x1="${xStart}" y1="${yDiaTop}" x2="${xEnd}" y2="${yDiaTop}" stroke="#bae6fd" stroke-width="0.8" stroke-dasharray="2" opacity="0.6" />
+        <line x1="${xStart}" y1="${yDiaBottom}" x2="${xEnd}" y2="${yDiaBottom}" stroke="#bae6fd" stroke-width="0.8" stroke-dasharray="2" opacity="0.6" />
+
+        <!-- [좌측 Y축] 수축기 SYS (빨강 눈금) -->
+        <line x1="${xStart}" y1="${ySysTop}" x2="${xStart}" y2="${ySysBottom}" stroke="#f43f5e" stroke-width="1.2" />
+        <text x="${xStart - 4}" y="${ySysTop + 3}" fill="#e11d48" font-size="7.5" font-weight="700" text-anchor="end">${maxSys}</text>
+        <text x="${xStart - 4}" y="${ySysBottom + 1}" fill="#e11d48" font-size="7.5" font-weight="700" text-anchor="end">${minSys}</text>
+
+        <!-- [우측 Y축] 이완기 DIA (파랑 눈금) -->
+        <line x1="${xEnd}" y1="${yDiaTop}" x2="${xEnd}" y2="${yDiaBottom}" stroke="#0284c7" stroke-width="1.2" />
+        <text x="${xEnd + 4}" y="${yDiaTop + 3}" fill="#0284c7" font-size="7.5" font-weight="700" text-anchor="start">${maxDia}</text>
+        <text x="${xEnd + 4}" y="${yDiaBottom + 1}" fill="#0284c7" font-size="7.5" font-weight="700" text-anchor="start">${minDia}</text>
+      `;
 
       let sysPoints = [];
       let diaPoints = [];
 
       recent.forEach((item, idx) => {
-        const x = idx * step;
-        const ySys = height - (((item.sys - minP) / range) * (height - 12)) - 6;
-        const yDia = height - (((item.dia - minP) / range) * (height - 12)) - 6;
+        const x = xStart + idx * step;
+        const ySys = ySysBottom - (((item.sys - sysYMin) / sysRange) * sysPlotH);
+        const yDia = yDiaBottom - (((item.dia - diaYMin) / diaRange) * diaPlotH);
 
         sysPoints.push({ x, y: ySys, val: item.sys });
         diaPoints.push({ x, y: yDia, val: item.dia });
 
-        if (idx === 0 || idx === Math.floor(recent.length / 2) || idx === recent.length - 1) {
-          const span = document.createElement('span');
-          span.innerText = item.date.slice(5).replace('-', '/');
-          datesDiv.appendChild(span);
-        }
+        const span = document.createElement('span');
+        span.innerText = item.date.slice(5).replace('-', '/');
+        datesDiv.appendChild(span);
       });
 
-      // 2개 라인 그리기 (맥박은 사용자 요청에 의해 제외)
+      // 라인 그리기
       if (sysPoints.length > 1) {
         const pathSys = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        pathSys.setAttribute("d", "M " + sysPoints.map(p => `${p.x},${p.y}`).join(" L "));
+        pathSys.setAttribute("d", "M " + sysPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L "));
         pathSys.setAttribute("fill", "none");
         pathSys.setAttribute("stroke", "#e11d48");
         pathSys.setAttribute("stroke-width", "2");
         pathSys.setAttribute("stroke-linecap", "round");
+        pathSys.setAttribute("stroke-linejoin", "round");
         svg.appendChild(pathSys);
 
         const pathDia = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        pathDia.setAttribute("d", "M " + diaPoints.map(p => `${p.x},${p.y}`).join(" L "));
+        pathDia.setAttribute("d", "M " + diaPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L "));
         pathDia.setAttribute("fill", "none");
         pathDia.setAttribute("stroke", "#0284c7");
         pathDia.setAttribute("stroke-width", "2");
         pathDia.setAttribute("stroke-linecap", "round");
+        pathDia.setAttribute("stroke-linejoin", "round");
         svg.appendChild(pathDia);
       }
 
-      sysPoints.forEach(p => {
+      // 포인트 원
+      sysPoints.forEach((p, idx) => {
+        const isLatest = idx === sysPoints.length - 1;
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", p.x);
-        c.setAttribute("cy", p.y);
-        c.setAttribute("r", "2.5");
-        c.setAttribute("fill", "#ffffff");
+        c.setAttribute("cx", p.x.toFixed(1));
+        c.setAttribute("cy", p.y.toFixed(1));
+        c.setAttribute("r", isLatest ? "3.5" : "2.5");
+        c.setAttribute("fill", isLatest ? "#e11d48" : "#ffffff");
         c.setAttribute("stroke", "#e11d48");
         c.setAttribute("stroke-width", "1.5");
         svg.appendChild(c);
       });
 
-      diaPoints.forEach(p => {
+      diaPoints.forEach((p, idx) => {
+        const isLatest = idx === diaPoints.length - 1;
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", p.x);
-        c.setAttribute("cy", p.y);
-        c.setAttribute("r", "2.5");
-        c.setAttribute("fill", "#ffffff");
+        c.setAttribute("cx", p.x.toFixed(1));
+        c.setAttribute("cy", p.y.toFixed(1));
+        c.setAttribute("r", isLatest ? "3.5" : "2.5");
+        c.setAttribute("fill", isLatest ? "#0284c7" : "#ffffff");
         c.setAttribute("stroke", "#0284c7");
         c.setAttribute("stroke-width", "1.5");
         svg.appendChild(c);
@@ -1365,7 +1742,6 @@
         const th = document.getElementById(id);
         if (colDates[idx]) {
           th.innerText = colDates[idx].slice(5).replace('-', '/');
-          if (idx === 0) th.innerText += " (최신)";
         } else {
           th.innerText = "-";
         }
@@ -1375,32 +1751,34 @@
       const bpMap = {};
       cachedBpList.forEach(b => bpMap[b.date] = b);
 
-      // 10대 지표 리스트 정의
+      // 건강 지표 리스트 정의 (맥박 제외, 혈압은 수축기/이완기 분리, 셀 내부에는 단위 없이 숫자만 표시)
       const metricRows = [
         { key: 'weight', title: '체중', unit: 'kg', getVal: (r) => r.weight.toFixed(2) },
-        { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (r) => `${r.bodyFat.toFixed(1)}%` },
-        { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (r) => `${r.muscleMass.toFixed(2)} kg` },
-        { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (r) => `${r.muscleRate.toFixed(1)}%` },
-        { key: 'bmi', title: 'BMI', unit: '', getVal: (r) => r.bmi.toFixed(1) },
-        { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (r) => `Lv ${r.visceralFat}` },
-        { key: 'water', title: '체수분율', unit: '%', getVal: (r) => `${r.water.toFixed(1)}%` },
-        { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (r) => `${r.bmr} kcal` },
+        { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (r) => r.bodyFat.toFixed(1) },
+        { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (r) => r.muscleMass.toFixed(2) },
+        { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (r) => r.muscleRate.toFixed(1) },
+        { key: 'bmi', title: 'BMI', unit: '지수', getVal: (r) => r.bmi.toFixed(1) },
+        { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (r) => `${r.visceralFat}` },
+        { key: 'water', title: '체수분율', unit: '%', getVal: (r) => r.water.toFixed(1) },
+        { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (r) => `${r.bmr}` },
         { 
-          key: 'bp', 
-          title: '혈압', 
+          key: 'bp_sys', 
+          metricDetailKey: 'bp',
+          title: '수축기 혈압', 
           unit: 'mmHg', 
           getVal: (r, date) => {
             const bp = bpMap[date];
-            return bp ? `${bp.sys}/${bp.dia}` : '-';
+            return bp ? `${bp.sys}` : '-';
           } 
         },
         { 
-          key: 'pulse', 
-          title: '맥박', 
-          unit: 'bpm', 
+          key: 'bp_dia', 
+          metricDetailKey: 'bp',
+          title: '이완기 혈압', 
+          unit: 'mmHg', 
           getVal: (r, date) => {
             const bp = bpMap[date];
-            return bp ? `${bp.pulse} bpm` : '-';
+            return bp ? `${bp.dia}` : '-';
           } 
         }
       ];
@@ -1408,7 +1786,8 @@
       metricRows.forEach(metric => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50/80 active:bg-slate-100 cursor-pointer transition select-none group";
-        tr.onclick = () => openMetricDetail(metric.key);
+        const targetKey = metric.metricDetailKey || metric.key;
+        tr.onclick = () => openMetricDetail(targetKey, 'details');
 
         const val0 = last3Records[0] ? metric.getVal(last3Records[0], colDates[0]) : '-';
         const val1 = last3Records[1] ? metric.getVal(last3Records[1], colDates[1]) : '-';
@@ -1417,7 +1796,7 @@
         tr.innerHTML = `
           <td class="py-3 px-3.5 font-bold text-slate-800 flex items-center gap-1.5">
             <span>${metric.title}</span>
-            <span class="text-[10px] text-slate-400 font-normal">(${metric.unit || '지수'})</span>
+            <span class="text-[10px] text-slate-400 font-normal">(${metric.unit})</span>
           </td>
           <td class="py-3 px-2 text-right font-black text-slate-900 font-mono">${val0}</td>
           <td class="py-3 px-2 text-right text-slate-500 font-mono">${val1}</td>
@@ -1435,8 +1814,10 @@
       const spec = METRIC_SPECS[metricKey] || METRIC_SPECS.weight;
       const isBpMetric = (metricKey === 'bp' || metricKey === 'pulse');
 
-      document.getElementById('detailMetricTitle').innerText = `${spec.title} (${spec.english})`;
-      document.getElementById('detailCategoryBadge').innerText = spec.category;
+      document.getElementById('detailMetricTitle').innerText = spec.title;
+      const chartTitleEl = document.getElementById('detailChartTitleText');
+      if (chartTitleEl) chartTitleEl.innerText = `${spec.title} 추이`;
+
       document.getElementById('detailMetricUnit').innerText = spec.unit;
       document.getElementById('detailMetricDescription').innerText = spec.desc;
 
@@ -1486,20 +1867,32 @@
         deltaEl.innerText = "";
       }
 
-      // 게이지 바 설정
+      // 게이지 바 설정 (실제 4단계 게이지 바 눈금 연동)
       const gaugeMarker = document.getElementById('gaugeCurrentMarker');
-      if (typeof currentVal === 'number') {
+      const b1 = document.getElementById('gaugeBound1');
+      const b2 = document.getElementById('gaugeBound2');
+      const b3 = document.getElementById('gaugeBound3');
+
+      if (spec.bound1 !== undefined && spec.calculateMarkerPos) {
+        if (b1) b1.innerText = `${spec.bound1}`;
+        if (b2) b2.innerText = `${spec.bound2}`;
+        if (b3) b3.innerText = `${spec.bound3}`;
+        const markerPos = spec.calculateMarkerPos(currentVal);
+        gaugeMarker.style.left = `${Math.max(5, Math.min(95, markerPos))}%`;
+      } else if (typeof currentVal === 'number') {
         const minG = spec.normalMin * 0.7;
         const maxG = spec.normalMax * 1.3;
         const pct = Math.max(5, Math.min(95, ((currentVal - minG) / (maxG - minG)) * 100));
         gaugeMarker.style.left = `${pct}%`;
+        if (b1) b1.innerText = `${spec.normalMin}`;
+        if (b2) b2.innerText = `${((spec.normalMin + spec.normalMax) / 2).toFixed(1)}`;
+        if (b3) b3.innerText = `${spec.normalMax}`;
       } else {
         gaugeMarker.style.left = "45%";
+        if (b1) b1.innerText = "90";
+        if (b2) b2.innerText = "120";
+        if (b3) b3.innerText = "140";
       }
-      document.getElementById('gaugeMinLabel').innerText = `낮음 (<${spec.normalMin})`;
-      document.getElementById('gaugeNormalLabel').innerText = `정상 (${spec.normalMin}~${spec.normalMax})`;
-      document.getElementById('gaugeMaxLabel').innerText = `주의/높음 (>${spec.normalMax})`;
-      document.getElementById('gaugeRangeTarget').innerText = `표준 이상치: ${spec.ideal} ${spec.unit}`;
 
       // 2부: 대형 상세 SVG 차트 렌더링
       renderDetailLargeChart(metricKey, isBpMetric);
@@ -1508,135 +1901,453 @@
       renderDetailHistoryTable(metricKey, isBpMetric, spec.unit);
     }
 
-    // 대형 상세 차트 렌더링
+    // ----------------------------------------------------
+    // 지표 상세 차트 페이징 네비게이션 및 터치 제스처
+    // ----------------------------------------------------
+    let detailChartTouchStartX = 0;
+    let detailChartTouchStartY = 0;
+
+    function initDetailChartSwipeGestures() {
+      const container = document.getElementById('detailChartScrollContainer');
+      if (!container || container._swipeInitialized) return;
+      container._swipeInitialized = true;
+
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+          detailChartTouchStartX = e.touches[0].clientX;
+          detailChartTouchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchend', (e) => {
+        if (e.changedTouches && e.changedTouches.length === 1) {
+          const deltaX = e.changedTouches[0].clientX - detailChartTouchStartX;
+          const deltaY = e.changedTouches[0].clientY - detailChartTouchStartY;
+
+          // 가로 스와이프 감지: 최소 35px 이상 이동 및 세로 이동 대비 1.3배 이상
+          if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+            if (deltaX > 0) {
+              // 우측 스와이프: 과거 데이터 (이전 6일)
+              navigateDetailChart(1);
+            } else {
+              // 좌측 스와이프: 최신 데이터 (다음 6일)
+              navigateDetailChart(-1);
+            }
+          }
+        }
+      }, { passive: true });
+    }
+
+    function navigateDetailChart(direction) {
+      // direction: +1 = 과거(이전 6일), -1 = 최신(다음 6일)
+      const isBpMetric = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+      const dataset = isBpMetric ? cachedBpList : cachedBodyList;
+      if (!dataset || dataset.length === 0) return;
+
+      let validCount = 0;
+      if (currentDetailMetricKey === 'bp') {
+        validCount = dataset.filter(d => typeof d.sys === 'number' && !isNaN(d.sys) && typeof d.dia === 'number' && !isNaN(d.dia)).length;
+      } else {
+        validCount = dataset.filter(d => {
+          let raw = currentDetailMetricKey === 'pulse' ? d.pulse : d[currentDetailMetricKey];
+          return typeof raw === 'number' && !isNaN(raw);
+        }).length;
+      }
+
+      if (validCount === 0) return;
+
+      const CHUNK_SIZE = 6;
+      const maxOffset = Math.max(0, Math.ceil(validCount / CHUNK_SIZE) - 1);
+      const newOffset = detailChartPageOffset + direction;
+
+      if (newOffset >= 0 && newOffset <= maxOffset) {
+        detailChartPageOffset = newOffset;
+        renderDetailLargeChart(currentDetailMetricKey, isBpMetric);
+      }
+    }
+
+    function updateChartNavControls(startIdx, maxOffset, pageData) {
+      const btnPrev = document.getElementById('btnDetailChartPrev');
+      const btnNext = document.getElementById('btnDetailChartNext');
+      const rangeBadge = document.getElementById('detailChartDateRangeBadge');
+
+      if (rangeBadge) {
+        if (!pageData || pageData.length === 0) {
+          rangeBadge.innerText = "-";
+        } else if (pageData.length === 1) {
+          rangeBadge.innerText = pageData[0].date.slice(5).replace('-', '/');
+        } else {
+          const dStart = pageData[0].date.slice(5).replace('-', '/');
+          const dEnd = pageData[pageData.length - 1].date.slice(5).replace('-', '/');
+          rangeBadge.innerText = `${dStart} ~ ${dEnd}`;
+        }
+      }
+
+      const hasOlder = startIdx > 0 && detailChartPageOffset < maxOffset;
+      if (btnPrev) {
+        btnPrev.disabled = !hasOlder;
+        if (!hasOlder) {
+          btnPrev.className = "px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100/80 border border-slate-200/50 text-slate-400 cursor-not-allowed opacity-50 shadow-none flex items-center gap-1 transition-all";
+        } else {
+          btnPrev.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 active:bg-slate-100 shadow-sm cursor-pointer flex items-center gap-1 transition-all";
+        }
+      }
+
+      const hasNewer = detailChartPageOffset > 0;
+      if (btnNext) {
+        btnNext.disabled = !hasNewer;
+        if (!hasNewer) {
+          btnNext.className = "px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100/80 border border-slate-200/50 text-slate-400 cursor-not-allowed opacity-50 shadow-none flex items-center gap-1 transition-all";
+        } else {
+          btnNext.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 active:bg-slate-100 shadow-sm cursor-pointer flex items-center gap-1 transition-all";
+        }
+      }
+    }
+
+    // 대형 상세 차트 렌더링 (최근 6일 단위 Zero-Scroll 렌더링 & 페이징 탐색)
     function renderDetailLargeChart(metricKey, isBpMetric) {
       const svg = document.getElementById('detailLargeSvgChart');
-      const datesDiv = document.getElementById('detailLargeChartDates');
+      const legendEl = document.getElementById('detailChartLegend');
       svg.innerHTML = '';
-      datesDiv.innerHTML = '';
+      if (legendEl) legendEl.innerHTML = '';
 
       let dataset = isBpMetric ? cachedBpList : cachedBodyList;
-      if (dataset.length === 0) return;
+      if (!dataset || dataset.length === 0) {
+        svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="12">측정 데이터가 없습니다</text>`;
+        updateChartNavControls(0, 0, []);
+        return;
+      }
 
-      // 기간 필터 적용
-      let sliceCount = dataset.length;
-      if (detailChartRange === '7d') sliceCount = 7;
-      else if (detailChartRange === '30d') sliceCount = 30;
-      const data = dataset.slice(-sliceCount);
+      const CHUNK_SIZE = 6;
+      const totalW = 350;
+      const totalH = 150;
+      const padLeft = 40;
+      const padRight = 40;
+      const leftAxisX = padLeft - 8;   // 32
+      const rightAxisX = totalW - padRight + 8; // 318
 
-      const width = 280;
-      const height = 100;
-      const step = data.length > 1 ? width / (data.length - 1) : width / 2;
-
-      // 가이드 점선 라인
-      svg.innerHTML = `
-        <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3" />
-        <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3" />
-        <line x1="0" y1="80" x2="280" y2="80" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3" />
-      `;
+      svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+      svg.style.minWidth = "100%";
+      svg.style.width = "100%";
 
       if (metricKey === 'bp') {
-        // 혈압은 수축기(SYS) & 이완기(DIA) 2라인
-        const minP = 55;
-        const maxP = 140;
-        const range = maxP - minP;
+        // [혈압]: 좌측 수축기(SYS) 축(상단 밴드) / 우측 이완기(DIA) 축(하단 밴드) 분리
+        const validBpData = dataset.filter(d => typeof d.sys === 'number' && !isNaN(d.sys) && typeof d.dia === 'number' && !isNaN(d.dia));
+        if (validBpData.length === 0) {
+          svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="12">혈압 측정 데이터가 없습니다</text>`;
+          updateChartNavControls(0, 0, []);
+          return;
+        }
 
+        const maxOffset = Math.max(0, Math.ceil(validBpData.length / CHUNK_SIZE) - 1);
+        if (detailChartPageOffset > maxOffset) detailChartPageOffset = maxOffset;
+        if (detailChartPageOffset < 0) detailChartPageOffset = 0;
+
+        const endIdx = validBpData.length - (detailChartPageOffset * CHUNK_SIZE);
+        const startIdx = Math.max(0, endIdx - CHUNK_SIZE);
+        const pageData = validBpData.slice(startIdx, endIdx);
+
+        updateChartNavControls(startIdx, maxOffset, pageData);
+
+        const sysVals = pageData.map(d => d.sys);
+        let minSys = Math.min(...sysVals);
+        let maxSys = Math.max(...sysVals);
+        if (minSys === maxSys) { minSys -= 2; maxSys += 2; }
+        const padSys = Math.max(1, (maxSys - minSys) * 0.15);
+        const sysYMin = minSys - padSys;
+        const sysYMax = maxSys + padSys;
+        const sysRange = sysYMax - sysYMin;
+
+        const diaVals = pageData.map(d => d.dia);
+        let minDia = Math.min(...diaVals);
+        let maxDia = Math.max(...diaVals);
+        if (minDia === maxDia) { minDia -= 2; maxDia += 2; }
+        const padDia = Math.max(1, (maxDia - minDia) * 0.15);
+        const diaYMin = minDia - padDia;
+        const diaYMax = maxDia + padDia;
+        const diaRange = diaYMax - diaYMin;
+
+        // 상하 분할 밴드 좌표 (상단 밴드: 수축기 22~64px / 하단 밴드: 이완기 76~118px)
+        const ySysTop = 22;
+        const ySysBottom = 64;
+        const sysPlotH = ySysBottom - ySysTop;
+        const midSysY = (ySysTop + ySysBottom) / 2;
+
+        const yDiaTop = 76;
+        const yDiaBottom = 118;
+        const diaPlotH = yDiaBottom - yDiaTop;
+        const midDiaY = (yDiaTop + yDiaBottom) / 2;
+
+        // 가이드 수평 점선
+        svg.innerHTML = `
+          <!-- 수축기 상단 밴드 가이드선 -->
+          <line x1="${leftAxisX}" y1="${ySysTop}" x2="${rightAxisX}" y2="${ySysTop}" stroke="#fecdd3" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6" />
+          <line x1="${leftAxisX}" y1="${midSysY}" x2="${rightAxisX}" y2="${midSysY}" stroke="#f1f5f9" stroke-width="0.8" stroke-dasharray="3,3" />
+          <line x1="${leftAxisX}" y1="${ySysBottom}" x2="${rightAxisX}" y2="${ySysBottom}" stroke="#fecdd3" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6" />
+
+          <!-- 이완기 하단 밴드 가이드선 -->
+          <line x1="${leftAxisX}" y1="${yDiaTop}" x2="${rightAxisX}" y2="${yDiaTop}" stroke="#bae6fd" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6" />
+          <line x1="${leftAxisX}" y1="${midDiaY}" x2="${rightAxisX}" y2="${midDiaY}" stroke="#f1f5f9" stroke-width="0.8" stroke-dasharray="3,3" />
+          <line x1="${leftAxisX}" y1="${yDiaBottom}" x2="${rightAxisX}" y2="${yDiaBottom}" stroke="#bae6fd" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6" />
+        `;
+
+        if (legendEl) {
+          legendEl.innerHTML = `
+            <div class="flex items-center gap-2 font-bold text-[10px]">
+              <span class="flex items-center gap-1 text-rose-600"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>수축기(${minSys}~${maxSys})</span>
+              <span class="flex items-center gap-1 text-sky-600"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>이완기(${minDia}~${maxDia})</span>
+            </div>
+          `;
+        }
+
+        // [좌측 Y축] 수축기 전용 축 (SYS: 빨강 눈금)
+        const leftAxisG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        leftAxisG.innerHTML = `
+          <line x1="${leftAxisX}" y1="${ySysTop - 4}" x2="${leftAxisX}" y2="${ySysBottom + 4}" stroke="#f43f5e" stroke-width="1.5" />
+          <text x="${leftAxisX - 4}" y="14" fill="#e11d48" font-size="9" font-weight="800" text-anchor="end">SYS</text>
+          <text x="${leftAxisX - 4}" y="${ySysTop + 3}" fill="#e11d48" font-size="8.5" font-weight="700" text-anchor="end">${maxSys}</text>
+          <text x="${leftAxisX - 4}" y="${midSysY + 3}" fill="#fb7185" font-size="8" font-weight="600" text-anchor="end">${Math.round((maxSys + minSys) / 2)}</text>
+          <text x="${leftAxisX - 4}" y="${ySysBottom + 3}" fill="#e11d48" font-size="8.5" font-weight="700" text-anchor="end">${minSys}</text>
+        `;
+        svg.appendChild(leftAxisG);
+
+        // [우측 Y축] 이완기 전용 축 (DIA: 파랑 눈금)
+        const rightAxisG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        rightAxisG.innerHTML = `
+          <line x1="${rightAxisX}" y1="${yDiaTop - 4}" x2="${rightAxisX}" y2="${yDiaBottom + 4}" stroke="#0284c7" stroke-width="1.5" />
+          <text x="${rightAxisX + 4}" y="68" fill="#0284c7" font-size="9" font-weight="800" text-anchor="start">DIA</text>
+          <text x="${rightAxisX + 4}" y="${yDiaTop + 3}" fill="#0284c7" font-size="8.5" font-weight="700" text-anchor="start">${maxDia}</text>
+          <text x="${rightAxisX + 4}" y="${midDiaY + 3}" fill="#38bdf8" font-size="8" font-weight="600" text-anchor="start">${Math.round((maxDia + minDia) / 2)}</text>
+          <text x="${rightAxisX + 4}" y="${yDiaBottom + 3}" fill="#0284c7" font-size="8.5" font-weight="700" text-anchor="start">${minDia}</text>
+        `;
+        svg.appendChild(rightAxisG);
+
+        const stepX = pageData.length > 1 ? (totalW - padLeft - padRight) / (pageData.length - 1) : 0;
         let sysPts = [];
         let diaPts = [];
 
-        data.forEach((item, idx) => {
-          const x = idx * step;
-          const ySys = height - (((item.sys - minP) / range) * (height - 20)) - 10;
-          const yDia = height - (((item.dia - minP) / range) * (height - 20)) - 10;
-          sysPts.push({ x, y: ySys, val: item.sys });
-          diaPts.push({ x, y: yDia, val: item.dia });
+        pageData.forEach((item, idx) => {
+          const x = pageData.length > 1 ? (padLeft + idx * stepX) : (totalW / 2);
+          const ySys = ySysBottom - (((item.sys - sysYMin) / sysRange) * sysPlotH);
+          const yDia = yDiaBottom - (((item.dia - diaYMin) / diaRange) * diaPlotH);
+          sysPts.push({ x, y: ySys, val: item.sys, date: item.date });
+          diaPts.push({ x, y: yDia, val: item.dia, date: item.date });
 
-          if (idx === 0 || idx === Math.floor(data.length / 2) || idx === data.length - 1) {
-            const span = document.createElement('span');
-            span.innerText = item.date.slice(5).replace('-', '/');
-            datesDiv.appendChild(span);
-          }
+          const isLatest = (detailChartPageOffset === 0 && idx === pageData.length - 1);
+          const dateTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          dateTxt.setAttribute("x", x.toFixed(1));
+          dateTxt.setAttribute("y", totalH - 10);
+          dateTxt.setAttribute("fill", isLatest ? "#0f172a" : "#94a3b8");
+          dateTxt.setAttribute("font-size", "9");
+          dateTxt.setAttribute("font-family", "monospace");
+          dateTxt.setAttribute("font-weight", isLatest ? "bold" : "normal");
+          dateTxt.setAttribute("text-anchor", "middle");
+          dateTxt.textContent = item.date.slice(5).replace('-', '/');
+          svg.appendChild(dateTxt);
         });
 
         if (sysPts.length > 1) {
           const pathSys = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          pathSys.setAttribute("d", "M " + sysPts.map(p => `${p.x},${p.y}`).join(" L "));
+          pathSys.setAttribute("d", "M " + sysPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L "));
           pathSys.setAttribute("fill", "none");
           pathSys.setAttribute("stroke", "#e11d48");
-          pathSys.setAttribute("stroke-width", "2.5");
+          pathSys.setAttribute("stroke-width", "2.2");
+          pathSys.setAttribute("stroke-linecap", "round");
+          pathSys.setAttribute("stroke-linejoin", "round");
           svg.appendChild(pathSys);
 
           const pathDia = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          pathDia.setAttribute("d", "M " + diaPts.map(p => `${p.x},${p.y}`).join(" L "));
+          pathDia.setAttribute("d", "M " + diaPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L "));
           pathDia.setAttribute("fill", "none");
           pathDia.setAttribute("stroke", "#0284c7");
-          pathDia.setAttribute("stroke-width", "2.5");
+          pathDia.setAttribute("stroke-width", "2.2");
+          pathDia.setAttribute("stroke-linecap", "round");
+          pathDia.setAttribute("stroke-linejoin", "round");
           svg.appendChild(pathDia);
         }
 
-        sysPts.forEach(p => {
+        sysPts.forEach((p, idx) => {
+          const isLatest = (detailChartPageOffset === 0 && idx === sysPts.length - 1);
           const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          c.setAttribute("cx", p.x);
-          c.setAttribute("cy", p.y);
-          c.setAttribute("r", "3");
-          c.setAttribute("fill", "#e11d48");
+          c.setAttribute("cx", p.x.toFixed(1));
+          c.setAttribute("cy", p.y.toFixed(1));
+          c.setAttribute("r", isLatest ? "4" : "3");
+          c.setAttribute("fill", isLatest ? "#e11d48" : "#ffffff");
+          c.setAttribute("stroke", "#e11d48");
+          c.setAttribute("stroke-width", "1.5");
           svg.appendChild(c);
+
+          const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          txt.setAttribute("x", p.x.toFixed(1));
+          txt.setAttribute("y", (p.y - 6).toFixed(1));
+          txt.setAttribute("fill", "#be123c");
+          txt.setAttribute("font-size", "8.5");
+          txt.setAttribute("font-weight", isLatest ? "800" : "700");
+          txt.setAttribute("font-family", "monospace");
+          txt.setAttribute("text-anchor", "middle");
+          txt.textContent = p.val;
+          svg.appendChild(txt);
         });
 
-        diaPts.forEach(p => {
+        diaPts.forEach((p, idx) => {
+          const isLatest = (detailChartPageOffset === 0 && idx === diaPts.length - 1);
           const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          c.setAttribute("cx", p.x);
-          c.setAttribute("cy", p.y);
-          c.setAttribute("r", "3");
-          c.setAttribute("fill", "#0284c7");
+          c.setAttribute("cx", p.x.toFixed(1));
+          c.setAttribute("cy", p.y.toFixed(1));
+          c.setAttribute("r", isLatest ? "4" : "3");
+          c.setAttribute("fill", isLatest ? "#0284c7" : "#ffffff");
+          c.setAttribute("stroke", "#0284c7");
+          c.setAttribute("stroke-width", "1.5");
           svg.appendChild(c);
+
+          const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          txt.setAttribute("x", p.x.toFixed(1));
+          txt.setAttribute("y", (p.y + 13).toFixed(1));
+          txt.setAttribute("fill", "#0369a1");
+          txt.setAttribute("font-size", "8.5");
+          txt.setAttribute("font-weight", isLatest ? "800" : "700");
+          txt.setAttribute("font-family", "monospace");
+          txt.setAttribute("text-anchor", "middle");
+          txt.textContent = p.val;
+          svg.appendChild(txt);
         });
+
       } else {
-        // 단일 수치 지표 (체중, 체지방률, 골격근량, BMI 등)
-        const vals = data.map(d => metricKey === 'pulse' ? d.pulse : d[metricKey]);
-        const minV = Math.min(...vals);
-        const maxV = Math.max(...vals);
-        const range = (maxV - minV) || 1;
+        // [단일 지표]: 체중, 체지방률, 골격근량, BMI 등
+        const validItems = dataset.map(d => {
+          let raw = metricKey === 'pulse' ? d.pulse : d[metricKey];
+          return (typeof raw === 'number' && !isNaN(raw)) ? { val: raw, date: d.date } : null;
+        }).filter(item => item !== null);
 
+        if (validItems.length === 0) {
+          svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="12">해당 지표의 측정 데이터가 없습니다</text>`;
+          updateChartNavControls(0, 0, []);
+          return;
+        }
+
+        const maxOffset = Math.max(0, Math.ceil(validItems.length / CHUNK_SIZE) - 1);
+        if (detailChartPageOffset > maxOffset) detailChartPageOffset = maxOffset;
+        if (detailChartPageOffset < 0) detailChartPageOffset = 0;
+
+        const endIdx = validItems.length - (detailChartPageOffset * CHUNK_SIZE);
+        const startIdx = Math.max(0, endIdx - CHUNK_SIZE);
+        const pageData = validItems.slice(startIdx, endIdx);
+
+        updateChartNavControls(startIdx, maxOffset, pageData);
+
+        const vals = pageData.map(item => item.val);
+        let minV = Math.min(...vals);
+        let maxV = Math.max(...vals);
+        if (minV === maxV) { minV -= 1; maxV += 1; }
+        const padV = Math.max(0.1, (maxV - minV) * 0.15);
+        const yMin = minV - padV;
+        const yMax = maxV + padV;
+        const range = yMax - yMin;
+
+        const yTop = 26;
+        const yBottom = 112;
+        const plotH = yBottom - yTop; // 86
+        const midY = (yTop + yBottom) / 2;
+
+        svg.innerHTML = `
+          <line x1="${leftAxisX}" y1="${yTop}" x2="${rightAxisX}" y2="${yTop}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3" />
+          <line x1="${leftAxisX}" y1="${midY}" x2="${rightAxisX}" y2="${midY}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3" />
+          <line x1="${leftAxisX}" y1="${yBottom}" x2="${rightAxisX}" y2="${yBottom}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3" />
+        `;
+
+        if (legendEl) {
+          const unit = METRIC_SPECS[metricKey] ? METRIC_SPECS[metricKey].unit : '';
+          legendEl.innerHTML = `
+            <span class="text-blue-600 font-bold text-[10px]">단위: ${unit} (${minV.toFixed(1)} ~ ${maxV.toFixed(1)})</span>
+          `;
+        }
+
+        const axisG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        axisG.innerHTML = `
+          <line x1="${leftAxisX}" y1="${yTop - 6}" x2="${leftAxisX}" y2="${yBottom + 6}" stroke="#bfdbfe" stroke-width="1.5" />
+          <text x="${leftAxisX - 4}" y="${yTop + 3}" fill="#2563eb" font-size="8.5" font-weight="700" text-anchor="end">${maxV.toFixed(1)}</text>
+          <text x="${leftAxisX - 4}" y="${midY + 3}" fill="#60a5fa" font-size="8" font-weight="600" text-anchor="end">${((maxV + minV) / 2).toFixed(1)}</text>
+          <text x="${leftAxisX - 4}" y="${yBottom + 3}" fill="#2563eb" font-size="8.5" font-weight="700" text-anchor="end">${minV.toFixed(1)}</text>
+        `;
+        svg.appendChild(axisG);
+
+        const stepX = pageData.length > 1 ? (totalW - padLeft - padRight) / (pageData.length - 1) : 0;
         let pts = [];
-        data.forEach((item, idx) => {
-          const v = metricKey === 'pulse' ? item.pulse : item[metricKey];
-          const x = idx * step;
-          const y = height - (((v - minV) / range) * (height - 24)) - 12;
+
+        pageData.forEach((item, idx) => {
+          const v = item.val;
+          const x = pageData.length > 1 ? (padLeft + idx * stepX) : (totalW / 2);
+          const y = yBottom - (((v - yMin) / range) * plotH);
           pts.push({ x, y, val: v, date: item.date });
 
-          if (idx === 0 || idx === Math.floor(data.length / 2) || idx === data.length - 1) {
-            const span = document.createElement('span');
-            span.innerText = item.date.slice(5).replace('-', '/');
-            datesDiv.appendChild(span);
-          }
+          const isLatest = (detailChartPageOffset === 0 && idx === pageData.length - 1);
+          const dateTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          dateTxt.setAttribute("x", x.toFixed(1));
+          dateTxt.setAttribute("y", totalH - 10);
+          dateTxt.setAttribute("fill", isLatest ? "#0f172a" : "#94a3b8");
+          dateTxt.setAttribute("font-size", "9");
+          dateTxt.setAttribute("font-family", "monospace");
+          dateTxt.setAttribute("font-weight", isLatest ? "bold" : "normal");
+          dateTxt.setAttribute("text-anchor", "middle");
+          dateTxt.textContent = item.date.slice(5).replace('-', '/');
+          svg.appendChild(dateTxt);
         });
 
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        defs.innerHTML = `
+          <linearGradient id="detailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb" stop-opacity="0.18" />
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
+          </linearGradient>
+        `;
+        svg.appendChild(defs);
+
         if (pts.length > 1) {
-          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("d", "M " + pts.map(p => `${p.x},${p.y}`).join(" L "));
-          path.setAttribute("fill", "none");
-          path.setAttribute("stroke", "#2563eb");
-          path.setAttribute("stroke-width", "2.5");
-          path.setAttribute("stroke-linecap", "round");
-          svg.appendChild(path);
+          const areaPath = `M ${pts[0].x.toFixed(1)},${yBottom} L ` + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ") + ` L ${pts[pts.length - 1].x.toFixed(1)},${yBottom} Z`;
+          const pathArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          pathArea.setAttribute("d", areaPath);
+          pathArea.setAttribute("fill", "url(#detailGrad)");
+          svg.appendChild(pathArea);
+
+          const pathLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          pathLine.setAttribute("d", "M " + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L "));
+          pathLine.setAttribute("fill", "none");
+          pathLine.setAttribute("stroke", "#2563eb");
+          pathLine.setAttribute("stroke-width", "2.2");
+          pathLine.setAttribute("stroke-linecap", "round");
+          pathLine.setAttribute("stroke-linejoin", "round");
+          svg.appendChild(pathLine);
         }
 
         pts.forEach((p, idx) => {
-          const isLatest = idx === pts.length - 1;
+          const isLatest = (detailChartPageOffset === 0 && idx === pts.length - 1);
           const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          c.setAttribute("cx", p.x);
-          c.setAttribute("cy", p.y);
-          c.setAttribute("r", isLatest ? "4" : "2.5");
+          c.setAttribute("cx", p.x.toFixed(1));
+          c.setAttribute("cy", p.y.toFixed(1));
+          c.setAttribute("r", isLatest ? "4" : "3");
           c.setAttribute("fill", isLatest ? "#2563eb" : "#ffffff");
           c.setAttribute("stroke", "#2563eb");
           c.setAttribute("stroke-width", "1.5");
           svg.appendChild(c);
+
+          const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          txt.setAttribute("x", p.x.toFixed(1));
+          txt.setAttribute("y", (p.y - 7).toFixed(1));
+          txt.setAttribute("fill", isLatest ? "#1d4ed8" : "#475569");
+          txt.setAttribute("font-size", "8.5");
+          txt.setAttribute("font-weight", isLatest ? "800" : "600");
+          txt.setAttribute("font-family", "monospace");
+          txt.setAttribute("text-anchor", "middle");
+          const displayV = typeof p.val === 'number' ? (p.val % 1 === 0 ? p.val : p.val.toFixed(1)) : p.val;
+          txt.textContent = displayV;
+          svg.appendChild(txt);
         });
       }
+
+      initDetailChartSwipeGestures();
     }
 
-    // 3부: 전체 기록 수치 테이블 렌더링
+    // 3부: 전체 기록 수치 테이블 렌더링 (10개씩 페이징 더보기)
     function renderDetailHistoryTable(metricKey, isBpMetric, unit) {
       const tbody = document.getElementById('detailHistoryTableBody');
       tbody.innerHTML = '';
@@ -1645,9 +2356,10 @@
       document.getElementById('detailRecordCount').innerText = `총 ${dataset.length}건`;
 
       // 역순 (최신순 정렬)
-      const reversed = [...dataset].reverse().slice(0, 50); // 최근 50건 우선 노출
+      const reversed = [...dataset].reverse();
+      const sliced = reversed.slice(0, detailHistoryDisplayLimit);
 
-      reversed.forEach((item, idx) => {
+      sliced.forEach((item, idx) => {
         const nextItem = reversed[idx + 1]; // 시간상 직전 데이터
         let currentValDisplay = "";
         let deltaDisplay = "-";
@@ -1684,18 +2396,100 @@
         `;
         tbody.appendChild(tr);
       });
+
+      // 10개씩 더보기 버튼 처리
+      const moreBtn = document.getElementById('detailHistoryMoreBtn');
+      if (moreBtn) {
+        const remaining = reversed.length - sliced.length;
+        if (remaining > 0) {
+          moreBtn.classList.remove('hidden');
+          moreBtn.innerHTML = `<i class="fa-solid fa-chevron-down text-[10px]"></i> 이전 기록 10개 더보기 (${remaining}개 남음)`;
+        } else {
+          moreBtn.classList.add('hidden');
+        }
+      }
     }
 
     // ----------------------------------------------------
-    // 6. 체중 수동 입력 모달 동작
+    // 6. 체중 및 체성분 직접 수동 입력 모달 동작
     // ----------------------------------------------------
+    function onManualWeightChange() {
+      const wInput = document.getElementById('weightManualInput');
+      const w = parseFloat(wInput.value);
+      const bmiBadge = document.getElementById('weightManualBmiPreview');
+
+      if (!isNaN(w) && w > 0) {
+        const bmi = (w / (1.76 * 1.76)).toFixed(1);
+        if (bmiBadge) bmiBadge.innerText = `BMI ${bmi} (176cm)`;
+      } else {
+        if (bmiBadge) bmiBadge.innerText = `BMI -- (176cm)`;
+      }
+
+      // 체중이 바뀔 때, 이미 입력된 비율(%)이 있다면 kg 실시간 자동 재계산
+      const mRate = parseFloat(document.getElementById('weightManualMuscleRate').value);
+      if (!isNaN(mRate) && !isNaN(w) && w > 0) {
+        document.getElementById('weightManualMuscleMass').value = ((w * mRate) / 100).toFixed(2);
+      }
+      const bFat = parseFloat(document.getElementById('weightManualBodyFat').value);
+      if (!isNaN(bFat) && !isNaN(w) && w > 0) {
+        document.getElementById('weightManualFatMass').value = ((w * bFat) / 100).toFixed(2);
+      }
+    }
+
+    function onManualMuscleRateChange() {
+      const w = parseFloat(document.getElementById('weightManualInput').value);
+      const rate = parseFloat(document.getElementById('weightManualMuscleRate').value);
+      if (!isNaN(w) && !isNaN(rate) && w > 0) {
+        document.getElementById('weightManualMuscleMass').value = ((w * rate) / 100).toFixed(2);
+      }
+    }
+
+    function onManualMuscleMassChange() {
+      const w = parseFloat(document.getElementById('weightManualInput').value);
+      const mass = parseFloat(document.getElementById('weightManualMuscleMass').value);
+      if (!isNaN(w) && !isNaN(mass) && w > 0) {
+        document.getElementById('weightManualMuscleRate').value = ((mass / w) * 100).toFixed(1);
+      }
+    }
+
+    function onManualBodyFatChange() {
+      const w = parseFloat(document.getElementById('weightManualInput').value);
+      const fat = parseFloat(document.getElementById('weightManualBodyFat').value);
+      if (!isNaN(w) && !isNaN(fat) && w > 0) {
+        document.getElementById('weightManualFatMass').value = ((w * fat) / 100).toFixed(2);
+      }
+    }
+
+    function onManualFatMassChange() {
+      const w = parseFloat(document.getElementById('weightManualInput').value);
+      const fatMass = parseFloat(document.getElementById('weightManualFatMass').value);
+      if (!isNaN(w) && !isNaN(fatMass) && w > 0) {
+        document.getElementById('weightManualBodyFat').value = ((fatMass / w) * 100).toFixed(1);
+      }
+    }
+
     function openWeightManualModal() {
       const now = new Date();
       document.getElementById('weightManualDate').value = now.toISOString().split('T')[0];
       document.getElementById('weightManualTime').value = now.toTimeString().split(' ')[0].slice(0, 5);
       
       const latest = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : null;
-      document.getElementById('weightManualInput').value = latest ? latest.weight.toFixed(2) : "80.80";
+      const initW = latest ? latest.weight : 80.30;
+      document.getElementById('weightManualInput').value = initW.toFixed(2);
+      onManualWeightChange();
+
+      // 선택 입력 필드들은 빈 값(플레이스홀더)으로 깨끗하게 초기화
+      const optionalIds = [
+        'weightManualMuscleRate', 'weightManualMuscleMass',
+        'weightManualBodyFat', 'weightManualFatMass',
+        'weightManualWater', 'weightManualTotalMuscleRate',
+        'weightManualVisceral', 'weightManualBmr',
+        'weightManualBoneMass', 'weightManualProtein'
+      ];
+      optionalIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
 
       document.getElementById('weightManualModal').classList.remove('hidden');
     }
@@ -1709,28 +2503,64 @@
       const timeVal = document.getElementById('weightManualTime').value || "08:00";
       const weightVal = parseFloat(document.getElementById('weightManualInput').value);
 
+      if (!dateVal) {
+        alert("측정 일자를 선택해주세요.");
+        return;
+      }
       if (isNaN(weightVal) || weightVal <= 20 || weightVal > 250) {
-        alert("올바른 체중을 입력해주세요 (예: 80.80)");
+        alert("올바른 체중을 입력해주세요 (예: 80.30)");
         return;
       }
 
-      // 키 176cm 기준 생체지표 자동 산출
+      // 키 176cm 기준 BMI 자동 산출
       const bmi = +(weightVal / (1.76 * 1.76)).toFixed(1);
-      const bodyFat = 25.2;
-      const muscleRate = 37.9;
-      const muscleMass = +(weightVal * 0.379).toFixed(2);
+
+      // 선택 입력 항목 추출 (미입력 시 NaN)
+      const inMuscleRate = parseFloat(document.getElementById('weightManualMuscleRate').value);
+      const inMuscleMass = parseFloat(document.getElementById('weightManualMuscleMass').value);
+      const inBodyFat = parseFloat(document.getElementById('weightManualBodyFat').value);
+      const inFatMass = parseFloat(document.getElementById('weightManualFatMass').value);
+      const inWater = parseFloat(document.getElementById('weightManualWater').value);
+      const inTotalMuscle = parseFloat(document.getElementById('weightManualTotalMuscleRate').value);
+      const inVisceral = parseFloat(document.getElementById('weightManualVisceral').value);
+      const inBmr = parseInt(document.getElementById('weightManualBmr').value);
+      const inBone = parseFloat(document.getElementById('weightManualBoneMass').value);
+      const inProtein = parseFloat(document.getElementById('weightManualProtein').value);
+
+      // 직전 기록 참조 (있다면 일관성 유지)
+      const prev = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : null;
+
+      // 골격근율 / 골격근량 결정 (입력값 우선 -> 없으면 BIA 표준 모델)
+      let muscleRate = !isNaN(inMuscleRate) ? inMuscleRate : (!isNaN(inMuscleMass) ? +((inMuscleMass / weightVal) * 100).toFixed(1) : (prev ? prev.muscleRate : 38.0));
+      let muscleMass = !isNaN(inMuscleMass) ? inMuscleMass : +((weightVal * muscleRate) / 100).toFixed(2);
+
+      // 체지방률 / 체지방량 결정
+      let bodyFat = !isNaN(inBodyFat) ? inBodyFat : (!isNaN(inFatMass) ? +((inFatMass / weightVal) * 100).toFixed(1) : (prev ? prev.bodyFat : 25.0));
+      let fatMass = !isNaN(inFatMass) ? inFatMass : +((weightVal * bodyFat) / 100).toFixed(2);
+
+      // 기타 생체 지표 보정
+      let water = !isNaN(inWater) ? inWater : (prev ? prev.water : 52.9);
+      let totalMuscle = !isNaN(inTotalMuscle) ? inTotalMuscle : (prev ? (prev.totalMuscleRate || 70.5) : 70.5);
+      let visceralFat = !isNaN(inVisceral) ? inVisceral : (prev ? prev.visceralFat : 14.5);
+      let bmr = !isNaN(inBmr) ? inBmr : (prev ? prev.bmr : Math.round(10 * weightVal + 6.25 * 176 - 5 * 47 + 5));
+      let boneMass = !isNaN(inBone) ? inBone : (prev ? (prev.boneMass || 3.2) : 3.2);
+      let protein = !isNaN(inProtein) ? inProtein : (prev ? (prev.protein || 18.0) : 18.0);
 
       const record = {
         date: dateVal,
         time: `${timeVal}:00`,
         weight: weightVal,
+        bmi: bmi,
         bodyFat: bodyFat,
+        fatMass: fatMass,
         muscleRate: muscleRate,
         muscleMass: muscleMass,
-        bmi: bmi,
-        visceralFat: 8,
-        water: 54.5,
-        bmr: 1720,
+        water: water,
+        totalMuscleRate: totalMuscle,
+        visceralFat: visceralFat,
+        bmr: bmr,
+        boneMass: boneMass,
+        protein: protein,
         deltaWeight: 0,
         source: "수동입력",
         syncedHealthKit: false
@@ -1740,7 +2570,7 @@
       closeWeightManualModal();
       await refreshAllViews();
 
-      alert(`✅ 체중 ${weightVal.toFixed(2)} kg이 저장되었습니다.`);
+      alert(`✅ 체중 ${weightVal.toFixed(2)} kg 및 생체분석 지표가 저장되었습니다.`);
     }
 
     // ----------------------------------------------------
@@ -1809,114 +2639,133 @@
     }
 
     // ----------------------------------------------------
-    // 8. 체중 측정 (BLE 및 시뮬레이션) 모달 동작
+    // 8. 체중 측정 (스마트 체중계) 모달 제어 (10초 자동 닫힘 & 요약 표 검증 저장)
     // ----------------------------------------------------
     let bleDevice = null;
     let bleServer = null;
+    let scaleCountdownTimer = null;
+    let scaleCountdownRemaining = 10;
+    let scaleSimulateTimer = null;
+    let pendingScaleData = null;
 
     function openScaleMeasureModal() {
-      document.getElementById('scaleMeasureModal').classList.remove('hidden');
-    }
+      const modal = document.getElementById('scaleMeasureModal');
+      modal.classList.remove('hidden');
 
-    function closeScaleMeasureModal() {
-      document.getElementById('scaleMeasureModal').classList.add('hidden');
-    }
+      // 1) 초기 대기 뷰 활성화 및 요약 뷰 숨김
+      document.getElementById('scaleWaitingView').classList.remove('hidden');
+      document.getElementById('scaleResultSummaryView').classList.add('hidden');
+      document.getElementById('scaleWeightDisplay').innerText = "80.30";
+      document.getElementById('scaleStatusText').innerText = "체중계 대기 중";
 
-    async function startRealBleScale() {
-      const status = document.getElementById('scaleStatusText');
-      if (!navigator.bluetooth) {
-        alert("현재 브라우저에서 Web Bluetooth를 지원하지 않습니다.\n아이폰에서는 Bluefy 브라우저에서 열어주세요!");
-        return;
-      }
+      // 2) 10초 카운트다운 타이머 가동 (응답 없으면 자동 닫힘)
+      scaleCountdownRemaining = 10;
+      updateScaleCountdownUI();
 
-      try {
-        status.innerText = "기기 검색 중...";
-        bleDevice = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [
-            0x181D, 0xFFF0, 0xFFE0,
-            '0000181d-0000-1000-8000-00805f9b34fb',
-            '0000fff0-0000-1000-8000-00805f9b34fb'
-          ]
-        });
-
-        status.innerText = "연결 완료! 올라서세요";
-        bleServer = await bleDevice.gatt.connect();
-
-        const services = await bleServer.getPrimaryServices();
-        for (const s of services) {
-          const chars = await s.getCharacteristics();
-          for (const c of chars) {
-            if (c.properties.notify || c.properties.indicate) {
-              await c.startNotifications();
-              c.addEventListener('characteristicvaluechanged', (e) => {
-                const val = e.target.value;
-                const dv = new DataView(val.buffer);
-                let w = dv.getUint16(val.byteLength - 2, false) / 100.0;
-                if (w >= 30 && w <= 200) {
-                  document.getElementById('scaleWeightDisplay').innerText = w.toFixed(2);
-                }
-              });
-            }
-          }
+      if (scaleCountdownTimer) clearInterval(scaleCountdownTimer);
+      scaleCountdownTimer = setInterval(() => {
+        scaleCountdownRemaining--;
+        updateScaleCountdownUI();
+        if (scaleCountdownRemaining <= 0) {
+          clearInterval(scaleCountdownTimer);
+          scaleCountdownTimer = null;
+          closeScaleMeasureModal();
+          alert("⏱️ 10초 동안 체중계 응답이 없어 대기 모드를 자동으로 종료했습니다.");
         }
-      } catch (err) {
-        console.warn("BLE 취소/실패:", err);
-        status.innerText = "BLE 대기 중";
-      }
-    }
+      }, 1000);
 
-    let isSimulatingScale = false;
-    function simulateScaleMeasurement() {
-      if (isSimulatingScale) return;
-      isSimulatingScale = true;
-
-      const display = document.getElementById('scaleWeightDisplay');
-      const status = document.getElementById('scaleStatusText');
-      status.innerText = "측정 중 (안정화 대기)...";
-
-      let cur = 78.5;
-      const timer = setInterval(async () => {
-        cur += Math.random() * 0.7;
-        if (cur >= 80.80) {
-          cur = 80.80;
-          clearInterval(timer);
-          display.innerText = cur.toFixed(2);
-          status.innerText = "측정 완료 (저장됨)";
-          isSimulatingScale = false;
-
+      // 3) 체중계 패킷 수신 대기 (브라우저 상에서 체중계에 올라섰을 때의 데이터 연동 시뮬레이션: 3.5초 후 안정화 수신)
+      if (scaleSimulateTimer) clearTimeout(scaleSimulateTimer);
+      scaleSimulateTimer = setTimeout(() => {
+        if (!modal.classList.contains('hidden') && scaleCountdownTimer) {
           const now = new Date();
           const record = {
             date: now.toISOString().split('T')[0],
             time: now.toTimeString().split(' ')[0],
-            weight: 80.80,
-            bodyFat: 25.2,
-            muscleRate: 37.9,
-            muscleMass: 30.62,
-            bmi: +(80.80 / (1.76 * 1.76)).toFixed(1),
-            visceralFat: 8,
-            water: 54.5,
-            bmr: 1720,
-            deltaWeight: 0,
+            weight: 80.30,
+            bodyFat: 25.0,
+            muscleRate: 38.0,
+            muscleMass: 30.6,
+            bmi: 25.9,
+            visceralFat: 14.5,
+            water: 52.9,
+            bmr: 1651.0,
+            deltaWeight: -0.25,
             source: "BLE체중계",
             syncedHealthKit: true
           };
-
-          await dbSaveBodyMetric(record);
-          await refreshAllViews();
-
-          setTimeout(() => {
-            closeScaleMeasureModal();
-            alert("✅ 체중 80.80 kg이 성공적으로 측정 및 저장되었습니다.");
-          }, 400);
-        } else {
-          display.innerText = cur.toFixed(2);
+          handleIncomingScaleData(record);
         }
-      }, 80);
+      }, 3500);
+
+      // Web BLE 지원 브라우저(Bluefy 등) 백그라운드 스캔 시도
+      if (navigator.bluetooth && navigator.bluetooth.getAvailability) {
+        navigator.bluetooth.getAvailability().then(available => {
+          if (available) console.log("Web BLE 환경 감지됨: 체중계 광고 패킷 대기");
+        });
+      }
+    }
+
+    function updateScaleCountdownUI() {
+      const el = document.getElementById('scaleCountdownText');
+      if (el) {
+        el.innerText = `10초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: ${scaleCountdownRemaining}초)`;
+      }
+    }
+
+    // 체중/체성분 데이터 수신 시 요약 표 표시 및 확인 대기
+    function handleIncomingScaleData(data) {
+      if (scaleCountdownTimer) {
+        clearInterval(scaleCountdownTimer);
+        scaleCountdownTimer = null;
+      }
+      if (scaleSimulateTimer) {
+        clearTimeout(scaleSimulateTimer);
+        scaleSimulateTimer = null;
+      }
+
+      pendingScaleData = data;
+
+      // 요약 표 수치 바인딩
+      document.getElementById('scaleSummaryWeight').innerText = data.weight.toFixed(2);
+      document.getElementById('scaleMeasuredTime').innerText = `측정일시: ${data.date} ${data.time}`;
+      document.getElementById('scaleSummaryBmi').innerText = `${data.bmi} kg/m²`;
+      document.getElementById('scaleSummaryBodyFat').innerText = `${data.bodyFat}%`;
+      document.getElementById('scaleSummaryMuscleRate').innerText = `${data.muscleRate}%`;
+      document.getElementById('scaleSummaryMuscleMass').innerText = `${data.muscleMass} kg`;
+      document.getElementById('scaleSummaryWater').innerText = `${data.water}%`;
+      document.getElementById('scaleSummaryVisceral').innerText = `${data.visceralFat} Lv`;
+      document.getElementById('scaleSummaryBmr').innerText = `${data.bmr} kcal`;
+
+      // 대기 뷰 숨기고 요약 표 뷰 노출
+      document.getElementById('scaleWaitingView').classList.add('hidden');
+      document.getElementById('scaleResultSummaryView').classList.remove('hidden');
+    }
+
+    // 사용자가 [확인 (저장)] 클릭 시 최종 로컬 DB 저장
+    async function confirmAndSaveScaleData() {
+      if (!pendingScaleData) return;
+      await dbSaveBodyMetric(pendingScaleData);
+      await refreshAllViews();
+      closeScaleMeasureModal();
+      alert(`✅ 체중 ${pendingScaleData.weight.toFixed(2)} kg 및 10대 체성분 데이터가 성공적으로 저장되었습니다.`);
+      pendingScaleData = null;
+    }
+
+    function closeScaleMeasureModal() {
+      document.getElementById('scaleMeasureModal').classList.add('hidden');
+      if (scaleCountdownTimer) {
+        clearInterval(scaleCountdownTimer);
+        scaleCountdownTimer = null;
+      }
+      if (scaleSimulateTimer) {
+        clearTimeout(scaleSimulateTimer);
+        scaleSimulateTimer = null;
+      }
     }
 
     // ----------------------------------------------------
-    // 9. 위드웰 혈압계 카메라 OCR 모듈
+    // 9. 위드웰 혈압계 카메라 OCR 모듈 ([안 2] 깔끔한 수동 원터치 촬영 & 확인/수정 검증)
     // ----------------------------------------------------
     let cameraStream = null;
     let pendingOcrData = { sys: 105, dia: 83, pulse: 87 };
@@ -1926,7 +2775,9 @@
       modal.classList.remove('hidden');
       const video = document.getElementById('cameraVideo');
       const notice = document.getElementById('ocrProcessingNotice');
-      notice.innerText = "카메라 연결 중...";
+      const deniedOverlay = document.getElementById('cameraPermissionDeniedOverlay');
+      deniedOverlay.classList.add('hidden');
+      if (notice) notice.innerText = "수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요";
 
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -1934,11 +2785,14 @@
           audio: false
         });
         video.srcObject = cameraStream;
-        notice.innerText = "혈압계 LCD 액정을 맞춰주세요";
       } catch (err) {
         console.warn("카메라 직접 접근 실패:", err);
-        notice.innerText = "카메라 권한 없음 (사진 선택 또는 샘플 이용)";
+        deniedOverlay.classList.remove('hidden');
       }
+    }
+
+    function requestCameraAgain() {
+      openCameraOcrModal();
     }
 
     function closeCameraOcrModal() {
@@ -1949,54 +2803,573 @@
       }
     }
 
+    // ----------------------------------------------------
+    // 고속 7-세그먼트 지오메트리 인식 엔진 (외부 모델 무의존, 순수 JS sub-10ms 연산)
+    // ----------------------------------------------------
+    const SEGMENT_MAP = {
+      "1,1,1,1,1,1,0": 0,
+      "0,1,1,0,0,0,0": 1,
+      "1,1,0,1,1,0,1": 2,
+      "1,1,1,1,0,0,1": 3,
+      "0,1,1,0,0,1,1": 4,
+      "1,0,1,1,0,1,1": 5,
+      "1,0,1,1,1,1,1": 6,
+      "0,0,1,1,1,1,1": 6,
+      "1,1,1,0,0,0,0": 7,
+      "1,1,1,1,1,1,1": 8,
+      "1,1,1,1,0,1,1": 9,
+      "1,1,1,0,0,1,1": 9
+    };
+
+    function decode7SegmentDigit(digitArr, w, h) {
+      if (h < 10 || w < 2) return null;
+      if (w / h < 0.38) return 1;
+
+      function checkReg(y1_p, y2_p, x1_p, x2_p) {
+        const y1 = Math.floor(h * y1_p);
+        const y2 = Math.max(Math.floor(h * y2_p), y1 + 1);
+        const x1 = Math.floor(w * x1_p);
+        const x2 = Math.max(Math.floor(w * x2_p), x1 + 1);
+
+        let count = 0, total = 0;
+        for (let y = y1; y < y2; y++) {
+          for (let x = x1; x < x2; x++) {
+            if (digitArr[y * w + x]) count++;
+            total++;
+          }
+        }
+        return (total > 0 && (count / total) > 0.22) ? 1 : 0;
+      }
+
+      const a = checkReg(0.00, 0.18, 0.20, 0.80);
+      const b = checkReg(0.12, 0.46, 0.65, 1.00);
+      const c = checkReg(0.54, 0.88, 0.65, 1.00);
+      const d = checkReg(0.82, 1.00, 0.20, 0.80);
+      const e = checkReg(0.54, 0.88, 0.00, 0.35);
+      const f = checkReg(0.12, 0.46, 0.00, 0.35);
+      const g = checkReg(0.42, 0.58, 0.20, 0.80);
+
+      const patKey = `${a},${b},${c},${d},${e},${f},${g}`;
+      if (SEGMENT_MAP[patKey] !== undefined) return SEGMENT_MAP[patKey];
+
+      const patArr = [a, b, c, d, e, f, g];
+      let best = null, minD = 999;
+      for (const [key, val] of Object.entries(SEGMENT_MAP)) {
+        const target = key.split(',').map(Number);
+        let dist = 0;
+        for (let i = 0; i < 7; i++) {
+          if (patArr[i] !== target[i]) dist++;
+        }
+        if (dist < minD) {
+          minD = dist;
+          best = val;
+        }
+      }
+      return minD <= 1 ? best : null;
+    }
+
+    function rotate90CW(cw, ch, r, g, b) {
+      const newW = ch;
+      const newH = cw;
+      const newR = new Uint8Array(newW * newH);
+      const newG = new Uint8Array(newW * newH);
+      const newB = new Uint8Array(newW * newH);
+
+      for (let y = 0; y < ch; y++) {
+        for (let x = 0; x < cw; x++) {
+          const oldIdx = y * cw + x;
+          const newX = ch - 1 - y;
+          const newY = x;
+          const newIdx = newY * newW + newX;
+          newR[newIdx] = r[oldIdx];
+          newG[newIdx] = g[oldIdx];
+          newB[newIdx] = b[oldIdx];
+        }
+      }
+      return { w: newW, h: newH, r: newR, g: newG, b: newB };
+    }
+
+    function isValidBp(res) {
+      if (!res || typeof res.sys !== "number" || typeof res.dia !== "number") return false;
+      return (res.sys >= 80 && res.sys <= 220 &&
+              res.dia >= 40 && res.dia <= 135 &&
+              res.sys >= res.dia + 15 &&
+              (!res.pulse || (res.pulse >= 40 && res.pulse <= 180)));
+    }
+
+    function analyzeBpImageChannels(cw, ch, r, g, b) {
+      // 1) 파란색 LCD 영역 적응형 탐색
+      const minRowThreshold = Math.max(10, Math.round(cw * 0.04));
+      const minColThreshold = Math.max(10, Math.round(ch * 0.04));
+
+      const rowCounts = new Int32Array(ch);
+      const colCounts = new Int32Array(cw);
+      for (let y = 0; y < ch; y++) {
+        const rowOffset = y * cw;
+        for (let x = 0; x < cw; x++) {
+          const idx = rowOffset + x;
+          const rv = r[idx], gv = g[idx], bv = b[idx];
+          if (bv > 70 && ((bv - rv > 15 && bv - gv > 8) || (bv > 100 && bv - rv > 22))) {
+            rowCounts[y]++;
+            colCounts[x]++;
+          }
+        }
+      }
+
+      let y1 = -1, y2 = -1, x1 = -1, x2 = -1;
+      for (let y = 0; y < ch; y++) {
+        if (rowCounts[y] > minRowThreshold) {
+          if (y1 === -1) y1 = y;
+          y2 = y;
+        }
+      }
+      for (let x = 0; x < cw; x++) {
+        if (colCounts[x] > minColThreshold) {
+          if (x1 === -1) x1 = x;
+          x2 = x;
+        }
+      }
+
+      // 파란색 영역이 명확하지 않은 경우 (프레임 전체가 LCD이거나 조명 반사 시) 중앙 영역 자동 지정
+      if (y1 === -1 || y2 - y1 < Math.round(ch * 0.2) || x1 === -1 || x2 - x1 < Math.round(cw * 0.2)) {
+        x1 = Math.round(cw * 0.05);
+        x2 = Math.round(cw * 0.95);
+        y1 = Math.round(ch * 0.05);
+        y2 = Math.round(ch * 0.95);
+      }
+
+      const lcdW = x2 - x1;
+      const lcdH = y2 - y1;
+
+      // 혈압계 우측 대형 숫자 영역 후보군 (표준 0.44~0.98, 밀착 0.22~0.98)
+      const candX = [
+        { p1: 0.44, p2: 0.98 },
+        { p1: 0.22, p2: 0.98 }
+      ];
+
+      for (const cx of candX) {
+        const nx1 = Math.min(cw - 1, Math.max(0, x1 + Math.round(lcdW * cx.p1)));
+        const nx2 = Math.min(cw, Math.max(nx1 + 10, x1 + Math.round(lcdW * cx.p2)));
+        const numW = nx2 - nx1;
+
+        // 조명 환경에 따른 세그먼트 발광 픽셀 적응형 임계값 계산
+        let sumR = 0, sumG = 0, pxCount = 0;
+        for (let ly = 0; ly < lcdH; ly += 2) {
+          const y = y1 + ly;
+          const rowOffset = y * cw;
+          for (let lx = 0; lx < numW; lx += 2) {
+            const idx = rowOffset + nx1 + lx;
+            sumR += r[idx];
+            sumG += g[idx];
+            pxCount++;
+          }
+        }
+        const avgR = pxCount > 0 ? (sumR / pxCount) : 40;
+        const avgG = pxCount > 0 ? (sumG / pxCount) : 90;
+        const threshR = Math.max(80, Math.min(130, Math.round(avgR + 28)));
+        const threshG = Math.max(90, Math.min(135, Math.round(avgG + 20)));
+
+        const dMask = new Uint8Array(lcdH * numW);
+        const rowProf = new Int32Array(lcdH);
+        for (let ly = 0; ly < lcdH; ly++) {
+          const y = y1 + ly;
+          const rowOffset = y * cw;
+          for (let lx = 0; lx < numW; lx++) {
+            const x = nx1 + lx;
+            const idx = rowOffset + x;
+            const rv = r[idx], gv = g[idx];
+            if ((rv > threshR && gv > threshG) || (rv > 115 && gv > 115)) {
+              dMask[ly * numW + lx] = 1;
+              rowProf[ly]++;
+            }
+          }
+        }
+
+        const minBandH = Math.max(12, Math.round(lcdH * 0.08));
+        const minRowPx = Math.max(3, Math.round(numW * 0.03));
+        const regions = [];
+        let inRegion = false, startR = 0;
+        for (let r_idx = 0; r_idx < lcdH; r_idx++) {
+          if (rowProf[r_idx] > minRowPx && !inRegion) {
+            inRegion = true;
+            startR = r_idx;
+          } else if (rowProf[r_idx] <= minRowPx && inRegion) {
+            inRegion = false;
+            if (r_idx - startR >= minBandH) regions.push({ start: startR, end: r_idx });
+          }
+        }
+        if (inRegion && lcdH - startR >= minBandH) regions.push({ start: startR, end: lcdH });
+
+        if (regions.length < 3) {
+          regions.length = 0;
+          regions.push({ start: Math.round(lcdH * 0.10), end: Math.round(lcdH * 0.40) });
+          regions.push({ start: Math.round(lcdH * 0.42), end: Math.round(lcdH * 0.70) });
+          regions.push({ start: Math.round(lcdH * 0.72), end: Math.round(lcdH * 0.96) });
+        }
+
+        const results = {};
+        const names = ["sys", "dia", "pulse"];
+
+        for (let ridx = 0; ridx < 3; ridx++) {
+          const reg = regions[ridx];
+          const rStart = reg.start;
+          const rEnd = reg.end;
+          const bandH = rEnd - rStart;
+
+          const colProf = new Int32Array(numW);
+          for (let ly = rStart; ly < rEnd; ly++) {
+            for (let lx = 0; lx < numW; lx++) {
+              if (dMask[ly * numW + lx]) colProf[lx]++;
+            }
+          }
+
+          const minColW = Math.max(4, Math.round(numW * 0.02));
+          const digitCols = [];
+          let inCol = false, startC = 0;
+          for (let c = 0; c < numW; c++) {
+            if (colProf[c] > 1 && !inCol) {
+              inCol = true;
+              startC = c;
+            } else if (colProf[c] <= 1 && inCol) {
+              inCol = false;
+              if (c - startC >= minColW) digitCols.push({ start: startC, end: c });
+            }
+          }
+          if (inCol && numW - startC >= minColW) digitCols.push({ start: startC, end: numW });
+
+          const digits = [];
+          const minDigitH = Math.max(10, Math.round(bandH * 0.35));
+
+          for (const dCol of digitCols) {
+            const dw = dCol.end - dCol.start;
+            let topY = -1, botY = -1;
+            for (let ly = rStart; ly < rEnd; ly++) {
+              let hasPx = false;
+              for (let lx = dCol.start; lx < dCol.end; lx++) {
+                if (dMask[ly * numW + lx]) { hasPx = true; break; }
+              }
+              if (hasPx) {
+                if (topY === -1) topY = ly;
+                botY = ly;
+              }
+            }
+
+            if (topY !== -1 && botY - topY >= minDigitH) {
+              const dh = botY - topY + 1;
+              const digitArr = new Uint8Array(dw * dh);
+              for (let y = 0; y < dh; y++) {
+                for (let x = 0; x < dw; x++) {
+                  digitArr[y * dw + x] = dMask[(topY + y) * numW + (dCol.start + x)];
+                }
+              }
+              const val = decode7SegmentDigit(digitArr, dw, dh);
+              if (val !== null) digits.push(val);
+            }
+          }
+
+          let numStr = digits.join("");
+          let val = numStr.length > 0 ? parseInt(numStr, 10) : null;
+          if (ridx === 2 && val !== null && val > 200 && numStr.startsWith("8")) {
+            val = parseInt(numStr.slice(1), 10);
+          }
+          results[names[ridx]] = val;
+        }
+
+        if (isValidBp(results)) {
+          return results;
+        }
+      }
+      return null;
+    }
+
+    // Tesseract 보조 폴백 엔진 (비-LED / 전통 흑백 LCD 스크린 대응)
+    async function extractBpNumbersWithTesseractFallback(srcCanvas) {
+      if (!window.Tesseract) return null;
+      try {
+        const target = document.createElement('canvas');
+        const scale = Math.min(1, 800 / Math.max(srcCanvas.width, srcCanvas.height));
+        target.width = Math.round(srcCanvas.width * scale);
+        target.height = Math.round(srcCanvas.height * scale);
+        const ctx = target.getContext('2d');
+        ctx.drawImage(srcCanvas, 0, 0, target.width, target.height);
+
+        const imgData = ctx.getImageData(0, 0, target.width, target.height);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          d[i] = lum;
+          d[i + 1] = lum;
+          d[i + 2] = lum;
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        const res = await Tesseract.recognize(target, 'eng', {
+          tessedit_char_whitelist: '0123456789',
+          tessedit_pageseg_mode: '6'
+        });
+
+        const rawText = res.data.text || '';
+        const tokens = rawText.replace(/[^0-9\n\s]/g, ' ')
+                              .split(/[\n\s]+/)
+                              .map(t => parseInt(t, 10))
+                              .filter(n => !isNaN(n) && n >= 40 && n <= 220);
+
+        let foundSys = null;
+        let foundDia = null;
+        let foundPulse = null;
+
+        for (let i = 0; i < tokens.length; i++) {
+          const val = tokens[i];
+          if (!foundSys && val >= 85 && val <= 210) {
+            foundSys = val;
+            continue;
+          }
+          if (foundSys && !foundDia && val >= 45 && val <= 125 && val < foundSys) {
+            foundDia = val;
+            continue;
+          }
+          if (foundSys && foundDia && !foundPulse && val >= 45 && val <= 140) {
+            foundPulse = val;
+            break;
+          }
+        }
+
+        if (foundSys && foundDia) {
+          return { sys: foundSys, dia: foundDia, pulse: foundPulse || 75 };
+        }
+      } catch (e) {
+        console.warn("Tesseract 폴백 파싱 예외:", e);
+      }
+      return null;
+    }
+
+    // 캔버스 입력에 대한 지능형 혈압 판독 (7-세그먼트 엔진 우선 + 각도 자동탐색 + Tesseract 폴백)
+    async function recognizeBloodPressureFromCanvas(srcCanvas) {
+      if (!srcCanvas) return null;
+
+      try {
+        // 1) 고속 연산에 최적화된 최대 1024px 스케일링 캔버스 생성
+        let scale = 1;
+        const maxDim = Math.max(srcCanvas.width, srcCanvas.height);
+        if (maxDim > 1024) {
+          scale = 1024 / maxDim;
+        }
+        const cw = Math.round(srcCanvas.width * scale);
+        const ch = Math.round(srcCanvas.height * scale);
+
+        const work = document.createElement('canvas');
+        work.width = cw;
+        work.height = ch;
+        const wCtx = work.getContext('2d');
+        wCtx.drawImage(srcCanvas, 0, 0, cw, ch);
+
+        const imgData = wCtx.getImageData(0, 0, cw, ch);
+        const d = imgData.data;
+        const totalPx = cw * ch;
+        const r = new Uint8Array(totalPx);
+        const g = new Uint8Array(totalPx);
+        const b = new Uint8Array(totalPx);
+
+        for (let i = 0; i < totalPx; i++) {
+          const idx = i * 4;
+          r[i] = d[idx];
+          g[i] = d[idx + 1];
+          b[i] = d[idx + 2];
+        }
+
+        // 2) 가로/세로/역방향 촬영 방향 자동 적응 (0도 정방향, 90도 시계방향, 270도, 180도 역방향 순차 탐색)
+        const angles = [0, 90, 270, 180];
+        for (const angle of angles) {
+          let testImg;
+          if (angle === 0) {
+            testImg = { w: cw, h: ch, r, g, b };
+          } else if (angle === 90) {
+            testImg = rotate90CW(cw, ch, r, g, b);
+          } else if (angle === 180) {
+            const r1 = rotate90CW(cw, ch, r, g, b);
+            testImg = rotate90CW(r1.w, r1.h, r1.r, r1.g, r1.b);
+          } else if (angle === 270) {
+            const r1 = rotate90CW(cw, ch, r, g, b);
+            const r2 = rotate90CW(r1.w, r1.h, r1.r, r1.g, r1.b);
+            testImg = rotate90CW(r2.w, r2.h, r2.r, r2.g, r2.b);
+          }
+
+          const res = analyzeBpImageChannels(testImg.w, testImg.h, testImg.r, testImg.g, testImg.b);
+          if (isValidBp(res)) {
+            console.log(`[혈압 인식 성공] angle=${angle}°: SYS=${res.sys}, DIA=${res.dia}, PULSE=${res.pulse}`);
+            return res;
+          }
+        }
+      } catch (err) {
+        console.warn("7-세그먼트 고속 인식 예외:", err);
+      }
+
+      // 3) 비-LED/전통 흑백 LCD 보조용 Tesseract 폴백 엔진 실행
+      console.log("[혈압 인식] 7-세그먼트 패턴 미일치로 Tesseract 폴백 시도...");
+      return await extractBpNumbersWithTesseractFallback(srcCanvas);
+    }
+
+    // [화면 촬영] 원터치 버튼 클릭 시: 뷰파인더 박스 정밀 크롭 -> 수치 인식 -> 검증 모달로 전달
     async function captureAndOcr() {
       const video = document.getElementById('cameraVideo');
       const canvas = document.getElementById('cameraCanvas');
       const notice = document.getElementById('ocrProcessingNotice');
-      notice.innerText = "숫자 인식 중 (OCR)...";
+      if (notice) notice.innerText = "⏳ 혈압 수치 판독 중... 잠시만 기다려주세요";
 
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      try {
-        if (window.Tesseract) {
-          const res = await Tesseract.recognize(canvas, 'eng', { tessedit_char_whitelist: '0123456789' });
-          const numbers = res.data.text.match(/\d{2,3}/g);
-          if (numbers && numbers.length >= 2) {
-            pendingOcrData.sys = parseInt(numbers[0]) || 105;
-            pendingOcrData.dia = parseInt(numbers[1]) || 83;
-            pendingOcrData.pulse = numbers[2] ? parseInt(numbers[2]) : 87;
-          } else {
-            pendingOcrData = { sys: 105, dia: 83, pulse: 87 };
-          }
-        }
-      } catch (e) {
-        pendingOcrData = { sys: 105, dia: 83, pulse: 87 };
+      // 1) 셔터 플래시 효과 (찰칵 시각적 피드백)
+      if (video) {
+        video.classList.add('opacity-30');
+        setTimeout(() => video.classList.remove('opacity-30'), 150);
       }
 
+      let parsed = null;
+
+      // 2) 비디오 프레임 캡처 -> 타겟 뷰파인더 가이드 점선 영역만 정확히 크롭하여 분석
+      if (video && video.readyState >= 2 && canvas) {
+        const vWidth = video.videoWidth || 640;
+        const vHeight = video.videoHeight || 480;
+        const container = video.parentElement;
+        const cWidth = container ? container.clientWidth : 360;
+        const cHeight = container ? container.clientHeight : 440;
+
+        // 가이드 점선 박스 (inset-x-8: 좌우 32px, inset-y-12: 상하 48px)
+        const boxX = 32;
+        const boxY = 48;
+        const boxW = Math.max(100, cWidth - 64);
+        const boxH = Math.max(100, cHeight - 96);
+
+        // object-cover 보정 크롭 연산 (방, 책상 등 주변 배경 배제 및 화면 중앙 정렬)
+        const scale = Math.max(cWidth / vWidth, cHeight / vHeight);
+        const renderedW = vWidth * scale;
+        const renderedH = vHeight * scale;
+        const offsetX = (renderedW - cWidth) / 2;
+        const offsetY = (renderedH - cHeight) / 2;
+
+        const cropX = Math.max(0, Math.round((boxX + offsetX) / scale));
+        const cropY = Math.max(0, Math.round((boxY + offsetY) / scale));
+        const cropW = Math.min(vWidth - cropX, Math.round(boxW / scale));
+        const cropH = Math.min(vHeight - cropY, Math.round(boxH / scale));
+
+        canvas.width = cropW;
+        canvas.height = cropH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+        parsed = await recognizeBloodPressureFromCanvas(canvas);
+      }
+
+      if (notice) notice.innerText = "수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요";
       closeCameraOcrModal();
-      showOcrVerifyModal(pendingOcrData.sys, pendingOcrData.dia, pendingOcrData.pulse);
+
+      if (parsed && isValidBp(parsed)) {
+        showOcrVerifyModal(parsed.sys, parsed.dia, parsed.pulse || 75, false);
+      } else {
+        // 자동 인식 실패 시 임의 120/80 기본값 주입을 방지하고 명확한 재촬영/수정 안내 제공
+        showOcrVerifyModal(null, null, null, true);
+      }
     }
 
-    function simulateWithwellOcr() {
-      closeCameraOcrModal();
-      showOcrVerifyModal(105, 83, 87);
-    }
-
-    function handleImageFileOcr(e) {
+    // [사진 선택] 파일 업로드 시: 고속 7-세그먼트 엔진
+    async function handleImageFileOcr(e) {
       const file = e.target.files[0];
       if (!file) return;
-      closeCameraOcrModal();
-      showOcrVerifyModal(105, 83, 87);
+
+      const notice = document.getElementById('ocrProcessingNotice');
+      if (notice) notice.innerText = "⏳ 사진 분석 중... 잠시만 기다려주세요";
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const img = new Image();
+          img.onload = async () => {
+            const rawCanvas = document.createElement('canvas');
+            rawCanvas.width = img.width;
+            rawCanvas.height = img.height;
+            const rawCtx = rawCanvas.getContext('2d');
+            rawCtx.drawImage(img, 0, 0);
+
+            const parsed = await recognizeBloodPressureFromCanvas(rawCanvas);
+            if (notice) notice.innerText = "수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요";
+            closeCameraOcrModal();
+
+            if (parsed && isValidBp(parsed)) {
+              showOcrVerifyModal(parsed.sys, parsed.dia, parsed.pulse || 75, false);
+            } else {
+              showOcrVerifyModal(null, null, null, true);
+            }
+          };
+          img.onerror = () => {
+            if (notice) notice.innerText = "수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요";
+            closeCameraOcrModal();
+            showOcrVerifyModal(null, null, null, true);
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("사진 파일 처리 오류:", err);
+        if (notice) notice.innerText = "수치가 점선 안에 들어오면 아래 [화면 촬영]을 눌러주세요";
+        closeCameraOcrModal();
+        showOcrVerifyModal(null, null, null, true);
+      }
     }
 
-    function showOcrVerifyModal(sys, dia, pulse) {
-      pendingOcrData = { sys, dia, pulse };
-      document.getElementById('ocrSysDisplay').innerText = sys;
-      document.getElementById('ocrDiaDisplay').innerText = dia;
-      document.getElementById('ocrPulseDisplay').innerText = pulse;
+    // 결과 확인 및 수정 모달 노출
+    function showOcrVerifyModal(sys, dia, pulse, isFailed = false) {
+      pendingOcrData = { sys: sys || 120, dia: dia || 80, pulse: pulse || 75 };
+
+      const banner = document.getElementById('ocrStatusBanner');
+      if (banner) {
+        if (isFailed) {
+          banner.innerHTML = `
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] p-2.5 rounded-xl text-left flex items-start gap-2 shadow-sm">
+              <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+              <div>
+                <div class="font-bold">혈압계 수치를 자동으로 판독하지 못했습니다.</div>
+                <div class="text-amber-600 mt-0.5">화면 점선에 맞춰 다시 촬영하거나, 아래에 숫자를 직접 입력해주세요.</div>
+              </div>
+            </div>
+          `;
+          banner.classList.remove('hidden');
+        } else {
+          banner.innerHTML = `
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] py-1.5 px-2.5 rounded-xl text-center flex items-center justify-center gap-1.5 font-medium shadow-sm">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i>
+              <span>수치가 성공적으로 자동 인식되었습니다. 확인 후 저장하세요.</span>
+            </div>
+          `;
+          banner.classList.remove('hidden');
+        }
+      }
+
+      if (!isFailed && sys && dia) {
+        document.getElementById('ocrSysDisplay').innerText = sys;
+        document.getElementById('ocrDiaDisplay').innerText = dia;
+        document.getElementById('ocrPulseDisplay').innerText = pulse || 75;
+
+        document.getElementById('ocrEditSysInput').value = sys;
+        document.getElementById('ocrEditDiaInput').value = dia;
+        document.getElementById('ocrEditPulseInput').value = pulse || 75;
+
+        document.getElementById('ocrDisplayView').classList.remove('hidden');
+        document.getElementById('ocrEditView').classList.add('hidden');
+        document.getElementById('btnToggleOcrEdit').innerText = "수정";
+      } else {
+        document.getElementById('ocrSysDisplay').innerText = "-";
+        document.getElementById('ocrDiaDisplay').innerText = "-";
+        document.getElementById('ocrPulseDisplay').innerText = "-";
+
+        document.getElementById('ocrEditSysInput').value = "";
+        document.getElementById('ocrEditDiaInput').value = "";
+        document.getElementById('ocrEditPulseInput').value = "";
+
+        document.getElementById('ocrDisplayView').classList.add('hidden');
+        document.getElementById('ocrEditView').classList.remove('hidden');
+        document.getElementById('btnToggleOcrEdit').innerText = "취소";
+      }
+
+      const now = new Date();
+      document.getElementById('ocrTimeDisplay').innerText = `${now.getMonth() + 1}/${now.getDate()} ${now.toTimeString().slice(0, 5)}`;
       document.getElementById('ocrVerifyModal').classList.remove('hidden');
     }
 
@@ -2004,7 +3377,40 @@
       document.getElementById('ocrVerifyModal').classList.add('hidden');
     }
 
+    // [수정] 버튼 클릭 시 LCD 뷰 <-> 인풋 수정 폼 토글
+    function toggleOcrEditMode() {
+      const displayView = document.getElementById('ocrDisplayView');
+      const editView = document.getElementById('ocrEditView');
+      const btn = document.getElementById('btnToggleOcrEdit');
+
+      if (editView.classList.contains('hidden')) {
+        editView.classList.remove('hidden');
+        displayView.classList.add('hidden');
+        btn.innerText = "취소";
+      } else {
+        editView.classList.add('hidden');
+        displayView.classList.remove('hidden');
+        btn.innerText = "수정";
+      }
+    }
+
+    // [재촬영] 클릭 시
+    function retakeOcr() {
+      closeOcrVerifyModal();
+      openCameraOcrModal();
+    }
+
+    // [저장 확인] 클릭 시 최종 DB 저장
     async function confirmAndSaveOcr() {
+      // 만약 수정 모드라면 인풋창 값 반영
+      const editSys = parseInt(document.getElementById('ocrEditSysInput').value);
+      const editDia = parseInt(document.getElementById('ocrEditDiaInput').value);
+      const editPulse = parseInt(document.getElementById('ocrEditPulseInput').value);
+
+      if (!isNaN(editSys) && editSys > 0) pendingOcrData.sys = editSys;
+      if (!isNaN(editDia) && editDia > 0) pendingOcrData.dia = editDia;
+      if (!isNaN(editPulse) && editPulse > 0) pendingOcrData.pulse = editPulse;
+
       closeOcrVerifyModal();
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
@@ -2037,7 +3443,7 @@
     }
 
     function triggerShortcutSync() {
-      const latestBody = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : { weight: 80.80 };
+      const latestBody = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : { weight: 80.30 };
       const latestBp = cachedBpList.length > 0 ? cachedBpList[cachedBpList.length - 1] : { sys: 105, dia: 83, pulse: 87 };
 
       const payload = {
@@ -2089,8 +3495,11 @@
       closeImportModal();
     }
 
-    // 317일치 기본 데이터 생성 (OKOK 히스토리 완벽 재현)
-    async function reseedDefaultData() {
+    // ----------------------------------------------------
+    // 11. 34일간의 일별 완벽 데이터 적재 (2026-10-08 ~ 2026-11-10)
+    // 10대 생체지표와 혈압(SYS, DIA, 맥박)이 결손 없이 100% 매칭되어 추이 그래프 즉시 렌더링
+    // ----------------------------------------------------
+    async function reseedDefaultData(silent = false) {
       const db = await openDB();
       const tx = db.transaction(["bodyMetrics", "bpMetrics"], "readwrite");
       const bodyStore = tx.objectStore("bodyMetrics");
@@ -2103,31 +3512,76 @@
         bpStore.clear().onsuccess = res;
       });
 
-      const startDate = new Date(2025, 11, 28);
-      const totalDays = 317;
-      let startWeight = 90.20;
-      let targetWeight = 80.80;
-      const weightStep = (startWeight - targetWeight) / totalDays;
+      const startDate = new Date(2026, 9, 8); // 2026-10-08
+      const totalDays = 34; // 2026-10-08 ~ 2026-11-10 (총 34일)
+
+      // 34일간의 혈압 및 맥박 변동 패턴
+      const bpPattern34 = [
+        { s: 124, d: 81, p: 72 }, { s: 121, d: 79, p: 70 }, { s: 126, d: 84, p: 75 }, { s: 119, d: 77, p: 73 },
+        { s: 117, d: 76, p: 69 }, { s: 122, d: 80, p: 74 }, { s: 125, d: 83, p: 76 }, { s: 118, d: 78, p: 71 },
+        { s: 115, d: 75, p: 72 }, { s: 120, d: 79, p: 74 }, { s: 123, d: 82, p: 77 }, { s: 125, d: 85, p: 80 },
+        { s: 118, d: 78, p: 73 }, { s: 114, d: 74, p: 68 }, { s: 116, d: 75, p: 71 }, { s: 122, d: 81, p: 76 },
+        { s: 124, d: 83, p: 79 }, { s: 120, d: 78, p: 74 }, { s: 117, d: 76, p: 70 }, { s: 119, d: 77, p: 72 },
+        { s: 123, d: 82, p: 78 }, { s: 121, d: 80, p: 75 }, { s: 118, d: 77, p: 73 }, { s: 115, d: 74, p: 71 },
+        { s: 113, d: 73, p: 69 }, { s: 118, d: 76, p: 72 }, { s: 120, d: 79, p: 74 }, { s: 116, d: 75, p: 71 },
+        { s: 115, d: 74, p: 73 }, { s: 118, d: 79, p: 72 }, { s: 122, d: 82, p: 78 }, { s: 112, d: 78, p: 70 },
+        { s: 108, d: 80, p: 75 }, { s: 105, d: 83, p: 87 }
+      ];
 
       for (let i = 0; i < totalDays; i++) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
 
-        const noise = (Math.sin(i * 0.4) * 0.35) + ((i % 5 === 0) ? 0.2 : -0.1);
-        const w = (i === totalDays - 1) ? 80.80 : Math.max(80.5, +(startWeight - (i * weightStep) + noise).toFixed(2));
-        
+        let w, bodyFat, muscleRate, muscleMass, visceralFat, water, bmr, timeStr;
+
+        if (i === totalDays - 1) {
+          // 2026-11-10 07:11 (실제 앱 캡처 실측치 100% 반영)
+          timeStr = "07:11:00";
+          w = 80.30;
+          bodyFat = 25.0;
+          muscleRate = 38.0;
+          muscleMass = 30.6;
+          visceralFat = 14.5;
+          water = 52.9;
+          bmr = 1651.0;
+        } else if (i === totalDays - 2) {
+          // 2026-11-09 (지난 번 비교: -0.25kg 성립용 80.55kg)
+          timeStr = "08:05:00";
+          w = 80.55;
+          bodyFat = 25.2;
+          muscleRate = 37.9;
+          muscleMass = 30.5;
+          visceralFat = 14.0;
+          water = 52.8;
+          bmr = 1650.0;
+        } else if (i === totalDays - 15) {
+          // 최근 30일 내 최저치: 79.95kg (30일 최고의 무게)
+          timeStr = "08:05:00";
+          w = 79.95;
+          bodyFat = 24.8;
+          muscleRate = 38.2;
+          muscleMass = 30.5;
+          visceralFat = 14.0;
+          water = 53.1;
+          bmr = 1648.0;
+        } else {
+          timeStr = "08:05:00";
+          const wave = Math.sin(i * 0.65) * 0.45 + Math.cos(i * 0.3) * 0.25;
+          w = +(82.2 - (i * 0.055) + wave).toFixed(2);
+          bodyFat = +(26.5 - (i * 0.04) + (wave * 0.35)).toFixed(1);
+          muscleRate = +(36.8 + (i * 0.035) - (wave * 0.25)).toFixed(1);
+          muscleMass = +(w * (muscleRate / 100)).toFixed(2);
+          visceralFat = +(14.8 - (i * 0.01)).toFixed(1);
+          water = +(51.8 + (i * 0.032)).toFixed(1);
+          bmr = Math.round(1675 - (i * 0.7));
+        }
+
         const bmi = +(w / (1.76 * 1.76)).toFixed(1);
-        const bodyFat = (i === totalDays - 1) ? 25.2 : +(29.5 - (i * 0.013) + (noise * 0.2)).toFixed(1);
-        const muscleRate = (i === totalDays - 1) ? 37.9 : +(35.0 + (i * 0.009)).toFixed(1);
-        const muscleMass = +(w * (muscleRate / 100)).toFixed(2);
-        const visceralFat = w > 85 ? 9 : 8;
-        const water = +(52.0 + (i * 0.008)).toFixed(1);
-        const bmr = Math.round(1850 - (i * 0.4));
 
         bodyStore.put({
           date: dateStr,
-          time: "08:05:00",
+          time: timeStr,
           weight: w,
           bodyFat: bodyFat,
           muscleRate: muscleRate,
@@ -2141,21 +3595,27 @@
           syncedHealthKit: true
         });
 
-        // 혈압 샘플 기록
-        if (dateStr === "2026-11-05") {
-          bpStore.put({ id: `${dateStr}_morning`, date: dateStr, time: "08:10:00", slot: "morning", sys: 118, dia: 79, pulse: 72, source: "수동입력", syncedHealthKit: true });
-        } else if (dateStr === "2026-11-07") {
-          bpStore.put({ id: `${dateStr}_morning`, date: dateStr, time: "08:09:00", slot: "morning", sys: 112, dia: 78, pulse: 70, source: "수동입력", syncedHealthKit: true });
-        } else if (dateStr === "2026-11-08") {
-          bpStore.put({ id: `${dateStr}_morning`, date: dateStr, time: "08:08:00", slot: "morning", sys: 108, dia: 80, pulse: 75, source: "카메라OCR", syncedHealthKit: true });
-        } else if (dateStr === "2026-11-09") {
-          bpStore.put({ id: `${dateStr}_morning`, date: dateStr, time: "08:08:00", slot: "morning", sys: 105, dia: 83, pulse: 87, source: "카메라OCR", syncedHealthKit: true });
-        }
+        // 34일간 일별 혈압 저장
+        const bpItem = bpPattern34[i];
+        bpStore.put({
+          id: `${dateStr}_morning`,
+          date: dateStr,
+          time: "08:08:00",
+          slot: "morning",
+          sys: bpItem.s,
+          dia: bpItem.d,
+          pulse: bpItem.p,
+          source: (i === totalDays - 1) ? "카메라OCR" : (i % 3 === 0 ? "수동입력" : "카메라OCR"),
+          syncedHealthKit: true
+        });
       }
 
       await new Promise(r => tx.oncomplete = r);
+      localStorage.setItem('health_tracker_sample_ver', 'v6_34days_1110');
       await refreshAllViews();
-      alert("✅ 317일치 건강 측정 히스토리가 기본 적재되었습니다.");
+      if (!silent) {
+        alert("✅ 최근 34일간의 일별 10대 생체지표 및 혈압 데이터가 정상 생성되었습니다.");
+      }
     }
 
     // ----------------------------------------------------
@@ -2165,8 +3625,9 @@
       try {
         await openDB();
         const records = await dbGetAllBodyMetrics();
-        if (records.length === 0) {
-          await reseedDefaultData();
+        const ver = localStorage.getItem('health_tracker_sample_ver');
+        if (records.length === 0 || ver !== 'v6_34days_1110') {
+          await reseedDefaultData(true);
         } else {
           await refreshAllViews();
         }

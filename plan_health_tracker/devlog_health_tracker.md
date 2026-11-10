@@ -74,7 +74,7 @@
 
 ## 5. 현재 산출물 현황 (Deliverables Status)
 
-1. [plan_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md): 기획 명세서 (v1.3.0, 간결체 반영 완료)
+1. [plan_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md): 메인 기획 명세서 (v1.4.0, 밸런스랩 가상 장치 검증 체계 반영 완료)
 2. [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 및 [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html): 신장 176cm 반영, 모바일 헤더 간소화, 반응형 모바일 풀스크린 최적화 완료
 3. [devlog_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/devlog_health_tracker.md): 프로젝트 개발 로그 (본 문서)
 4. **실기기 접속용 정식 배포 URL:** `https://cnekid.github.io/health_tracker/` (GitHub Pages HTTPS 활성화 완료)
@@ -83,7 +83,108 @@
 
 ## 6. 진행 현황 및 향후 계획 (Progress & Next Steps)
 
+* **2026-11-10 진행 완료 (지표 기준서 공식 기반 표준화 체계 및 [지표 1] 체중 확정 반영):**
+  * **핵심 지표 범위 조정:** 맥박(10번) 제외, 혈압(수축기/이완기)을 단일 상세 화면으로 통합 관리하여 **총 9개 핵심 지표** 체계로 확정.
+  * **[방식 2] 공식 기반 표준화 체계 채택:**
+    * 순수 1인 하드코딩 방식의 한계를 극복하고 향후 타인/가족 확장성을 보장하기 위해, `ref_health_metric_standards.md`의 각 지표 명세를 **[원천 산출 공식 + 현재 프로필(176cm, 47세, 남성) 대입 기준선 + 모바일 화면 전달 요약 설명문]**의 3단 표준 템플릿으로 정립.
+    * 몸무게($W$)는 키에 따른 자체 판정 기준을 가짐과 동시에 다른 BIA 파생 지표(골격근율, 체지방량, 기초대사량)의 계산 엔진 역할을 수행하는 구조를 명확히 함.
+  * **[지표 1] 체중 (Body Weight) - [안 A] 한국인 의학 표준 최종 확정:**
+    * 대한비만학회(KSSO 제9판) 한국인 임상 기준 채택: 낮음(<57.3kg) / 건강(57.3~70.9kg, 이상적 68.1kg) / 높음(71.0~77.1kg) / 비만(≥77.2kg).
+    * 설명문 확정: *"신장 176cm 기준 한국 성인 남성의 이상적인 표준 체중은 약 68.1kg(건강 범위: 57.3~70.9kg)입니다. 단순 체중 감량보다는 혈압 안정과 대사 건강을 위해 골격근량을 유지하면서 순수 체지방을 줄여나가는 것이 핵심입니다."*
+    * **산출물 전수 동기화:** [ref_health_metric_standards.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ref_health_metric_standards.md), [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html), [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 동기화 완료.
+
+* **2026-11-10 진행 완료 (체중 및 BIA 체성분 직접 수동 입력 모달 전면 개편):**
+  * **필수/선택 입력 구조화:**
+    * 측정 일자, 시간, 체중(kg)을 필수 항목(`*필수`)으로 지정하여 기본 체중 기록의 무결성 확보.
+    * 인바디 검사지나 과거 기록에 존재하는 10대 BIA 지표(골격근율/량, 체지방률/량, 체수분율, 전체근육률, 내장지방 레벨, 기초대사량, 골량, 단백질)를 자유롭게 개별 선택 입력할 수 있는 2열 그리드 인터페이스 구축.
+  * **유연한 부분 입력 및 스마트 자동 연동:**
+    * 일부 항목만 입력하더라도 직접 입력한 값은 100% 최우선 저장하고, 비워둔 항목은 BIA 표준 모델 및 직전 측정 기록 기반으로 자동 보정하여 데이터 결손 방지.
+    * 체중 및 비율(%) 입력 시 질량(kg) 및 BMI가 실시간 상호 자동 연동 계산되는 편의 로직 탑재.
+  * **산출물 반영:** [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html) 및 배포용 [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 동기화 완료.
+
+* **2026-11-10 진행 완료 (체중계 실측 12대 BIA 지표와 앱 프로필 속성 구조적 분리 반영):**
+  * **체중계 전송 지표 vs 앱 고유 프로필 역할 분리:**
+    * 체중계 하드웨어는 신장/나이를 보관하지 않고 오직 [체중 + BIA 저항값]만 측정·전송하며, 신장과 나이는 스마트폰 앱의 고유 프로필 속성이라는 점을 아키텍처에 명확히 반영.
+    * 이에 따라 체중계가 전송하는 순수 지표를 **12대 BIA 측정 지표**(체중, BMI, 지방%, 체질지방량kg, 골격근비율%, 골격근량kg, 근육%, 근육량kg, 수분%, 물의무게kg, 내장지방, 기초대사)로 확정.
+  * **가상 체중계 어드민 화면 개편 ([ui_balanslab_virtual_device.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_balanslab_virtual_device.html)):**
+    * 카드 그리드에서 신장(13번), 나이(14번)를 분리하고 상단 헤더 우측에 `[기준 프로필: 176cm · 47세]` 배지로 정돈 배치.
+    * 가운데 지표 카드는 12대 측정 항목으로 구성되어 4열 × 3행의 완벽한 직사각형 그리드 밸런스 달성.
+    * 체중 및 비율(%) 인풋 수정 시 파생 지표(BMI, 지방량kg, 골격근량kg, 근육량kg, 물의무게kg)가 오차 없이 실시간 자동 재계산되는 음영 읽기전용 보호 체계 유지.
+    * `[기본값 초기화 (80.30kg)]`, `[랜덤 생성]`, 지속 발송/중단 2버튼 제어, 3단계 상태 카드 정상 연동 확인.
+  * **기획서 동기화 ([plan_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md)):**
+    * 3.1절 및 3.6절에 체중계 실측 12대 BIA 지표 및 앱 프로필 2대 속성 분리 명세 업데이트 완료.
+
+* **2026-11-10 진행 완료 (가상 체중계 어드민 UX 전면 직관화 및 기획 명세 동기화):**
+  * **용어 및 버튼 직관화:**
+    * 혼란을 주던 `로컬 모의 모드(엔진 미실행)` 엔지니어링 표현을 제거하고, 기기 상태 중심의 직관적 안내(`⚪ 대기 중` / `🟢 발송 중`)로 정돈.
+    * `[실측치 프리셋]` 버튼 명칭을 실제 동작에 맞게 **`[기본값 초기화 (80.30kg)]`**로 변경.
+  * **불필요한 기술 옵션 제거:**
+    * 테스트용 `BLE 패킷 규격(Mode 1/2/3)` 셀렉트 박스 삭제, 실제 밸런스랩 규격인 `OKOK 1:1 풀 BIA 프레임(19바이트)`으로 내부 고정.
+  * **발송/중단 제어 2개 버튼 단순화:**
+    * 혼동을 주던 `발송(즉시송출)` / `발송(측정시뮬레이션)` 제거.
+    * 실제 체중계에 올라서고 내려오는 동작과 일치하는 **`[📡 발송 (체중계 올라섬)]`**(중단 전까지 지속 송출)과 **`[⏹ 중단 (체중계 내려옴)]`** 2개 버튼으로 통일.
+  * **로그 화면 전면 개편:**
+    * 복잡한 검은색 헥사/터미널 덤프 콘솔을 제거하고, 대기/발송중/수신완료 3단계 실시간 상태 카드 및 간결한 최근 수신 기록 배너로 개편.
+    * 핸드폰 수신 확인(ACK) 시 `🎉 핸드폰에서 수신을 완료했습니다!` 안내 노출 및 송출 자동 종료 처리.
+  * **산출물 동기화:** [ui_balanslab_virtual_device.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_balanslab_virtual_device.html) 및 [plan_health_tracker.md](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md) 반영 완료.
+
+* **2026-11-10 진행 완료 (모바일 1화면 뷰포트 최적화 및 홈 카드 메트릭 정돈):**
+  * **헤더 정리:** 최상단 타이틀 `HealthTracker` 바로 아래의 불필요한 오늘 날짜/요일(`homeHeaderDate`) 삭제 및 상단 마진 축소.
+  * **기준일 우측 끝 정렬:** 체중 및 혈압 카드의 `기준일 : M월 D일` 표기를 카드 헤더 박스의 오른쪽 끝(`flex justify-between items-center`)으로 이동하여 가독성 및 공간 효율 극대화.
+  * **체중 카드 비교 메트릭 정리:**
+    * 메인 수치 우측에 이미 `(직전 대비)` 증감 뱃지가 있으므로, 중복되던 하단 "지난 번과 비교" 삭제.
+    * 대신 **30일 최고 / 최저 몸무게**를 간단하고 직관적인 단어로 한 줄(`최근 30일` | `최고 81.9kg · 최저 80.0kg`)로 정돈.
+    * 내부 원본 데이터셋은 원본 정밀도를 유지하되, **최고/최저 표시 시에는 소수점 1자리까지만 표기 (`toFixed(1)`)**.
+  * **모바일 1화면 뷰포트 맞춤형 세로 컴팩트화:**
+    * 스크롤 없이 모바일 실기기 한 화면 안에 [헤더 + 체중 카드 + 혈압 카드 + 하단 탭]이 모두 쏙 담기도록 세로 패딩, 카드 내부 간격(`space-y-2`), Sparkline SVG 높이(`h-12`), 버튼 패딩(`py-2`) 정밀 압축.
+    * [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html) 반영 및 정합성 검증 완료.
+
+* **2026-11-10 진행 완료 (실기기 OKOK 캡처 분석 및 가상 장치·기획안 정밀 개편):**
+  * **실제 측정 데이터(11/10 07:11 실측치) 정밀 분석:**
+    * 사용자 신체 프로필: 신장 176cm, 실제 나이 47세.
+    * 10대 생체지표 체계 확정: 체중(80.30kg), BMI(25.9), 지방(25.0%/20.1kg), 골격근(38.0%/30.6kg), 근육(70.5%/56.6kg), 수분(52.9%/42.5kg), 내장지방(14.5), 기초대사(1651.0kcal/day).
+    * 실제 체중 4단계 판정선 이식: 낮음(<57.31) / 건강(57.31~77.13) / 높음(77.13~92.62) / 비만(>92.62).
+  * **밸런스랩 가상 체중계 어드민 개편 (`ui_balanslab_virtual_device.html`):**
+    * 10대 생체지표 입력 폼 및 체중/비율 변경 시 질량(kg) 및 BMI 실시간 자동 연동 계산 엔진 구현.
+    * 실제 실측치 원클릭 복원 버튼(`[실측치 프리셋]`) 및 현실적 랜덤 생성기 도입.
+    * Swift 백엔드 엔진(`main.swift` -> `balanslab_device`) 연동 및 양방향 수신 확인(ACK, `0xFFF2`) 리스너 완비.
+  * **메인 기획안 및 화면구성안 갱신 (`plan_health_tracker.md`, `ui_health_tracker.html`):**
+    * **기획안(`plan_health_tracker.md`):** 3.1, 3.5, 3.6을 최신 10대 지표 및 가상 장치 테스트 어드민 명세, 양방향 ACK 체계로 정식 동기화.
+    * **앱 화면구성안(`ui_health_tracker.html`):**
+      * 홈 체중 카드에 실제 비교 메트릭(`지난 번과 비교: -0.25 kg`, `30일 최고 무게: 79.95 kg`) 요약 바 탑재.
+      * 기준일 `11월 10일 (80.30 kg, 직전 대비 -0.25 kg)` 실측치 완벽 동기화.
+      * 지표 상세 뷰에 실제 체중 4단계 판정선 게이지 바(낮음 < 57.31 < 건강 < 77.13 < 높음 < 92.62 < 비만) 및 10대 생체지표 의학적 판정 로직 반영.
+      * IndexedDB 기본 적재 데이터셋을 2026-11-10 07:11 실측치 기준 318일 히스토리로 갱신 완료 (`v4_okok_1110`).
+
+* **2026-11-10 진행 완료 (가상 체중계 BLE 시뮬레이터 구축):**
+  * **맥북 기반 가상 장치 구현 (`tests/ble_simulator/`):**
+    * macOS 네이티브 Swift 6 및 `CoreBluetooth` (`CBPeripheralManager`) 기반 단일 CLI 실행 바이너리(`scale_sim`) 구축.
+    * 표준 체중계 서비스(`0x181D` / `0x2A9D`) 및 밸런스랩/OKOK 커스텀 서비스(`0xFFF0` / `0xFFF1`) 듀얼 GATT 프로파일 광고(`BalansLab-Scale`).
+    * 책상에서 물리 체중계 없이 아이폰 Bluefy 웹앱 및 Mac 브라우저와 실시간 연동 테스트를 진행할 수 있는 인터랙티브 CLI 인터페이스(엔터 시뮬레이션, 지정 체중 즉시 전송, 패킷 포맷 전환) 완비.
+
+* **2026-11-10 진행 완료 (지표 상세 화면 추이 차트 Zero-Scroll 즉시 렌더링 & 6일 단위 페이징 최적화):**
+  * **Zero-Scroll 즉시 렌더링 체계 적용 (`renderDetailLargeChart`):**
+    * 기존 전체 데이터셋(수십 일치)을 한 번에 가로 수천 px의 단일 SVG로 그려 우측 끝으로 강제 자동 스크롤(`scrollLeft = scrollWidth`, `scroll-smooth`)시키던 방식 제거.
+    * 모바일 뷰포트(100%)에 맞추어 **최신 6일치(5개 추이 구간)**만 Zero-Scroll로 0.01초 내 즉시 렌더링하도록 경량화하여 화면 진입 시 왼쪽에서 오른쪽으로 휙 지나가는 피로감 완전 해소.
+  * **과거 데이터 6일 단위 페이징 네비게이션 (`[◀ 이전 6일]`, `[다음 6일 ▶]`):**
+    * 차트 서브헤더에 구간 이동 버튼 및 현재 표시 구간 날짜 배지(예: `11/04 ~ 11/09`) 배치.
+    * `[◀ 이전 6일]` 터치 시 직전 과거 6일치 구간을 슬라이스하여 지연 없이 재렌더링.
+    * 최신 구간에서는 `[다음 6일 ▶]` 비활성화(`disabled`/연한 회색), 최초 과거 구간에서는 `[◀ 이전 6일]` 비활성화 처리.
+    * 상세 화면 진입 시(`openMetricDetail`) 항상 최신 6일치(`detailChartPageOffset = 0`)로 자동 초기화.
+  * **모바일 터치 스와이프 제스처 연동:**
+    * 차트 컨테이너에 `touchstart`/`touchend` 이벤트 리스너를 결합하여 우측 스와이프 시 이전 6일, 좌측 스와이프 시 다음 6일로 자연스럽게 탐색 지원 (`touch-pan-y`로 세로 스크롤 방해 차단).
+  * **지표별 차트 정합성 및 동적 Y축 스케일 최적화:**
+    * 단일 지표(체중, BMI, 골격근량 등): 활성 6일 구간 내 최소/최대값 기준 동적 Y축 스케일 및 면적 그라데이션 SVG 적용.
+    * 혈압 지표: 활성 6일 구간 내 좌측 수축기(SYS 빨강) / 우측 이완기(DIA 파랑) 독립 밴드 듀얼 Y축 및 가이드 점선 동적 최적화.
+  * **UI/UX 및 상하단 컴포넌트 무결성 보존:**
+    * 상단 의학적 4단계 게이지 바 및 하단 '전체 history (총 N건)' 테이블 데이터와의 연동에 사이드 이펙트 없이 완벽 동작.
+
 * **2026-11-10 진행 완료 (UI 대규모 개편 및 사용자 요구사항 반영):**
+  * **9대 핵심 건강 지표 표준화 및 [방식 2] 공식 기반 가변 스펙 엔진 구축:**
+    * 맥박 제외 및 혈압(수축기/이완기) 통합 상세 뷰 원칙 확정 (총 9대 지표 관리 체계 수립).
+    * 하드코딩 고정값 방식 배제, 사용자 프로필(신장, 나이, 성별, 체중)에 따라 기준선과 설명문이 실시간 계산되는 **동적 가변식 함수(`calculateWeightDynamicSpec`)** 엔진 구축.
+    * 사용자가 제시한 카드 원천 양식 100% 보존: `"체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 {height}cm 기준 의학적 기준 범위는 낮음(<{b1}kg), 건강({b1}~{b2}kg), 높음({b2}~{b3}kg), 비만(≥{b3}kg)으로 구분됩니다."`
+    * [지표 1: 체중] 대한비만학회(KSSO 제9판) 한국인 의학 표준([안 A]) 확정 반영 (저체중 < 18.5, 정상 18.5~22.9, 과체중 23.0~24.9, 비만 ≥ 25.0).
   * **상단 헤더 개편:** 타이틀 `HealthTracker`로 단일화, Apple Health 연동 버튼 제거, 오늘 날짜 동적 표시 유지.
   * **체중 카드 개편:** `(밸런스랩 스케일)` 및 `317일 연속` 뱃지 제거, 최근 측정일 기준(`기준일 : 11월 9일`) 표기, `(어제 대비)` -> `(직전 대비)` 증감율 표기 변경.
   * **체중 미니 추이 그래프(Sparkline):** 기존 4개 체지방/BMI 박스를 대체하여 최근 7회 체중 변화 곡선 SVG 배치, 클릭 시 체중 상세 분석 화면으로 즉시 진입하는 인터랙션 구현.
@@ -107,9 +208,22 @@
   * 실제 모바일 기기 접속 시 가짜 상태바 및 목업 베젤을 숨기고 네이티브 풀스크린으로 표시되도록 반응형 CSS 개선.
   * `cnekid/health_tracker` GitHub 공개 저장소 생성 및 GitHub Pages 정식 배포 완료 (`https://cnekid.github.io/health_tracker/`).
 
+* **2026-11-10 진행 완료 (루트 배포 파일 동기화 & 가상 체중계 컴파일):**
+  * **루트 배포 파일 완전 동기화 (`plan_health_tracker/ui_health_tracker.html` ➔ `index.html`):**
+    * 최신 6일 단위 Zero-Scroll 차트, 카메라 OCR 확인 모달, BLE 10종 체성분 지표 요약 모달이 적용된 작업본을 GitHub Pages 배포 엔트리포인트인 `health_tracker/index.html`(180,455 bytes)에 복사 완료 (`diff -q` 무결성 검증 통과).
+  * **가상 체중계 BLE 시뮬레이터 빌드 (`tests/ble_simulator/scale_sim`):**
+    * macOS 네이티브 `swiftc -O` 컴파일러를 통해 `main.swift`를 바이너리 `scale_sim`(158,200 bytes)으로 빌드 완료.
+  * **Apple 건강(HealthKit) 단축어(`LogHealth`) 세팅 가이드 완료:**
+    * 아이폰 기본 [단축어] 앱에서 Web URL scheme(`shortcuts://run-shortcut?name=LogHealth...`) 입력을 파싱하여 체중 및 혈압 샘플을 건강 앱에 기록하는 단축어 구성 완료.
+
 * **다음 테스트 과제:**
-  1. **iPhone Bluefy 실기기 접속 테스트:**
-     * App Store에서 무료 `Bluefy` 브라우저 설치 후 `https://cnekid.github.io/health_tracker/` 접속.
+  1. **GitHub Pages 최신본 푸시 및 iPhone Bluefy 접속:**
+     * 사용자 Git Push 후 `https://cnekid.github.io/health_tracker/` 접속하여 최신 UI 확인.
+  2. **가상 체중계 연동 테스트:**
+     * 맥북 터미널에서 `./health_tracker/tests/ble_simulator/scale_sim` 실행 후 Bluefy `[체중 측정]` 터치하여 BLE 수신 및 10종 요약 모달 저장 검증.
+  3. **혈압 카메라 OCR 및 단축어 연동 테스트:**
+     * 모니터 혈압계 사진 대상 원터치 촬영 ➔ 수치 확인 모달 저장 ➔ Apple 건강 앱 기록 확인.
+
      * 체중계 탭에서 시뮬레이션 및 실제 BLE 페어링 동작 확인.
      * 혈압 탭에서 카메라 OCR 권한 허용 및 인식 테스트.
   2. **OKOK 실제 CSV 파일 전달 시 일괄 변환 주입.**

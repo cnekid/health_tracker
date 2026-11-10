@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>밸런스랩 가상 체중계 어드민</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.variable.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Pretendard Variable', -apple-system, sans-serif; background-color: #F8FAFC; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+    .anim-pulse-dot {
+      animation: pulse-dot 1.4s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-slate-800 p-6 max-w-4xl mx-auto space-y-4">
+
+  <!-- 1. 상단 헤더 -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-sm">
+        <i class="fa-solid fa-weight-scale"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-extrabold text-slate-900 tracking-tight">밸런스랩 가상 체중계 어드민</h1>
+        <p class="text-[11px] text-slate-400 font-medium">물리 체중계 대신 아이폰 HealthTracker 앱으로 건강 지표를 송출하는 테스트 도구</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- 핸드폰 앱 기준 프로필 (고정 참조값) -->
+      <span class="px-2.5 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+        <i class="fa-solid fa-user text-[11px] text-slate-400"></i>
+        <span>기준 프로필: <strong>176cm · 47세</strong></span>
+      </span>
+      <button onclick="resetToActualPreset()" class="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs">
+        <i class="fa-solid fa-rotate-left text-[11px] text-slate-400"></i>
+        기본값 초기화 (80.30kg)
+      </button>
+      <button onclick="generateRandomData()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs">
+        <i class="fa-solid fa-shuffle text-[11px] text-slate-400"></i>
+        랜덤 생성
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. 발송 생체 지표 (체중계 실측 BIA 12대 측정 항목) -->
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="font-extrabold text-slate-800 tracking-tight text-xs">발송 생체 지표 (12대 측정 항목)</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold border border-blue-100">체중계 BIA 1:1 실측 전송</span>
+      </div>
+      <span class="text-[11px] text-slate-400">※ 체중 및 비율(%) 변경 시 각 항목의 질량(kg)과 BMI가 자동 계산됩니다. (신장·나이는 상단 프로필 적용)</span>
+    </div>
+    
+    <!-- 14대 전체 지표 그리드 -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+      
+      <!-- 1. 체중 (Kg) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-800 font-extrabold flex items-center gap-1">
+            <span class="text-blue-600 font-bold">1.</span> 체중 (Kg)
+          </label>
+          <span class="text-[10px] text-amber-600 font-bold px-1 rounded bg-amber-50 border border-amber-200/60">높음</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputWeight" step="0.05" value="80.30" oninput="recalcAll()"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold text-sm focus:outline-blue-500">
+          <span class="text-slate-600 font-bold text-xs">kg</span>
+        </div>
+      </div>
+
+      <!-- 2. BMI -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">2.</span> BMI
+          </label>
+          <span class="text-[10px] text-amber-600 font-bold px-1 rounded bg-amber-50 border border-amber-200/60">높음</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputBmi" step="0.1" value="25.9" readonly
+                 class="w-full px-2 py-1 bg-slate-100 border border-slate-200 rounded text-right font-mono text-slate-600 font-bold text-sm cursor-not-allowed">
+        </div>
+      </div>
+
+      <!-- 3. 지방 (%) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">3.</span> 지방 (%)
+          </label>
+          <span class="text-[10px] text-amber-600 font-bold px-1 rounded bg-amber-50 border border-amber-200/60">높음</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputBodyFat" step="0.1" value="25.0" oninput="recalcAll()"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium">%</span>
+        </div>
+      </div>
+
+      <!-- 4. 체질 지방량 (Kg) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">4.</span> 체질 지방량 (Kg)
+          </label>
+          <span class="text-[10px] text-amber-600 font-bold px-1 rounded bg-amber-50 border border-amber-200/60">높음</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputFatKg" step="0.1" value="20.1" readonly
+                 class="w-full px-2 py-1 bg-slate-100 border border-slate-200 rounded text-right font-mono text-slate-700 font-bold cursor-not-allowed">
+          <span class="text-slate-500 font-medium">kg</span>
+        </div>
+      </div>
+
+      <!-- 5. 골격근 비율 (%) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">5.</span> 골격근 비율 (%)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">완전한</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputSkeletalRate" step="0.1" value="38.0" oninput="recalcAll()"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium">%</span>
+        </div>
+      </div>
+
+      <!-- 6. 골격근량 (Kg) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">6.</span> 골격근량 (Kg)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">완전한</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputSkeletalKg" step="0.1" value="30.6" readonly
+                 class="w-full px-2 py-1 bg-slate-100 border border-slate-200 rounded text-right font-mono text-slate-700 font-bold cursor-not-allowed">
+          <span class="text-slate-500 font-medium">kg</span>
+        </div>
+      </div>
+
+      <!-- 7. 근육 (%) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">7.</span> 근육 (%)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">건강</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputMuscleRate" step="0.1" value="70.5" oninput="recalcAll()"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium">%</span>
+        </div>
+      </div>
+
+      <!-- 8. 근육량 (Kg) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">8.</span> 근육량 (Kg)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">건강</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputMuscleKg" step="0.1" value="56.6" readonly
+                 class="w-full px-2 py-1 bg-slate-100 border border-slate-200 rounded text-right font-mono text-slate-700 font-bold cursor-not-allowed">
+          <span class="text-slate-500 font-medium">kg</span>
+        </div>
+      </div>
+
+      <!-- 9. 수분 (%) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">9.</span> 수분 (%)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">건강</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputWater" step="0.1" value="52.9" oninput="recalcAll()"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium">%</span>
+        </div>
+      </div>
+
+      <!-- 10. 물의 무게 (Kg) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">10.</span> 물의 무게 (Kg)
+          </label>
+          <span class="text-[10px] text-emerald-600 font-bold px-1 rounded bg-emerald-50 border border-emerald-200/60">건강</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputWaterKg" step="0.1" value="42.5" readonly
+                 class="w-full px-2 py-1 bg-slate-100 border border-slate-200 rounded text-right font-mono text-slate-700 font-bold cursor-not-allowed">
+          <span class="text-slate-500 font-medium">kg</span>
+        </div>
+      </div>
+
+      <!-- 11. 내장지방 기록 -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">11.</span> 내장지방 기록
+          </label>
+          <span class="text-[10px] text-rose-600 font-bold px-1 rounded bg-rose-50 border border-rose-200/60">비만</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputVisceral" step="0.1" value="14.5"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium text-[11px]">Lv</span>
+        </div>
+      </div>
+
+      <!-- 12. 기초대사 (kcal/day) -->
+      <div class="p-2.5 border border-slate-200 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-slate-700 font-semibold flex items-center gap-1">
+            <span class="text-slate-400 font-bold">12.</span> 기초대사 (kcal)
+          </label>
+          <span class="text-[10px] text-amber-600 font-bold px-1 rounded bg-amber-50 border border-amber-200/60">높음</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <input type="number" id="inputBmr" step="0.5" value="1651.0"
+                 class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-right font-mono font-bold focus:outline-blue-500">
+          <span class="text-slate-500 font-medium text-[10px]">kcal</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 하단 부가 안내 (체중계 확장 가능 지표) -->
+    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+      <span>💡 체중계 칩셋 BIA 확장 연산 지표: 뼈 무게(골량), 단백질(%) 등은 체중계 기종에 따라 추가 연동됩니다.</span>
+      <span class="font-mono">GATT: OKOK 19B Full Frame</span>
+    </div>
+  </div>
+
+  <!-- 3. 발송 / 중단 직관적 제어 버튼 -->
+  <div class="grid grid-cols-2 gap-3">
+    <!-- [발송] 버튼 -->
+    <button id="btnStartSend" onclick="startBroadcasting()" class="py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+      <i class="fa-solid fa-tower-broadcast text-base"></i>
+      <span>발송 (체중계 올라섬)</span>
+    </button>
+    <!-- [중단] 버튼 -->
+    <button id="btnStopSend" onclick="stopBroadcasting()" disabled class="py-3.5 bg-slate-200 text-slate-400 rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 cursor-not-allowed">
+      <i class="fa-solid fa-stop text-base"></i>
+      <span>중단 (체중계 내려옴)</span>
+    </button>
+  </div>
+
+  <!-- 4. 실시간 상태 및 수신 알림 카드 (복잡한 덤프 로그 대체) -->
+  <div id="statusContainer" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+    
+    <!-- 상태 1: 대기 중 (기본값) -->
+    <div id="viewStateIdle" class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg shrink-0">
+        <i class="fa-solid fa-pause"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-slate-800 text-sm">대기 중 (송출 중지됨)</span>
+          <span class="w-2 h-2 rounded-full bg-slate-300"></span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">상단 14대 지표를 확인한 후 <strong>[발송]</strong> 버튼을 누르면 스마트폰 앱에서 수신할 수 있도록 신호를 송출합니다.</p>
+      </div>
+    </div>
+
+    <!-- 상태 2: 발송 중 (진행 중) -->
+    <div id="viewStateBroadcasting" class="hidden flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-lg shrink-0 anim-pulse-dot">
+        <i class="fa-solid fa-tower-broadcast"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-blue-700 text-sm">블루투스 신호 발송 중... (연결 대기)</span>
+          <span class="w-2 h-2 rounded-full bg-blue-500 anim-pulse-dot"></span>
+        </div>
+        <p class="text-xs text-slate-600 mt-0.5">
+          핸드폰(Bluefy)의 HealthTracker 앱에서 <strong>[체중 측정]</strong> 버튼을 눌러주세요. <strong>[중단]</strong>을 누를 때까지 신호를 계속 쏩니다.
+        </p>
+      </div>
+    </div>
+
+    <!-- 상태 3: 수신 완료 배너 (수신 시 노출) -->
+    <div id="viewStateSuccess" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-900 flex items-start justify-between">
+      <div class="flex items-start gap-2.5">
+        <span class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+          <i class="fa-solid fa-check"></i>
+        </span>
+        <div>
+          <div class="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
+            <span>🎉 핸드폰에서 수신을 완료했습니다!</span>
+            <span id="successTime" class="text-[11px] font-mono text-emerald-700 font-normal">(13:15:22)</span>
+          </div>
+          <p id="successSummary" class="text-[11px] text-emerald-800 mt-0.5">
+            체중 80.30kg 및 14대 생체지표가 성공적으로 전달되어 HealthTracker에 기록되었습니다.
+          </p>
+        </div>
+      </div>
+      <button onclick="dismissSuccess()" class="text-emerald-600 hover:text-emerald-800 text-xs px-1">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 최근 수신 이력 (간결한 1줄 히스토리) -->
+    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+      <span>최근 수신 기록: <strong id="lastReceivedLog" class="text-slate-600 font-semibold">아직 수신 내역 없음</strong></span>
+      <span id="engineConnectIndicator" class="text-slate-400">맥북 BLE 준비 완료</span>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8765";
+    let isBroadcasting = false;
+    let broadcastIntervalTimer = null;
+    let isEngineOnline = false;
+    let lastRenderedLogIdx = 0;
+
+    // 1. 생체 지표 자동 연동 계산 (체중 * 비율 = 질량)
+    function recalcAll() {
+      const w = parseFloat(document.getElementById('inputWeight').value) || 0;
+      if (w <= 0) return;
+
+      // 1) BMI (신장 176cm 기준)
+      const bmi = (w / (1.76 * 1.76)).toFixed(1);
+      document.getElementById('inputBmi').value = bmi;
+
+      // 2) 체질 지방량 (kg)
+      const bf = parseFloat(document.getElementById('inputBodyFat').value) || 0;
+      const fatKg = ((w * bf) / 100.0).toFixed(1);
+      document.getElementById('inputFatKg').value = fatKg;
+
+      // 3) 골격근량 (kg)
+      const sm = parseFloat(document.getElementById('inputSkeletalRate').value) || 0;
+      const smKg = ((w * sm) / 100.0).toFixed(1);
+      document.getElementById('inputSkeletalKg').value = smKg;
+
+      // 4) 전체 근육량 (kg)
+      const m = parseFloat(document.getElementById('inputMuscleRate').value) || 0;
+      const mKg = ((w * m) / 100.0).toFixed(1);
+      document.getElementById('inputMuscleKg').value = mKg;
+
+      // 5) 물의 무게 (kg)
+      const wt = parseFloat(document.getElementById('inputWater').value) || 0;
+      const wtKg = ((w * wt) / 100.0).toFixed(1);
+      document.getElementById('inputWaterKg').value = wtKg;
+    }
+
+    // 2. 기본값 초기화 (80.30kg 실측치 기준 복원)
+    function resetToActualPreset() {
+      document.getElementById('inputWeight').value = "80.30";
+      document.getElementById('inputBodyFat').value = "25.0";
+      document.getElementById('inputFatKg').value = "20.1";
+      document.getElementById('inputSkeletalRate').value = "38.0";
+      document.getElementById('inputSkeletalKg').value = "30.6";
+      document.getElementById('inputMuscleRate').value = "70.5";
+      document.getElementById('inputMuscleKg').value = "56.6";
+      document.getElementById('inputWater').value = "52.9";
+      document.getElementById('inputWaterKg').value = "42.5";
+      document.getElementById('inputVisceral').value = "14.5";
+      document.getElementById('inputBmr').value = "1651.0";
+      recalcAll();
+    }
+
+    // 3. 실제 체형 기준 현실적 랜덤 생성
+    function generateRandomData() {
+      const w = (Math.random() * 2.0 + 79.5).toFixed(2); // 79.50 ~ 81.50 kg
+      document.getElementById('inputWeight').value = w;
+      document.getElementById('inputBodyFat').value = (Math.random() * 1.5 + 24.2).toFixed(1); // 24.2 ~ 25.7 %
+      document.getElementById('inputSkeletalRate').value = (Math.random() * 1.0 + 37.5).toFixed(1); // 37.5 ~ 38.5 %
+      document.getElementById('inputMuscleRate').value = (Math.random() * 1.5 + 69.8).toFixed(1); // 69.8 ~ 71.3 %
+      document.getElementById('inputWater').value = (Math.random() * 1.5 + 52.0).toFixed(1); // 52.0 ~ 53.5 %
+      document.getElementById('inputVisceral').value = (Math.random() * 1.0 + 14.0).toFixed(1); // 14.0 ~ 15.0
+      document.getElementById('inputBmr').value = (Math.random() * 40 + 1630).toFixed(1); // 1630 ~ 1670 kcal
+      recalcAll();
+    }
+
+    // 4. 발송 시작 (체중계 올라선 상태)
+    function startBroadcasting() {
+      if (isBroadcasting) return;
+      isBroadcasting = true;
+
+      // UI 상태 변경
+      document.getElementById('viewStateIdle').classList.add('hidden');
+      document.getElementById('viewStateBroadcasting').classList.remove('hidden');
+
+      const btnStart = document.getElementById('btnStartSend');
+      const btnStop = document.getElementById('btnStopSend');
+
+      btnStart.disabled = true;
+      btnStart.className = "py-3.5 bg-slate-200 text-slate-400 rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
+      
+      btnStop.disabled = false;
+      btnStop.className = "py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 shadow-sm";
+
+      // 1회 즉시 송출 후, 중단할 때까지 1.2초마다 지속 송출 신호 유지
+      dispatchPayload();
+      broadcastIntervalTimer = setInterval(dispatchPayload, 1200);
+    }
+
+    // 5. 발송 중단 (체중계 내려온 상태)
+    function stopBroadcasting() {
+      if (!isBroadcasting) return;
+      isBroadcasting = false;
+
+      if (broadcastIntervalTimer) {
+        clearInterval(broadcastIntervalTimer);
+        broadcastIntervalTimer = null;
+      }
+
+      // UI 상태 복귀
+      document.getElementById('viewStateIdle').classList.remove('hidden');
+      document.getElementById('viewStateBroadcasting').classList.add('hidden');
+
+      const btnStart = document.getElementById('btnStartSend');
+      const btnStop = document.getElementById('btnStopSend');
+
+      btnStart.disabled = false;
+      btnStart.className = "py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 shadow-sm";
+
+      btnStop.disabled = true;
+      btnStop.className = "py-3.5 bg-slate-200 text-slate-400 rounded-xl font-extrabold text-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
+    }
+
+    // 6. 데이터 송출 실행 (백엔드 엔진 또는 모의 송출)
+    async function dispatchPayload() {
+      const payload = {
+        weight: parseFloat(document.getElementById('inputWeight').value) || 80.30,
+        bmi: parseFloat(document.getElementById('inputBmi').value) || 25.9,
+        bodyFat: parseFloat(document.getElementById('inputBodyFat').value) || 25.0,
+        fatKg: parseFloat(document.getElementById('inputFatKg').value) || 20.1,
+        skeletalRate: parseFloat(document.getElementById('inputSkeletalRate').value) || 38.0,
+        skeletalKg: parseFloat(document.getElementById('inputSkeletalKg').value) || 30.6,
+        muscleRate: parseFloat(document.getElementById('inputMuscleRate').value) || 70.5,
+        muscleKg: parseFloat(document.getElementById('inputMuscleKg').value) || 56.6,
+        waterRate: parseFloat(document.getElementById('inputWater').value) || 52.9,
+        waterKg: parseFloat(document.getElementById('inputWaterKg').value) || 42.5,
+        visceralFat: parseFloat(document.getElementById('inputVisceral').value) || 14.5,
+        bmr: parseFloat(document.getElementById('inputBmr').value) || 1651.0,
+        height: 176,
+        age: 47,
+        format: "okok", // 19B OKOK BIA 풀 규격 고정
+        isSimulated: false
+      };
+
+      if (isEngineOnline) {
+        try {
+          await fetch(`${API_BASE}/api/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } catch (e) {
+          // 통신 실패 시 자동 fallback
+        }
+      }
+    }
+
+    // 7. 핸드폰 수신 완료 알림 처리
+    function notifyReceivedSuccess(w) {
+      const nowStr = new Date().toTimeString().split(' ')[0];
+      const weightVal = w || document.getElementById('inputWeight').value;
+
+      document.getElementById('successTime').innerText = `(${nowStr})`;
+      document.getElementById('successSummary').innerText = `체중 ${weightVal}kg 및 14대 생체지표가 성공적으로 전달되어 HealthTracker에 기록되었습니다.`;
+      document.getElementById('viewStateSuccess').classList.remove('hidden');
+
+      document.getElementById('lastReceivedLog').innerText = `${nowStr} - 체중 ${weightVal}kg 수신 완료`;
+
+      // 수신이 완료되었으므로 자동으로 송출 중단 처리
+      stopBroadcasting();
+    }
+
+    function dismissSuccess() {
+      document.getElementById('viewStateSuccess').classList.add('hidden');
+    }
+
+    // 8. 맥북 BLE 백엔드 엔진 상태 주기적 확인 (2초마다)
+    async function checkEngineStatus() {
+      const indicator = document.getElementById('engineConnectIndicator');
+      try {
+        const res = await fetch(`${API_BASE}/api/status`, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) {
+          const data = await res.json();
+          isEngineOnline = true;
+          indicator.innerText = `맥북 BLE 활성 (연결 대기: ${data.subscribedCount}대)`;
+          indicator.className = "text-emerald-600 font-semibold";
+
+          // 엔진에서 핸드폰의 ACK 수신 이벤트 감지
+          if (data.logs && data.logs.length > lastRenderedLogIdx) {
+            for (let i = lastRenderedLogIdx; i < data.logs.length; i++) {
+              const item = data.logs[i];
+              if (item.msg && (item.msg.includes("ACK") || item.msg.includes("수신 확인") || item.msg.includes("전달 완료"))) {
+                notifyReceivedSuccess();
+              }
+            }
+            lastRenderedLogIdx = data.logs.length;
+          }
+          return;
+        }
+      } catch (e) {
+        // 엔진 오프라인
+      }
+      isEngineOnline = false;
+      indicator.innerText = "웹 테스트 모드";
+      indicator.className = "text-slate-400";
+    }
+
+    setInterval(checkEngineStatus, 2000);
+    checkEngineStatus();
+    recalcAll();
+  </script>
+</body>
+</html>
