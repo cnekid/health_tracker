@@ -616,3 +616,30 @@
   4. **무결성 검증:**
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 동일 일치 (0 diff).
      * JavaScriptCore 구문 분석 0 error 통과.
+
+---
+
+### [2026-11-11 23:35] Bluefy 실제 물리 체중계 탐색 누락 해결 & 영구 권한(getDevices) 기반 완전 무팝업 자동 연결 구현
+
+* **원인 분석:**
+  1. **실제 물리 체중계 누락 원인:**
+     * 밸런스랩 실제 물리 체중계는 광고(AD) 패킷에 로컬 이름(Local Name)과 GATT 서비스 UUID 목록을 담지 않고, 제조사 데이터(`0xFFFF...`)만 송출함.
+     * iOS Bluefy 브라우저는 `requestDevice()`의 `manufacturerData` 필터링을 지원하지 않음.
+     * 기존 코드의 `scaleFilters`에 `Moses's MacBook Air`에 해당하는 호스트명 필터가 포함되어 있어, 검색 시 맥북 가상 체중계만 잡히고 실제 체중계는 필터에서 제외됨.
+     * 맥북 가상 체중계가 검색 결과에 포함되어 `requestDevice()`가 정상 성공 처리됨으로써 `catch` 블록의 Fallback 코드가 전혀 실행되지 않았음.
+  2. **매번 팝업이 뜨던 원인:**
+     * 페이지 새로고침 시 인메모리 변수(`lastBleDeviceInstance`)가 초기화되어, W3C Web Bluetooth 영구 권한 API인 `navigator.bluetooth.getDevices()`를 활용하지 못했음.
+
+* **세부 해결 내역:**
+  1. **영구 권한 API (`navigator.bluetooth.getDevices()`) 기반 무팝업 직행 연결 탑재:**
+     * 사용자가 Bluefy 최초 연결 시 녹색 토글("이 웹 사이트가 선택한 장치로 향후 배경 연결을 설정하도록 허용합니다")을 켠 상태로 기기를 1회 승인하면, 브라우저가 영구 권한을 부여함.
+     * 이후 `[체중 측정]` 터치 시 `getDevices()`를 조회하여 이전에 권한이 승인된 체중계(최근 연결 ID 우선)로 백그라운드 무팝업 직행 연결(`candidateDevice.gatt.connect()`)을 자동 수행.
+     * 기기가 켜져 있으면 **선택 팝업창이 아예 뜨지 않고 100% 무팝업으로 즉시 체중 측정 및 동기화 진행**.
+  2. **최초 검색 필터 정비 (`acceptAllDevices: true`):**
+     * Bluefy 환경에서 이름 없는 실제 물리 체중계가 누락되지 않도록 초기 검색 시 `acceptAllDevices: true`와 체중계 필수 서비스 UUID(`optionalServices`)를 적용.
+     * 체중계에 발을 올려 액정이 켜지면 블루투스 패킷이 송출되며 선택 창에 즉시 노출됨.
+  3. **UI 안내 문구 강화:**
+     * 체중계 대기 화면에 `💡 발로 살짝 눌러 체중계 화면이 켜지면 즉시 연결됩니다.` 팁 추가.
+  4. **무결성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 동일 일치 (0 diff 보장).
+     * JavaScriptCore(`jsc`) 구문 검사 무결성 통과 (0 error).
