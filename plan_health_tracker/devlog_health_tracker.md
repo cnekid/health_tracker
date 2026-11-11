@@ -83,6 +83,16 @@
 
 ## 6. 진행 현황 및 향후 계획 (Progress & Next Steps)
 
+* **2026-11-11 진행 완료 (데이터 전체 삭제 후 빈 데이터 처리 및 새로고침 시 가짜 샘플 자동 재생성 버그 수정):**
+  * **새로고침 시 가짜 샘플 자동 재생성 버그 원천 차단:**
+    * `DOMContentLoaded` 이벤트 시 `records.length === 0`일 때 무조건 `reseedDefaultData()`를 호출하던 로직을 제거하여, 사용자가 데이터를 전체 삭제한 후 새로고침하더라도 가짜 데이터가 다시 채워지지 않고 빈 상태를 유지하도록 수정.
+  * **홈 화면 및 상세 화면 빈 데이터(0건) 렌더링 정상화:**
+    * `renderHomeWeightCard` 및 `renderHomeBpCard`에서 `cachedBodyList.length === 0`일 때 조기 리턴(`return`)으로 인해 기존 정적 HTML 수치(80.30kg, 105/83mmHg 등)가 남아있던 결함을 수정.
+    * 데이터가 0건일 때 `기준일 : -`, `--.- kg`, `-- / -- mmHg`, `기록된 데이터가 없습니다` 상태로 즉시 깨끗하게 렌더링되도록 처리.
+    * 상세 탭 매트릭스 표 및 항목별 상세 화면에서도 0건일 때 빈 데이터 안내 문구 정상 표시.
+  * **산출물 전수 동기화:**
+    * [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 및 [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html) 동기화 완료 (`diff -u` 0건 일치 검증).
+
 * **2026-11-11 진행 완료 ([설정] 탭 전용 [기록 데이터 상세 관리] 모달 구축 및 항목 상세 조회 뷰 클린 복원):**
   * **설정 화면 전용 [기록 데이터 상세 관리] 모달(`dataManagementModal`) 신설:**
     * **체중계 기록 vs 혈압계 기록 독립 탭 분리:**

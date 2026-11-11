@@ -111,15 +111,15 @@
               </span>
               <h3 class="text-base font-extrabold text-slate-900 tracking-tight">체중</h3>
             </div>
-            <span id="weightBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : 11월 10일</span>
+            <span id="weightBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : -</span>
           </div>
 
           <!-- 메인 수치 및 직전 대비 -->
           <div class="flex items-baseline gap-2 pt-0.5">
-            <span id="homeWeightVal" class="text-3xl font-black tracking-tight text-slate-900">80.30</span>
+            <span id="homeWeightVal" class="text-3xl font-black tracking-tight text-slate-900">--.-</span>
             <span class="text-base font-medium text-slate-500">kg</span>
-            <span id="homeWeightDeltaBadge" class="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1">
-              <i class="fa-solid fa-arrow-down text-[10px]"></i>-0.25 kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>
+            <span id="homeWeightDeltaBadge" class="text-[11px] text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-0.5 ml-1">
+              <span class="text-slate-400 font-normal text-[10px]">- (직전 대비)</span>
             </span>
           </div>
 
@@ -130,9 +130,9 @@
               <span>최근 30일</span>
             </div>
             <div class="flex items-center gap-2 font-mono text-[11px]">
-              <span class="text-slate-500">최고 <strong id="homeWeightMax30d" class="text-slate-800 font-bold">81.9</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
+              <span class="text-slate-500">최고 <strong id="homeWeightMax30d" class="text-slate-800 font-bold">-</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
               <span class="text-slate-300">·</span>
-              <span class="text-slate-500">최저 <strong id="homeWeightMin30d" class="text-slate-800 font-bold">80.0</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
+              <span class="text-slate-500">최저 <strong id="homeWeightMin30d" class="text-slate-800 font-bold">-</strong><span class="text-[10px] text-slate-400 font-sans ml-0.5">kg</span></span>
             </div>
           </div>
 
@@ -174,20 +174,20 @@
               </span>
               <h3 class="text-base font-extrabold text-slate-900 tracking-tight">혈압</h3>
             </div>
-            <span id="bpBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : 11월 9일</span>
+            <span id="bpBasisDate" class="text-[11px] text-slate-400 font-medium tracking-tight">기준일 : -</span>
           </div>
 
           <!-- 메인 수치: 수축기 / 이완기 & 맥박 -->
           <div class="flex items-baseline justify-between pt-0.5">
             <div class="flex items-baseline">
-              <span id="homeSysVal" class="text-3xl font-black text-rose-600 tracking-tight">105</span>
+              <span id="homeSysVal" class="text-3xl font-black text-rose-600 tracking-tight">--</span>
               <span class="text-slate-300 text-2xl font-light mx-1">/</span>
-              <span id="homeDiaVal" class="text-3xl font-black text-sky-600 tracking-tight">83</span>
+              <span id="homeDiaVal" class="text-3xl font-black text-sky-600 tracking-tight">--</span>
               <span class="text-xs text-slate-500 ml-1.5 font-medium">mmHg</span>
             </div>
             <div class="text-right">
               <span class="text-[11px] text-slate-500 font-medium">맥박</span>
-              <span id="homePulseVal" class="text-lg font-bold text-slate-800 ml-1">87</span>
+              <span id="homePulseVal" class="text-lg font-bold text-slate-800 ml-1">--</span>
               <span class="text-[10px] text-slate-400 font-medium">bpm</span>
             </div>
           </div>
@@ -1982,29 +1982,47 @@
 
     // 홈 탭: 체중 카드 렌더링
     function renderHomeWeightCard() {
-      if (cachedBodyList.length === 0) return;
+      const basisEl = document.getElementById('weightBasisDate');
+      const valEl = document.getElementById('homeWeightVal');
+      const badge = document.getElementById('homeWeightDeltaBadge');
+      const maxEl = document.getElementById('homeWeightMax30d');
+      const minEl = document.getElementById('homeWeightMin30d');
+
+      if (cachedBodyList.length === 0) {
+        if (basisEl) basisEl.innerText = "기준일 : -";
+        if (valEl) valEl.innerText = "--.-";
+        if (badge) {
+          badge.className = "text-[11px] text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-0.5 ml-1";
+          badge.innerHTML = `<span class="text-slate-400 font-normal text-[10px]">- (직전 대비)</span>`;
+        }
+        if (maxEl) maxEl.innerText = "-";
+        if (minEl) minEl.innerText = "-";
+        renderWeightSparkline();
+        return;
+      }
 
       const latest = cachedBodyList[cachedBodyList.length - 1];
       const prev = cachedBodyList.length > 1 ? cachedBodyList[cachedBodyList.length - 2] : null;
 
       // 기준일 표기 (예: 기준일 : 11월 10일)
-      const basisEl = document.getElementById('weightBasisDate');
       if (basisEl) basisEl.innerText = `기준일 : ${formatDateToKoreanShort(latest.date)}`;
-      document.getElementById('homeWeightVal').innerText = latest.weight.toFixed(2);
+      if (valEl) valEl.innerText = latest.weight.toFixed(2);
 
       // (직전 대비) 증감 계산
-      const badge = document.getElementById('homeWeightDeltaBadge');
-      if (prev) {
-        const delta = +(latest.weight - prev.weight).toFixed(2);
-        if (delta <= 0) {
-          badge.className = "text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1";
-          badge.innerHTML = `<i class="fa-solid fa-arrow-down text-[10px]"></i>${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
+      if (badge) {
+        if (prev) {
+          const delta = +(latest.weight - prev.weight).toFixed(2);
+          if (delta <= 0) {
+            badge.className = "text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-0.5 ml-1";
+            badge.innerHTML = `<i class="fa-solid fa-arrow-down text-[10px]"></i>${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
+          } else {
+            badge.className = "text-[11px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 flex items-center gap-0.5 ml-1";
+            badge.innerHTML = `<i class="fa-solid fa-arrow-up text-[10px]"></i>+${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
+          }
         } else {
-          badge.className = "text-[11px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 flex items-center gap-0.5 ml-1";
-          badge.innerHTML = `<i class="fa-solid fa-arrow-up text-[10px]"></i>+${delta} kg <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
+          badge.className = "text-[11px] text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-0.5 ml-1";
+          badge.innerHTML = `최초 측정 <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
         }
-      } else {
-        badge.innerHTML = `최초 측정 <span class="text-slate-500 font-normal text-[10px] ml-0.5">(직전 대비)</span>`;
       }
 
       // 30일 최고 / 최저 무게 (소수점 1자리 표기)
@@ -2013,8 +2031,6 @@
         const weights = last30.map(r => r.weight);
         const maxW = Math.max(...weights);
         const minW = Math.min(...weights);
-        const maxEl = document.getElementById('homeWeightMax30d');
-        const minEl = document.getElementById('homeWeightMin30d');
         if (maxEl) maxEl.innerText = maxW.toFixed(1);
         if (minEl) minEl.innerText = minW.toFixed(1);
       }
@@ -2026,10 +2042,13 @@
     function renderWeightSparkline() {
       const svg = document.getElementById('weightSparklineSvg');
       const datesDiv = document.getElementById('weightSparklineDates');
-      svg.innerHTML = '';
-      datesDiv.innerHTML = '';
+      if (svg) svg.innerHTML = '';
+      if (datesDiv) datesDiv.innerHTML = '';
 
-      if (cachedBodyList.length === 0) return;
+      if (cachedBodyList.length === 0) {
+        if (datesDiv) datesDiv.innerHTML = '<span class="text-[10px] text-slate-400 w-full text-center py-1">기록된 체중 데이터가 없습니다</span>';
+        return;
+      }
 
       const sliceCount = 5;
       const recent = cachedBodyList.slice(-sliceCount);
@@ -2104,15 +2123,26 @@
 
     // 홈 탭: 혈압 카드 렌더링
     function renderHomeBpCard() {
-      if (cachedBpList.length === 0) return;
+      const bpBasisEl = document.getElementById('bpBasisDate');
+      const sysEl = document.getElementById('homeSysVal');
+      const diaEl = document.getElementById('homeDiaVal');
+      const pulseEl = document.getElementById('homePulseVal');
+
+      if (cachedBpList.length === 0) {
+        if (bpBasisEl) bpBasisEl.innerText = "기준일 : -";
+        if (sysEl) sysEl.innerText = "--";
+        if (diaEl) diaEl.innerText = "--";
+        if (pulseEl) pulseEl.innerText = "--";
+        renderBpSparkline();
+        return;
+      }
 
       const latestBp = cachedBpList[cachedBpList.length - 1];
 
-      const bpBasisEl = document.getElementById('bpBasisDate');
       if (bpBasisEl) bpBasisEl.innerText = `기준일 : ${formatDateToKoreanShort(latestBp.date)}`;
-      document.getElementById('homeSysVal').innerText = latestBp.sys;
-      document.getElementById('homeDiaVal').innerText = latestBp.dia;
-      document.getElementById('homePulseVal').innerText = latestBp.pulse;
+      if (sysEl) sysEl.innerText = latestBp.sys;
+      if (diaEl) diaEl.innerText = latestBp.dia;
+      if (pulseEl) pulseEl.innerText = latestBp.pulse;
 
       renderBpSparkline();
     }
@@ -2121,10 +2151,13 @@
     function renderBpSparkline() {
       const svg = document.getElementById('bpSparklineSvg');
       const datesDiv = document.getElementById('bpSparklineDates');
-      svg.innerHTML = '';
-      datesDiv.innerHTML = '';
+      if (svg) svg.innerHTML = '';
+      if (datesDiv) datesDiv.innerHTML = '';
 
-      if (cachedBpList.length === 0) return;
+      if (cachedBpList.length === 0) {
+        if (datesDiv) datesDiv.innerHTML = '<span class="text-[10px] text-slate-400 w-full text-center py-1">기록된 혈압 데이터가 없습니다</span>';
+        return;
+      }
 
       const recent = cachedBpList.slice(-5);
       const width = 280;
@@ -2272,7 +2305,10 @@
         headerRow.removeChild(headerRow.lastChild);
       }
 
-      if (cachedBodyList.length === 0 && cachedBpList.length === 0) return;
+      if (cachedBodyList.length === 0 && cachedBpList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-xs text-slate-400 font-medium">기록된 건강 데이터가 없습니다.</td></tr>';
+        return;
+      }
 
       // 전체 고유 날짜 추출 및 최신순(내림차순) 정렬
       const dateSet = new Set();
@@ -2425,26 +2461,34 @@
       let updateTime = "";
 
       if (metricKey === 'bp') {
-        currentVal = latestBp ? `${latestBp.sys} / ${latestBp.dia}` : '105 / 83';
-        updateTime = latestBp ? `${latestBp.date} ${latestBp.time}` : '2026-11-09';
+        currentVal = latestBp ? `${latestBp.sys} / ${latestBp.dia}` : '-';
+        updateTime = latestBp ? `${latestBp.date} ${latestBp.time}` : '기록 없음';
       } else if (metricKey === 'pulse') {
-        currentVal = latestBp ? latestBp.pulse : 87;
+        currentVal = latestBp ? latestBp.pulse : '-';
         prevVal = prevBp ? prevBp.pulse : null;
-        updateTime = latestBp ? `${latestBp.date} ${latestBp.time}` : '2026-11-09';
+        updateTime = latestBp ? `${latestBp.date} ${latestBp.time}` : '기록 없음';
       } else if (latestBody) {
         currentVal = latestBody[metricKey];
         prevVal = prevBody ? prevBody[metricKey] : null;
         updateTime = `${latestBody.date} ${latestBody.time}`;
+      } else {
+        currentVal = '-';
+        updateTime = '기록 없음';
       }
 
       document.getElementById('detailMetricValue').innerText = typeof currentVal === 'number' ? (currentVal % 1 === 0 ? currentVal : currentVal.toFixed(2)) : currentVal;
       document.getElementById('detailMetricUpdateDate').innerText = `최근 측정일: ${updateTime}`;
 
       // 평가 상태 뱃지 태그
-      const evalResult = spec.statusEval(typeof currentVal === 'number' ? currentVal : 105, latestBp);
       const tagEl = document.getElementById('detailMetricStatusTag');
-      tagEl.innerText = evalResult.text;
-      tagEl.className = `text-[11px] px-2.5 py-0.5 rounded-md font-semibold border border-slate-200 ${evalResult.color}`;
+      if (currentVal === '-') {
+        tagEl.innerText = '기록 없음';
+        tagEl.className = 'text-[11px] px-2.5 py-0.5 rounded-md font-semibold border border-slate-200 text-slate-400 bg-slate-50';
+      } else {
+        const evalResult = spec.statusEval(typeof currentVal === 'number' ? currentVal : (latestBp ? latestBp.sys : 105), latestBp);
+        tagEl.innerText = evalResult.text;
+        tagEl.className = `text-[11px] px-2.5 py-0.5 rounded-md font-semibold border border-slate-200 ${evalResult.color}`;
+      }
 
       // 직전 대비 증감
       const deltaEl = document.getElementById('detailMetricDelta');
@@ -3449,6 +3493,13 @@
       const dataset = isBpMetric ? cachedBpList : cachedBodyList;
       const countEl = document.getElementById('detailRecordCount');
       if (countEl) countEl.innerText = `총 ${dataset.length}건`;
+
+      if (dataset.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400 font-medium">기록된 데이터가 없습니다.</td></tr>`;
+        const moreBtn = document.getElementById('detailHistoryMoreBtn');
+        if (moreBtn) moreBtn.classList.add('hidden');
+        return;
+      }
 
       // 역순 (최신순 정렬)
       const reversed = [...dataset].reverse();
@@ -5153,13 +5204,7 @@
         loadUserProfile();
         renderProfileUI();
         await openDB();
-        const records = await dbGetAllBodyMetrics();
-        const ver = localStorage.getItem('health_tracker_sample_ver');
-        if (records.length === 0 || ver !== 'v6_34days_1110') {
-          await reseedDefaultData(true);
-        } else {
-          await refreshAllViews();
-        }
+        await refreshAllViews();
       } catch (err) {
         console.error("초기 로드 실패:", err);
       }
