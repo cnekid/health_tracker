@@ -523,7 +523,10 @@
   2. **체중계 BLE 연결 무한 대기 버그 수정 (`startBleScaleConnection`):**
      * iOS Bluefy 환경에서 미지원/무응답 프로미스를 반환하는 `navigator.bluetooth.getDevices()` 대기 블록을 제거.
      * 사용자가 `[체중 측정]` 버튼을 클릭한 즉각적 사용자 제스처(User Gesture) 유효 시간 내에 `navigator.bluetooth.requestDevice`가 다이렉트 호출되도록 개편하여 iOS 네이티브 블루투스 페어링 시트가 즉각 팝업되도록 보장.
-  3. **코드 동기화 및 무결성 검증:**
+  3. **체중계 BLE 기기 검색 필터 전면 개방 (`acceptAllDevices: true`):**
+     * 기존 `filters: scaleFilterList`의 특정 영문 기기명/서비스 UUID 제약으로 인해 실제 상용 밸런스랩/OKOK 계열 체중계가 iOS Bluefy 장치 선택창에서 누락(빈 목록)되던 문제 해결.
+     * `acceptAllDevices: true` 및 확장 `optionalServices`(OKOK, WSS, BIA, UART 등) 구조로 전면 전환하여 주변에 켜져 있는 모든 스마트 체중계가 팝업 목록에 즉시 노출되도록 개선.
+  4. **코드 동기화 및 무결성 검증:**
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff).
      * JavaScriptCore 구문 분석 0 error 통과.
 

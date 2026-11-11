@@ -4561,33 +4561,20 @@
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
-          const scaleFilterList = [
-            { namePrefix: "Moses" },
-            { namePrefix: "Mac" },
-            { namePrefix: "BalansLab" },
-            { namePrefix: "OKOK" },
-            { namePrefix: "Scale" },
-            { namePrefix: "Electronic" },
-            { services: [OKOK_SVC] },
-            { services: [WSS_SVC] }
+          // 주변 모든 BLE 기기 탐색 허용 (어떤 제조사/모델명 체중계라도 팝업창에 즉시 노출)
+          const optionalScaleServices = [
+            OKOK_SVC,
+            WSS_SVC,
+            "0000181b-0000-1000-8000-00805f9b34fb", // Body Composition
+            "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
+            "0000fee7-0000-1000-8000-00805f9b34fb", // Chipsea / Tencent
+            "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
           ];
 
-          try {
-            device = await navigator.bluetooth.requestDevice({
-              filters: scaleFilterList,
-              optionalServices: [OKOK_SVC, WSS_SVC]
-            });
-          } catch (filterErr) {
-            const errStr = String(filterErr?.message || filterErr);
-            if (filterErr?.name === "NotFoundError" || errStr.includes("cancel") || errStr.includes("cancelled") || errStr.includes("User cancelled")) {
-              throw filterErr;
-            }
-            console.warn("필터링 요청 실패, 전체 검색으로 전환 시도:", filterErr);
-            device = await navigator.bluetooth.requestDevice({
-              acceptAllDevices: true,
-              optionalServices: [OKOK_SVC, WSS_SVC]
-            });
-          }
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: optionalScaleServices
+          });
 
           bleDevice = device;
           lastBleDeviceInstance = device;
@@ -4604,9 +4591,14 @@
           localStorage.setItem("health_tracker_last_scale_name", device.name || "스마트 체중계");
         }
 
-        // FFF0 (OKOK) 및 181D (WSS) 서비스 탐색
+        // FFF0 (OKOK), 181D (WSS), 181B (BIA), FFE0 (UART) 등 모든 규격 서비스 탐색
         const activeCharacteristics = [];
-        const serviceUuids = [OKOK_SVC, WSS_SVC];
+        const serviceUuids = [
+          OKOK_SVC,
+          WSS_SVC,
+          "0000181b-0000-1000-8000-00805f9b34fb",
+          "0000ffe0-0000-1000-8000-00805f9b34fb"
+        ];
 
         for (const sUuid of serviceUuids) {
           try {
