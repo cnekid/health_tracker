@@ -71,8 +71,8 @@
     </div>
   </header>
 
-  <!-- 아이폰 목업 프레임 -->
-  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+  <!-- 아이폰 목업 프레임 (모바일 실기기 가용 높이에 맞춘 670px 최적화) -->
+  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[670px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
     
     <!-- 아이폰 상태바 & 다이내믹 아일랜드 -->
     <div class="h-11 w-full pt-3 px-7 hidden sm:flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
@@ -5071,6 +5071,129 @@
       if (!file) return;
       alert(`파일 (${file.name}) 분석 완료: 데이터가 로컬 DB에 추가되었습니다.`);
       closeImportModal();
+    }
+
+    // ----------------------------------------------------
+    // 11. 34일간의 일별 완벽 데이터 적재 (2026-10-08 ~ 2026-11-10)
+    // 10대 생체지표와 혈압(SYS, DIA, 맥박)이 결손 없이 100% 매칭되어 추이 그래프 즉시 렌더링
+    // ----------------------------------------------------
+    async function reseedDefaultData(silent = false) {
+      const db = await openDB();
+      const tx = db.transaction(["bodyMetrics", "bpMetrics"], "readwrite");
+      const bodyStore = tx.objectStore("bodyMetrics");
+      const bpStore = tx.objectStore("bpMetrics");
+
+      await new Promise((res) => {
+        bodyStore.clear().onsuccess = res;
+      });
+      await new Promise((res) => {
+        bpStore.clear().onsuccess = res;
+      });
+
+      const startDate = new Date(2026, 9, 8); // 2026-10-08
+      const totalDays = 34; // 2026-10-08 ~ 2026-11-10 (총 34일)
+
+      // 34일간의 혈압 및 맥박 변동 패턴
+      const bpPattern34 = [
+        { s: 124, d: 81, p: 72 }, { s: 121, d: 79, p: 70 }, { s: 126, d: 84, p: 75 }, { s: 119, d: 77, p: 73 },
+        { s: 117, d: 76, p: 69 }, { s: 122, d: 80, p: 74 }, { s: 125, d: 83, p: 76 }, { s: 118, d: 78, p: 71 },
+        { s: 115, d: 75, p: 72 }, { s: 120, d: 79, p: 74 }, { s: 123, d: 82, p: 77 }, { s: 125, d: 85, p: 80 },
+        { s: 118, d: 78, p: 73 }, { s: 114, d: 74, p: 68 }, { s: 116, d: 75, p: 71 }, { s: 122, d: 81, p: 76 },
+        { s: 124, d: 83, p: 79 }, { s: 120, d: 78, p: 74 }, { s: 117, d: 76, p: 70 }, { s: 119, d: 77, p: 72 },
+        { s: 123, d: 82, p: 78 }, { s: 121, d: 80, p: 75 }, { s: 118, d: 77, p: 73 }, { s: 115, d: 74, p: 71 },
+        { s: 113, d: 73, p: 69 }, { s: 118, d: 76, p: 72 }, { s: 120, d: 79, p: 74 }, { s: 116, d: 75, p: 71 },
+        { s: 115, d: 74, p: 73 }, { s: 118, d: 79, p: 72 }, { s: 122, d: 82, p: 78 }, { s: 112, d: 78, p: 70 },
+        { s: 108, d: 80, p: 75 }, { s: 105, d: 83, p: 87 }
+      ];
+
+      for (let i = 0; i < totalDays; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+
+        let w, bodyFat, muscleRate, muscleMass, visceralFat, water, bmr, timeStr;
+
+        if (i === totalDays - 1) {
+          // 2026-11-10 07:11 (실제 앱 캡처 실측치 100% 반영)
+          timeStr = "07:11:00";
+          w = 80.30;
+          bodyFat = 25.0;
+          muscleRate = 38.0;
+          muscleMass = 30.6;
+          visceralFat = 14.5;
+          water = 52.9;
+          bmr = 1651.0;
+        } else if (i === totalDays - 2) {
+          // 2026-11-09 (지난 번 비교: -0.25kg 성립용 80.55kg)
+          timeStr = "08:05:00";
+          w = 80.55;
+          bodyFat = 25.2;
+          muscleRate = 37.9;
+          muscleMass = 30.5;
+          visceralFat = 14.0;
+          water = 52.8;
+          bmr = 1650.0;
+        } else if (i === totalDays - 15) {
+          // 최근 30일 내 최저치: 79.95kg (30일 최고의 무게)
+          timeStr = "08:05:00";
+          w = 79.95;
+          bodyFat = 24.8;
+          muscleRate = 38.2;
+          muscleMass = 30.5;
+          visceralFat = 14.0;
+          water = 53.1;
+          bmr = 1648.0;
+        } else {
+          timeStr = "08:05:00";
+          const wave = Math.sin(i * 0.65) * 0.45 + Math.cos(i * 0.3) * 0.25;
+          w = +(82.2 - (i * 0.055) + wave).toFixed(2);
+          bodyFat = +(26.5 - (i * 0.04) + (wave * 0.35)).toFixed(1);
+          muscleRate = +(36.8 + (i * 0.035) - (wave * 0.25)).toFixed(1);
+          muscleMass = +(w * (muscleRate / 100)).toFixed(2);
+          visceralFat = +(14.8 - (i * 0.01)).toFixed(1);
+          water = +(51.8 + (i * 0.032)).toFixed(1);
+          bmr = Math.round(1675 - (i * 0.7));
+        }
+
+        const bmi = +(w / (1.76 * 1.76)).toFixed(1);
+
+        bodyStore.put({
+          date: dateStr,
+          time: timeStr,
+          weight: w,
+          bodyFat: bodyFat,
+          muscleRate: muscleRate,
+          muscleMass: muscleMass,
+          bmi: bmi,
+          visceralFat: visceralFat,
+          water: water,
+          bmr: bmr,
+          deltaWeight: 0,
+          source: "BLE체중계",
+          syncedHealthKit: true
+        });
+
+        // 34일간 일별 혈압 저장
+        const bpItem = bpPattern34[i];
+        bpStore.put({
+          id: `${dateStr}_morning`,
+          date: dateStr,
+          time: "08:08:00",
+          slot: "morning",
+          sys: bpItem.s,
+          dia: bpItem.d,
+          pulse: bpItem.p,
+          source: (i === totalDays - 1) ? "카메라OCR" : (i % 3 === 0 ? "수동입력" : "카메라OCR"),
+          syncedHealthKit: true
+        });
+      }
+
+      await new Promise(r => tx.oncomplete = r);
+      localStorage.setItem('health_tracker_sample_ver', 'v6_34days_1110');
+      await refreshAllViews();
+      if (!silent) {
+        alert("✅ 최근 34일간의 일별 10대 생체지표 및 혈압 데이터가 정상 생성되었습니다.");
+      }
     }
 
     // ----------------------------------------------------
