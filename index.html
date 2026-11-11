@@ -835,7 +835,12 @@
             <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
           </div>
 
-          <div class="pt-2">
+          <div class="pt-2 space-y-2">
+            <!-- 재연결 필요 시 원터치 팝업 호출 버튼 -->
+            <button id="scaleReconnectBtn" type="button" onclick="startBleScaleConnection(true)" class="hidden w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-rotate-right"></i>
+              <span>체중계 다시 찾기 (연결 팝업)</span>
+            </button>
             <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
@@ -3863,6 +3868,10 @@
       if (isBleConnecting) return;
       isBleConnecting = true;
 
+      // 재연결 버튼 초기화
+      const reconnectBtn = document.getElementById("scaleReconnectBtn");
+      if (reconnectBtn) reconnectBtn.classList.add("hidden");
+
       // Web Bluetooth API 지원 여부 확인
       if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
         document.getElementById("scaleStatusText").innerText = "Web Bluetooth 미지원 브라우저";
@@ -3886,12 +3895,18 @@
         // [원터치 자동 재연결]
         // 강제 새 기기 검색(forceNewScan)이 아닌 경우, 직전 기기 또는 Bluefy 영구 권한(getDevices) 기기로 즉시 연결 시도
         if (!forceNewScan) {
-          // A. 현재 세션 메모리에 기기 인스턴스가 남아있는 경우
-          if (lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
+          // A. 현재 세션 메모리에 이미 연결된 기기 인스턴스가 살아있는 경우 즉시 재사용
+          if (lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
+            device = lastBleDeviceInstance;
+            server = lastBleDeviceInstance.gatt;
+            document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "체중계"} 연결됨`;
+          }
+          // B. 메모리에 기기 인스턴스가 남아있는 경우 타임아웃과 함께 재연결 시도
+          else if (lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
             device = lastBleDeviceInstance;
             document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "체중계"} 자동 연결 중...`;
           }
-          // B. W3C Web Bluetooth Persistent Permissions (getDevices) 지원 환경
+          // C. W3C Web Bluetooth Persistent Permissions (getDevices) 지원 환경
           else if (navigator.bluetooth.getDevices) {
             try {
               const devices = await navigator.bluetooth.getDevices();
@@ -3914,18 +3929,22 @@
             }
           }
 
-          // 기억된 기기로 팝업 없이 GATT 연결 시도
-          if (device) {
+          // 기억된 기기로 GATT 연결 시도 (무한 대기 방지 2.5초 타임아웃)
+          if (device && !server) {
             try {
               bleDevice = device;
               lastBleDeviceInstance = device;
               device.addEventListener("gattserverdisconnected", onBleDisconnected);
-              server = await device.gatt.connect();
+              server = await Promise.race([
+                device.gatt.connect(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("자동 재연결 시간 초과")), 2500))
+              ]);
               bleServer = server;
             } catch (autoConnErr) {
-              console.warn("자동 연결 실패, 기기 선택 팝업으로 전환:", autoConnErr);
+              console.warn("자동 재연결 실패, 세션 초기화:", autoConnErr);
               device = null;
               server = null;
+              lastBleDeviceInstance = null;
             }
           }
         }
@@ -4052,8 +4071,11 @@
         if (errName === "NotFoundError" || errMsg.includes("cancelled") || errMsg.includes("canceled") || errMsg.includes("User cancelled")) {
           document.getElementById("scaleStatusText").innerText = "기기 선택이 취소되었습니다.";
         } else {
-          document.getElementById("scaleStatusText").innerText = `연결 오류: ${errName} ${errMsg}`.trim();
+          document.getElementById("scaleStatusText").innerText = `연결 대기: 체중계를 다시 찾아주세요`;
         }
+        // 연결 실패 또는 브라우저 보안 제약 시 즉시 재연결 버튼 활성화
+        const reconnectBtn = document.getElementById("scaleReconnectBtn");
+        if (reconnectBtn) reconnectBtn.classList.remove("hidden");
       } finally {
         isBleConnecting = false;
       }
@@ -4193,13 +4215,11 @@
         syncedHealthKit: true
       };
 
-      // 체중계로 수신 확인(ACK) 역전송 (FFF2) 및 연결 정리
+      // 체중계로 수신 확인(ACK) 역전송 (FFF2)
       if (bleAckChar) {
         bleAckChar.writeValueWithoutResponse(new Uint8Array([0x01])).catch(() => {});
       }
-      setTimeout(() => {
-        disconnectBleScale();
-      }, 500);
+      // 수신 즉시 연결을 강제로 끊지 않고 요약 뷰 확인/저장 또는 모달 닫기 시 안정적으로 해제
 
       handleIncomingScaleData(record);
     }

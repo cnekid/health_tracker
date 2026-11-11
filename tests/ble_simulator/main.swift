@@ -157,6 +157,7 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
             CBAdvertisementDataLocalNameKey: "BalansLab-Scale",
             CBAdvertisementDataServiceUUIDsKey: [WEIGHT_SCALE_SERVICE_UUID, OKOK_SERVICE_UUID]
         ]
+        peripheralManager.stopAdvertising()
         peripheralManager.startAdvertising(advData)
         isAdvertising = true
         appendLog("📡 [BLE 광고 시작] 장치명: 'BalansLab-Scale' | 수신 대기 중", color: "blue")
@@ -170,9 +171,13 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     
     func startAutoStreaming() {
         guard autoStreamTimer == nil else { return }
-        // 실제 체중계 표준 동작: 체중계에 올라서서 측정 완료 시 1초 주기로 확정 패킷 연속 알림(Notification) 송출
+        // 구독 중인 Central이 있을 때만 타이머 가동 (구독 없을 시 불필요한 로그 스팸 방지)
+        guard !subscribedCentrals.isEmpty else { return }
         autoStreamTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self, self.isSteppedOn, !self.subscribedCentrals.isEmpty else { return }
+            guard let self = self, self.isSteppedOn, !self.subscribedCentrals.isEmpty else {
+                self?.stopAutoStreaming()
+                return
+            }
             self.transmit(payload: self.lastPayload, isLocked: true)
         }
     }
@@ -205,6 +210,10 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         if subscribedCentrals.isEmpty {
             isSteppedOn = false
             stopAutoStreaming()
+            // 연결 해제 즉시 BLE 광고를 강제 재시작하여 다음 측정 시 핸드폰에서 언제든 검색되도록 보장
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.startAdvertising()
+            }
         }
     }
 
@@ -239,6 +248,10 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
                 peripheralManager.respond(to: req, withResult: .success)
                 self.isSteppedOn = false
                 stopAutoStreaming()
+                // ACK 수신 후 다음 측정에 대비하여 즉시 광고를 재개
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    self?.startAdvertising()
+                }
             } else {
                 peripheralManager.respond(to: req, withResult: .success)
             }
@@ -459,6 +472,9 @@ class LocalHttpServer {
                     )
                     
                     device.isSteppedOn = true
+                    // 발송 시 블루투스 광고를 확실히 갱신하여 핸드폰 검색 보장
+                    device.startAdvertising()
+                    
                     if isSimulated {
                         device.runSimulation(payload: payload)
                     } else {
