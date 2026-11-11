@@ -4712,43 +4712,59 @@
           localStorage.setItem("health_tracker_last_scale_name", device.name || "스마트 체중계");
         }
 
-        // FFF0 (OKOK), 181D (WSS), 181B (BIA), FFE0 (UART) 등 모든 규격 서비스 탐색
+        // FFF0 (OKOK), 181D (WSS), 181B (BIA), FEE7 (Chipsea), FFE0 (UART) 등 모든 규격 서비스 탐색
         const activeCharacteristics = [];
         const serviceUuids = [
           OKOK_SVC,
           WSS_SVC,
           "0000181b-0000-1000-8000-00805f9b34fb",
+          "0000fee7-0000-1000-8000-00805f9b34fb",
           "0000ffe0-0000-1000-8000-00805f9b34fb"
         ];
 
-        for (const sUuid of serviceUuids) {
-          try {
-            const service = await server.getPrimaryService(sUuid);
-            if (!service) continue;
+        let foundServices = [];
+        try {
+          const all = await server.getPrimaryServices();
+          if (all && all.length > 0) foundServices = all;
+        } catch (_) {}
 
+        if (foundServices.length === 0) {
+          for (const sUuid of serviceUuids) {
             try {
-              const chars = await service.getCharacteristics();
-              for (const ch of chars) {
-                if (ch.properties && (ch.properties.notify || ch.properties.indicate || ch.properties.read)) {
+              const s = await server.getPrimaryService(sUuid);
+              if (s) foundServices.push(s);
+            } catch (_) {}
+          }
+        }
+
+        for (const service of foundServices) {
+          try {
+            const chars = await service.getCharacteristics();
+            for (const ch of chars) {
+              if (ch.properties && (ch.properties.notify || ch.properties.indicate || ch.properties.read)) {
+                if (!activeCharacteristics.some(c => c.uuid === ch.uuid)) {
                   activeCharacteristics.push(ch);
                 }
-                if (ch.uuid.toLowerCase().includes("fff2")) {
-                  bleAckChar = ch;
-                }
               }
-            } catch (eChars) {
-              const targetUuids = sUuid === OKOK_SVC ? [OKOK_NOTIFY, OKOK_ACK] : [WSS_NOTIFY];
-              for (const tu of targetUuids) {
-                try {
-                  const ch = await service.getCharacteristic(tu);
-                  if (ch) {
-                    activeCharacteristics.push(ch);
-                    if (tu === OKOK_ACK) bleAckChar = ch;
-                  }
-                } catch (eC) {}
+              if (ch.uuid.toLowerCase().includes("fff2")) {
+                bleAckChar = ch;
               }
             }
-          } catch (eS) {}
+          } catch (eChars) {
+            const sUuid = service.uuid ? service.uuid.toLowerCase() : "";
+            const targetUuids = sUuid.includes("fff0") ? [OKOK_NOTIFY, OKOK_ACK] : [WSS_NOTIFY];
+            for (const tu of targetUuids) {
+              try {
+                const ch = await service.getCharacteristic(tu);
+                if (ch) {
+                  if (!activeCharacteristics.some(c => c.uuid === ch.uuid)) {
+                    activeCharacteristics.push(ch);
+                  }
+                  if (tu === OKOK_ACK) bleAckChar = ch;
+                }
+              } catch (_) {}
+            }
+          }
         }
 
         if (activeCharacteristics.length === 0) {
