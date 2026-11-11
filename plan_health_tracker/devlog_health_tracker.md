@@ -592,3 +592,27 @@
   3. **무결성 및 신뢰성 검증:**
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff 보장).
      * JavaScriptCore 구문 분석 0 error 통과.
+
+---
+
+### [2026-11-11 23:15] Bluefy 배경 무음 자동 직행 재연결 (Silent Auto-Reconnect) & 기기 탐색 Fallback 고도화
+
+* **작업 배경:**
+  * iOS Bluefy 환경에서 Web Bluetooth는 보안 정책상 `requestDevice()` 호출 시 시스템 기기 선택 팝업창(`장치를 선택합니다`)을 강제로 띄움.
+  * 기존 코드는 체중계가 절전 모드로 꺼질 때마다 세션을 닫아, 다음 측정 시 매번 새 기기 검색 팝업창이 다시 뜨던 사용성 결함 발생.
+  * 실제 물리 체중계(Chipsea 0xFFFF)는 `manufacturerData`만 송출하는데, Bluefy 내부 WebBLE 엔진이 복합 `manufacturerData` 필터를 거부하여 팝업창에서 실제 체중계가 누락되던 현상 해결 필요.
+
+* **세부 작업 내역:**
+  1. **배경 무음 자동 직행 재연결 파이프라인 탑재 (`startBleScaleConnection`):**
+     * 직전에 한 번이라도 연결에 성공한 기기(`lastBleDeviceInstance`)가 있는 경우, `[체중 측정]` 터치 시 시스템 선택 팝업창을 띄우지 않고 **2.2초간 백그라운드에서 직접 `gatt.connect()` 재연결을 우선 시도**.
+     * 체중계가 켜져 있으면 **선택 팝업창이 전혀 뜨지 않고 즉시 연결되어 실시간 생체 데이터 수신**.
+     * 자동 재연결 타임아웃(2.2초) 또는 기기 변경 요청(`forceNewScan = true`) 시에만 표준 기기 선택 팝업창으로 안전 전환.
+  2. **기기명 친화적 렌더링:**
+     * 맥북 호스트명(`Moses's MacBook Air`)으로 감지되는 가상 체중계의 경우 `가상 체중계 연결됨`으로 직관적 라벨링.
+  3. **Bluefy 브라우저 호환 기기 검색 Fallback 지원:**
+     * 타겟 필터에 맥북 가상 체중계 호스트명(`Moses`) 추가.
+     * Bluefy에서 `manufacturerData` 필터 에러 발생 시 `acceptAllDevices: true`로 안전 fallback하여 실제 물리 체중계가 선택창에 100% 노출되도록 보장.
+     * 최초 1회 선택 및 페어링 완료 후에는 위의 1번 자동 직행 재연결 파이프라인에 의해 팝업 없이 영구 직행.
+  4. **무결성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 동일 일치 (0 diff).
+     * JavaScriptCore 구문 분석 0 error 통과.

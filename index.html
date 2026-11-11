@@ -4550,14 +4550,37 @@
         let device = null;
         let server = null;
 
-        // 이미 연결된 GATT 세션이 살아있는 경우 즉시 재사용
+        // 1) 이미 활성화된 GATT 연결 세션이 살아있는 경우 즉시 재사용
         if (!forceNewScan && lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
           device = lastBleDeviceInstance;
           server = lastBleDeviceInstance.gatt;
-          document.getElementById("scaleStatusText").innerText = `${device.name || "체중계"} 연결됨`;
+          const friendlyName = (device.name && (device.name.includes("Moses") || device.name.includes("MacBook"))) ? "가상 체중계" : (device.name || "스마트 체중계");
+          document.getElementById("scaleStatusText").innerText = `${friendlyName} 연결됨`;
         }
 
-        // 새 기기 연결 또는 재연결 시 즉시 표준 기기 선택 팝업 호출 (사용자 제스처 유효성 보장)
+        // 2) 연결이 끊겼더라도 직전에 연결했던 기기 인스턴스가 남아있다면 -> 팝업창 없이 배경 자동 직행 재연결 시도!
+        if (!device && !forceNewScan && lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
+          try {
+            document.getElementById("scaleStatusText").innerText = "체중계 자동 연결 중...";
+            server = await Promise.race([
+              lastBleDeviceInstance.gatt.connect(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2200))
+            ]);
+            if (server && server.connected) {
+              device = lastBleDeviceInstance;
+              bleDevice = device;
+              bleServer = server;
+              const friendlyName = (device.name && (device.name.includes("Moses") || device.name.includes("MacBook"))) ? "가상 체중계" : (device.name || "스마트 체중계");
+              document.getElementById("scaleStatusText").innerText = `${friendlyName} 자동 연결됨`;
+            }
+          } catch (eAuto) {
+            console.warn("자동 직행 연결 대기 만료 (새 기기 검색 진행):", eAuto);
+            device = null;
+            server = null;
+          }
+        }
+
+        // 3) 새 기기 연결 또는 재연결 시 표준 기기 선택 팝업 호출 (사용자 제스처 유효성 보장)
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
@@ -4570,20 +4593,19 @@
             "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
           ];
 
-          // 타겟 기기 2종으로 고정 (1: 가상 체중계, 2: 실제 밸런스랩 체중계 칩셋 0xFFFF)
-          // 잡다한 Apple/Samsung/가전 기기를 100% 필터링하여 오직 켜져 있는 체중계만 팝업에 노출
+          // 1차 시도: 타겟 기기 2종 필터 (가상 체중계 + 0xFFFF 칩셋 실제 체중계)
           const scaleFilters = [
-            // 1) 맥북 가상 체중계
+            // 1) 맥북 가상 체중계 (기기명 또는 맥북 호스트명)
             { name: "BalansLab-Scale" },
+            { namePrefix: "Moses" },
+            { services: [OKOK_SVC] },
+            { services: [WSS_SVC] },
             // 2) 실제 밸런스랩 체중계 (Chipsea 제조사 식별자 0xFFFF)
             {
               manufacturerData: [{
                 companyIdentifier: 0xffff
               }]
-            },
-            // 3) 표준 OKOK/WSS GATT 브로드캐스트 기기
-            { services: [OKOK_SVC] },
-            { services: [WSS_SVC] }
+            }
           ];
 
           try {
@@ -4592,19 +4614,16 @@
               optionalServices: optionalScaleServices
             });
           } catch (filterErr) {
-            // 브라우저가 특정 복합 필터를 미지원하여 에러를 낼 경우의 안전 fallback
-            if (filterErr.name !== "NotFoundError" && !String(filterErr).includes("User cancelled")) {
-              device = await navigator.bluetooth.requestDevice({
-                filters: [
-                  { name: "BalansLab-Scale" },
-                  { services: [OKOK_SVC] },
-                  { services: [WSS_SVC] }
-                ],
-                optionalServices: optionalScaleServices
-              });
-            } else {
+            // 사용자가 선택창에서 취소를 누른 경우 중단
+            if (filterErr.name === "NotFoundError" || String(filterErr).includes("User cancelled")) {
               throw filterErr;
             }
+            // Bluefy 등 manufacturerData 미지원 브라우저 환경 대비: 전체 기기 허용으로 안전 fallback
+            console.warn("체중계 필터 fallback 가동:", filterErr);
+            device = await navigator.bluetooth.requestDevice({
+              acceptAllDevices: true,
+              optionalServices: optionalScaleServices
+            });
           }
 
           bleDevice = device;
