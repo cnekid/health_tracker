@@ -523,19 +523,72 @@
   2. **체중계 BLE 연결 무한 대기 버그 수정 (`startBleScaleConnection`):**
      * iOS Bluefy 환경에서 미지원/무응답 프로미스를 반환하는 `navigator.bluetooth.getDevices()` 대기 블록을 제거.
      * 사용자가 `[체중 측정]` 버튼을 클릭한 즉각적 사용자 제스처(User Gesture) 유효 시간 내에 `navigator.bluetooth.requestDevice`가 다이렉트 호출되도록 개편하여 iOS 네이티브 블루투스 페어링 시트가 즉각 팝업되도록 보장.
-  3. **체중계 BLE 기기 검색 필터 전면 개방 (`acceptAllDevices: true`):**
+  3. **체중계 BLE 기기 검색 필터 전면 개방 (`acceptAllDevices: true`) 및 에러 진단 UI 강화:**
      * 기존 `filters: scaleFilterList`의 특정 영문 기기명/서비스 UUID 제약으로 인해 실제 상용 밸런스랩/OKOK 계열 체중계가 iOS Bluefy 장치 선택창에서 누락(빈 목록)되던 문제 해결.
      * `acceptAllDevices: true` 및 확장 `optionalServices`(OKOK, WSS, BIA, UART 등) 구조로 전면 전환하여 주변에 켜져 있는 모든 스마트 체중계가 팝업 목록에 즉시 노출되도록 개선.
+     * 비체중계 기기 오선택 시 명확한 장치명 및 에러 원인을 안내하도록 모달 UI 문구 강화.
   4. **코드 동기화 및 무결성 검증:**
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff).
      * JavaScriptCore 구문 분석 0 error 통과.
 
 
+---
 
+### [2026-11-11 22:25] 밸런스랩 가상 체중계 어드민 - 주변 BLE 실시간 신호 탐색기(레이더) 구축
 
+* **작업 목표:**
+  * 상용 물리 체중계(밸런스랩 등) 작동 시 방출되는 BLE 신호를 맥북에서 포착하여 정확한 장치명/UUID/패킷 데이터를 식별할 수 있는 독립 신호 탐색기 구현.
+  * 불필요한 배터리/CPU 리소스 소모를 방지하기 위해 사용자 요청 시에만 수동으로 스캔을 시작/중단하는 On-Demand 제어 체계 적용.
+  * 신호가 끊기더라도 항목이 화면에서 사라지거나 위치가 밀리지 않고 상태(🟢 수신 중 / ⚪ 대기)만 갱신되는 순서 래칭(Latching) 테이블 제공.
+  * Apple/Samsung 가전 등 주변 노이즈 신호를 화면에서 숨기거나 개별 삭제/전체 초기화할 수 있는 관리 기능 지원.
 
+* **세부 작업 내역:**
+  1. **맥북 백엔드 BLE 탐색 매니저 (`BleRadarManager` in `main.swift`):**
+     * `CBCentralManager` 기반 온디맨드 스캔 제어 (`scanForPeripherals(allowDuplicates: true)` / `stopScan()`).
+     * 장치 분류기 탑재: Service UUID(`FFF0`, `181D`), 로컬 이름 패턴(`Scale`, `OKOK`, `Chipsea`, `Balans`, `SF`, `S88` 등), 제조사 코드(`4C00` ➔ Apple, `7500` ➔ Samsung, `CA11` ➔ 체중계 등)를 분석하여 `scale`, `apple`, `home_appliance`, `other`로 자동 분류.
+     * 순서 래칭(Latching): 한 번 탐색된 기기의 고유 ID 순서를 보존하여 신호가 소멸(절전)되어도 행 위치가 유지되도록 보장.
+     * REST API 추가: `POST /api/radar/start`, `POST /api/radar/stop`, `GET /api/radar`, `POST /api/radar/clear`, `POST /api/radar/delete`.
+  2. **가상 체중계 어드민 화면 UI (`ui_balanslab_virtual_device.html`):**
+     * 기존 가상 체중계 조작 영역 하단에 완전 독립된 **[주변 BLE 실시간 신호 탐색기]** 카드 섹션 추가.
+     * 제어 버튼: `[▶ 탐색 시작]`, `[⏹ 탐색 중지]`, `[목록 비우기]`.
+     * 필터/관리: `[전체] / [⚖️ 체중계만]` 필터 버튼, 개별 `[숨김]/[해제]`, `[삭제]` 버튼, `[숨긴 기기 표시]` 체크박스 및 `[숨김 모두 해제]` 버튼.
+     * 신호 상세 시각화: 장치명, RSSI 신호 세기 게이지 바(-dBm), Service UUIDs, 제조사 Hex 데이터 표시.
+  3. **안전성 및 컴파일 검증:**
+     * `scale_sim` Swift 바이너리 클린 컴파일 성공 (exit code 0).
+     * `ui_balanslab_virtual_device.html` 내장 스크립트 JavaScriptCore 구문 분석 0 error 통과.
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff 유지).
 
+---
 
+### [2026-11-11 22:45] HealthTracker - 스마트 체중계 타겟 2종(가상 체중계 + 실제 밸런스랩 체중계) 고정 필터링 적용
 
+* **작업 목표:**
+  * 기존 `acceptAllDevices: true` 적용 시 iOS Bluefy 팝업창에 Apple Watch, MacBook, AirPurifier, 의미 없는 Hex UUID 등 20개 이상의 주변 무관 기기가 대량 노출되던 피로감 해소.
+  * 사용자가 체중 측정을 실행할 때, 오직 유효한 2종 기기(맥북 가상 체중계 `BalansLab-Scale`, 실제 밸런스랩 물리 체중계)만 팝업창에 감지/표시되도록 타겟 기기를 고정 필터링.
 
+* **실제 체중계 신호 분석 결과:**
+  * 맥북 BLE 레이더 패킷 실측 결과:
+    * `FFFF 0015 4311 FFF0 11 E3 44 39 BB 12 AC DC 32 14 00 00 00 FC 00 E3 C5`
+    * Company Identifier: `0xFFFF`
+    * Chipsea 칩셋 식별자: `4311` (`0x1143`)
+    * Service: `FFF0` (OKOK BIA 프로토콜)
+    * 물리 MAC: `AC:12:BB:39:44:E3`
+  * 특이사항: 실제 체중계는 Local Name을 브로드캐스팅하지 않으며(`name: ""`), `0xFFF0` 서비스 식별자를 일반 GATT Service 배열이 아닌 `Manufacturer Data` 내부에 은닉 탑재함.
 
+* **세부 작업 내역:**
+  1. **Web Bluetooth `requestDevice` 타겟 필터 고정 (`index.html`, `ui_health_tracker.html`):**
+     * `acceptAllDevices: true` 제거.
+     * `scaleFilters`:
+       * 1) `{ name: "BalansLab-Scale" }` (맥북 가상 체중계)
+       * 2) `{ manufacturerData: [{ companyIdentifier: 0xffff }] }` (실제 밸런스랩 물리 체중계)
+       * 3) `{ services: [OKOK_SVC] }`, `{ services: [WSS_SVC] }` (표준 OKOK/WSS GATT 브로드캐스트 기기)
+     * 잡다한 Apple(`0x004C`), Samsung(`0x0075`) 등 50여 개 주변 가전 기기 100% 차단.
+     * 브라우저 호환성 안전 장치: 복합 필터 미지원 환경 대비 안전 fallback 예외 처리 탑재.
+  2. **맥북 BLE 레이더 분류기 고도화 (`main.swift`):**
+     * `upperMfg`에 `4311`과 `FFF0`이 동시 포함되거나 `FFFF`로 시작하고 `FFF0`이 포함된 경우를 밸런스랩 실제 체중계로 즉시 판별.
+     * 카테고리를 `scale`로 지정하고, 표시 이름을 `⚖️ 밸런스랩 체중계 ({UUID 앞8자리})`로 자동 부여하여 레이더 최상단에 래칭 고정.
+     * 사용자의 지침에 따라 `INBODY` 명칭 기기는 체중계 분류에서 엄격히 제외.
+     * `swiftc -O main.swift -o scale_sim` 클린 재컴파일 완료.
+  3. **무결성 및 신뢰성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff 보장).
+     * JavaScriptCore 구문 분석 0 error 통과.

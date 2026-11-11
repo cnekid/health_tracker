@@ -324,6 +324,85 @@
     </div>
   </div>
 
+  <!-- 5. 주변 BLE 실시간 신호 탐색기 (체중계 레이더) -->
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+    <!-- 헤더 및 제어 버튼 -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shadow-xs">
+            <i class="fa-solid fa-radar"></i>
+          </span>
+          <h2 class="text-sm font-extrabold text-slate-900 tracking-tight">주변 BLE 실시간 신호 탐색기 (체중계 레이더)</h2>
+          <span id="radarStatusBadge">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> 스캔 중지됨 (대기)
+            </span>
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5">
+          실제 체중계에 발을 올렸을 때 방출되는 신호를 실시간으로 포착하고 구분합니다. (신호가 꺼져도 행 위치가 고정 유지됩니다)
+        </p>
+      </div>
+
+      <!-- 탐색/중지/비우기 조작 버튼 -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="btnStartRadar" onclick="startRadarScan()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+          <i class="fa-solid fa-play text-[11px]"></i>
+          <span>탐색 시작</span>
+        </button>
+        <button id="btnStopRadar" onclick="stopRadarScan()" class="hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+          <i class="fa-solid fa-stop text-[11px]"></i>
+          <span>탐색 중지</span>
+        </button>
+        <button onclick="clearRadarList()" class="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+          <i class="fa-solid fa-rotate text-[10px] text-slate-400"></i>
+          <span>목록 비우기</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 통계 및 필터 툴바 -->
+    <div class="flex flex-wrap items-center justify-between gap-2 text-xs py-1">
+      <div class="flex items-center gap-3 text-[11px] text-slate-600">
+        <span>감지 기기: <strong id="radarStatTotal" class="font-mono text-slate-900 font-bold">0</strong>대</span>
+        <span>🟢 활성(수신 중): <strong id="radarStatLive" class="font-mono text-emerald-600 font-bold">0</strong>대</span>
+        <span>⚖️ 체중계 후보: <strong id="radarStatScale" class="font-mono text-purple-600 font-bold">0</strong>대</span>
+        <span class="text-slate-400">|</span>
+        <span>숨김: <strong id="radarStatHidden" class="font-mono text-slate-500">0</strong>대</span>
+      </div>
+
+      <div class="flex items-center gap-3 text-xs">
+        <!-- 체중계 후보 필터 토글 -->
+        <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]">
+          <button id="btnFilterAll" onclick="setRadarFilter('all')" class="px-2 py-0.5 rounded font-bold bg-white text-slate-800 shadow-2xs">전체</button>
+          <button id="btnFilterScale" onclick="setRadarFilter('scale_only')" class="px-2 py-0.5 rounded font-semibold text-slate-600 hover:text-slate-900">⚖️ 체중계만</button>
+        </div>
+
+        <!-- 숨긴 기기 표시 토글 -->
+        <label class="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer select-none">
+          <input type="checkbox" id="chkShowHidden" onchange="toggleShowHidden(this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500">
+          <span>숨긴 기기 표시</span>
+        </label>
+        <button id="btnUnhideAll" onclick="unhideAllDevices()" class="text-[11px] text-slate-400 hover:text-slate-700 underline">숨김 모두 해제</button>
+      </div>
+    </div>
+
+    <!-- 장치 목록 컨테이너 -->
+    <div id="radarDeviceList" class="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+      <!-- 동적 렌더링 영역 -->
+    </div>
+
+    <!-- 빈 상태 안내 -->
+    <div id="radarEmptyState" class="py-10 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+      <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-sm mx-auto mb-2">
+        <i class="fa-solid fa-satellite-dish"></i>
+      </div>
+      <p class="text-xs font-semibold text-slate-700">탐색 대기 중</p>
+      <p class="text-[11px] text-slate-400 mt-0.5">상단의 <strong>[탐색 시작]</strong> 버튼을 누른 후 체중계에 올라서면 실시간 신호가 여기에 감지됩니다.</p>
+    </div>
+  </div>
+
   <script>
     const API_BASE = "http://localhost:8765";
     let isBroadcasting = false;
@@ -528,8 +607,253 @@
       indicator.className = "text-slate-400";
     }
 
+    // ==================== 9. BLE 레이더 (주변 신호 탐색기) 제어 ====================
+    let isRadarScanning = false;
+    let radarPollTimer = null;
+    let hiddenDeviceIds = new Set(JSON.parse(localStorage.getItem('radar_hidden_devices') || '[]'));
+    let showHiddenDevices = false;
+    let radarFilter = 'all'; // 'all' or 'scale_only'
+
+    async function startRadarScan() {
+      try {
+        const res = await fetch(`${API_BASE}/api/radar/start`, { method: 'POST' });
+        if (res.ok) {
+          isRadarScanning = true;
+          updateRadarControls();
+          await pollRadar();
+          if (!radarPollTimer) {
+            radarPollTimer = setInterval(pollRadar, 1200);
+          }
+        }
+      } catch (e) {
+        alert("가상 엔진 서버(http://localhost:8765)에 연결할 수 없습니다.\n터미널에서 ./scale_sim 을 실행해주세요.");
+      }
+    }
+
+    async function stopRadarScan() {
+      try {
+        await fetch(`${API_BASE}/api/radar/stop`, { method: 'POST' });
+      } catch (e) {}
+      isRadarScanning = false;
+      if (radarPollTimer) {
+        clearInterval(radarPollTimer);
+        radarPollTimer = null;
+      }
+      updateRadarControls();
+      pollRadar();
+    }
+
+    async function clearRadarList() {
+      if (!confirm("탐색된 장치 목록을 비우시겠습니까?")) return;
+      try {
+        await fetch(`${API_BASE}/api/radar/clear`, { method: 'POST' });
+        renderRadarDevices([]);
+      } catch (e) {}
+    }
+
+    async function deleteRadarDevice(id) {
+      try {
+        await fetch(`${API_BASE}/api/radar/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        pollRadar();
+      } catch (e) {}
+    }
+
+    function toggleHideDevice(id) {
+      if (hiddenDeviceIds.has(id)) {
+        hiddenDeviceIds.delete(id);
+      } else {
+        hiddenDeviceIds.add(id);
+      }
+      localStorage.setItem('radar_hidden_devices', JSON.stringify(Array.from(hiddenDeviceIds)));
+      pollRadar();
+    }
+
+    function unhideAllDevices() {
+      hiddenDeviceIds.clear();
+      localStorage.removeItem('radar_hidden_devices');
+      pollRadar();
+    }
+
+    function toggleShowHidden(show) {
+      showHiddenDevices = show;
+      pollRadar();
+    }
+
+    function setRadarFilter(filter) {
+      radarFilter = filter;
+      const btnAll = document.getElementById('btnFilterAll');
+      const btnScale = document.getElementById('btnFilterScale');
+      if (filter === 'scale_only') {
+        btnScale.className = "px-2 py-0.5 rounded font-bold bg-white text-purple-700 shadow-2xs";
+        btnAll.className = "px-2 py-0.5 rounded font-semibold text-slate-600 hover:text-slate-900";
+      } else {
+        btnAll.className = "px-2 py-0.5 rounded font-bold bg-white text-slate-800 shadow-2xs";
+        btnScale.className = "px-2 py-0.5 rounded font-semibold text-slate-600 hover:text-slate-900";
+      }
+      pollRadar();
+    }
+
+    async function pollRadar() {
+      try {
+        const res = await fetch(`${API_BASE}/api/radar`, { signal: AbortSignal.timeout(1200) });
+        if (!res.ok) return;
+        const data = await res.json();
+        isRadarScanning = data.isScanning;
+        updateRadarControls();
+        renderRadarDevices(data.devices || []);
+      } catch (e) {
+        // 서버 응답 없음
+      }
+    }
+
+    function updateRadarControls() {
+      const btnStart = document.getElementById('btnStartRadar');
+      const btnStop = document.getElementById('btnStopRadar');
+      const statusBadge = document.getElementById('radarStatusBadge');
+
+      if (isRadarScanning) {
+        btnStart.classList.add('hidden');
+        btnStop.classList.remove('hidden');
+        statusBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 anim-pulse-dot">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 탐색 중 (CoreBluetooth 스캔 가동)
+        </span>`;
+      } else {
+        btnStart.classList.remove('hidden');
+        btnStop.classList.add('hidden');
+        statusBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> 스캔 중지됨 (대기)
+        </span>`;
+      }
+    }
+
+    function renderRadarDevices(devices) {
+      const listContainer = document.getElementById('radarDeviceList');
+      const emptyState = document.getElementById('radarEmptyState');
+      const statTotal = document.getElementById('radarStatTotal');
+      const statLive = document.getElementById('radarStatLive');
+      const statScale = document.getElementById('radarStatScale');
+      const statHidden = document.getElementById('radarStatHidden');
+
+      const totalCount = devices.length;
+      const liveCount = devices.filter(d => d.isLive).length;
+      const scaleCount = devices.filter(d => d.category === 'scale').length;
+      const hiddenCount = devices.filter(d => hiddenDeviceIds.has(d.id)).length;
+
+      if (statTotal) statTotal.innerText = totalCount;
+      if (statLive) statLive.innerText = liveCount;
+      if (statScale) statScale.innerText = scaleCount;
+      if (statHidden) statHidden.innerText = hiddenCount;
+
+      let filtered = devices.filter(d => {
+        const isHidden = hiddenDeviceIds.has(d.id);
+        if (!showHiddenDevices && isHidden) return false;
+        if (radarFilter === 'scale_only' && d.category !== 'scale') return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        listContainer.classList.add('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      listContainer.classList.remove('hidden');
+
+      listContainer.innerHTML = filtered.map(dev => {
+        const isHidden = hiddenDeviceIds.has(dev.id);
+
+        let categoryBadge = '';
+        let cardBorder = 'border-slate-200';
+        let cardBg = 'bg-white';
+
+        if (dev.category === 'scale') {
+          categoryBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200">⚖️ 체중계 유력 후보</span>';
+          cardBorder = dev.isLive ? 'border-purple-400 ring-2 ring-purple-100' : 'border-purple-200';
+          cardBg = dev.isLive ? 'bg-purple-50/50' : 'bg-purple-50/20';
+        } else if (dev.category === 'apple') {
+          categoryBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">Apple 기기</span>';
+        } else if (dev.category === 'home_appliance') {
+          categoryBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">주변 가전</span>';
+        } else {
+          categoryBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-500 border border-slate-200">기타 BLE</span>';
+        }
+
+        const statusBadge = dev.isLive
+          ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 anim-pulse-dot"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 수신 중</span>'
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> 대기 (${dev.lastSeen})</span>`;
+
+        const rssiVal = dev.rssi || -99;
+        let rssiColor = 'bg-slate-300';
+        let rssiText = `${rssiVal} dBm`;
+        if (rssiVal > -60) rssiColor = 'bg-emerald-500';
+        else if (rssiVal > -75) rssiColor = 'bg-blue-500';
+        else if (rssiVal > -85) rssiColor = 'bg-amber-500';
+        else rssiColor = 'bg-rose-400';
+
+        const servicesStr = (dev.services && dev.services.length > 0)
+          ? dev.services.join(', ')
+          : '없음';
+
+        const mfgStr = dev.manufacturerHex
+          ? (dev.manufacturerHex.length > 20 ? dev.manufacturerHex.substring(0, 20) + '...' : dev.manufacturerHex)
+          : '없음';
+
+        return `
+          <div class="p-3 border ${cardBorder} ${cardBg} rounded-xl transition shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isHidden ? 'opacity-50' : ''}">
+            <div class="flex items-start gap-3 min-w-0 flex-1">
+              <div class="pt-1">${statusBadge}</div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-extrabold text-sm text-slate-900 truncate">${escapeHtml(dev.name)}</span>
+                  ${categoryBadge}
+                  ${isHidden ? '<span class="text-[10px] px-1 bg-amber-100 text-amber-700 rounded font-bold">숨김 상태</span>' : ''}
+                </div>
+                <div class="text-[11px] text-slate-400 font-mono truncate mt-0.5" title="${dev.id}">
+                  UUID: ${dev.id}
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 mt-1 font-mono">
+                  <span><strong>서비스:</strong> <span class="${servicesStr.includes('FFF0') || servicesStr.includes('181D') ? 'text-purple-600 font-bold' : ''}">${servicesStr}</span></span>
+                  <span><strong>제조사:</strong> ${mfgStr}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+              <div class="text-right">
+                <div class="flex items-center gap-1.5 justify-end">
+                  <div class="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full ${rssiColor}" style="width: ${Math.min(100, Math.max(10, (rssiVal + 100) * 1.5))}%"></div>
+                  </div>
+                  <span class="font-mono text-xs font-bold text-slate-700">${rssiText}</span>
+                </div>
+                <span class="text-[10px] text-slate-400">신호 세기</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="toggleHideDevice('${dev.id}')" class="px-2 py-1 text-[11px] font-semibold border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition" title="${isHidden ? '숨김 해제' : '목록에서 숨김'}">
+                  <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${isHidden ? '해제' : '숨김'}
+                </button>
+                <button onclick="deleteRadarDevice('${dev.id}')" class="px-2 py-1 text-[11px] font-semibold border border-rose-200 hover:bg-rose-50 rounded text-rose-600 transition" title="완전 삭제">
+                  <i class="fa-solid fa-trash-can"></i> 삭제
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     setInterval(checkEngineStatus, 2000);
     checkEngineStatus();
+    pollRadar();
     recalcAll();
   </script>
 </body>

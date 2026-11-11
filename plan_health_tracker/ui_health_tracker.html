@@ -4561,7 +4561,6 @@
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
-          // 주변 모든 BLE 기기 탐색 허용 (어떤 제조사/모델명 체중계라도 팝업창에 즉시 노출)
           const optionalScaleServices = [
             OKOK_SVC,
             WSS_SVC,
@@ -4571,10 +4570,42 @@
             "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
           ];
 
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: optionalScaleServices
-          });
+          // 타겟 기기 2종으로 고정 (1: 가상 체중계, 2: 실제 밸런스랩 체중계 칩셋 0xFFFF)
+          // 잡다한 Apple/Samsung/가전 기기를 100% 필터링하여 오직 켜져 있는 체중계만 팝업에 노출
+          const scaleFilters = [
+            // 1) 맥북 가상 체중계
+            { name: "BalansLab-Scale" },
+            // 2) 실제 밸런스랩 체중계 (Chipsea 제조사 식별자 0xFFFF)
+            {
+              manufacturerData: [{
+                companyIdentifier: 0xffff
+              }]
+            },
+            // 3) 표준 OKOK/WSS GATT 브로드캐스트 기기
+            { services: [OKOK_SVC] },
+            { services: [WSS_SVC] }
+          ];
+
+          try {
+            device = await navigator.bluetooth.requestDevice({
+              filters: scaleFilters,
+              optionalServices: optionalScaleServices
+            });
+          } catch (filterErr) {
+            // 브라우저가 특정 복합 필터를 미지원하여 에러를 낼 경우의 안전 fallback
+            if (filterErr.name !== "NotFoundError" && !String(filterErr).includes("User cancelled")) {
+              device = await navigator.bluetooth.requestDevice({
+                filters: [
+                  { name: "BalansLab-Scale" },
+                  { services: [OKOK_SVC] },
+                  { services: [WSS_SVC] }
+                ],
+                optionalServices: optionalScaleServices
+              });
+            } else {
+              throw filterErr;
+            }
+          }
 
           bleDevice = device;
           lastBleDeviceInstance = device;
@@ -4671,7 +4702,8 @@
         if (errName === "NotFoundError" || errMsg.includes("cancelled") || errMsg.includes("canceled") || errMsg.includes("User cancelled")) {
           document.getElementById("scaleStatusText").innerText = "기기 선택이 취소되었습니다.";
         } else {
-          document.getElementById("scaleStatusText").innerText = `연결 대기: 체중계를 다시 찾아주세요`;
+          const devName = device?.name ? ` (${device.name})` : "";
+          document.getElementById("scaleStatusText").innerText = `연결 실패${devName}: ${errMsg || "체중계를 다시 찾아주세요"}`;
         }
         // 연결 실패 또는 브라우저 보안 제약 시 즉시 재연결 버튼 활성화
         const reconnectBtn = document.getElementById("scaleReconnectBtn");
