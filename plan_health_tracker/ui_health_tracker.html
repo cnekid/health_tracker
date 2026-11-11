@@ -3291,109 +3291,67 @@
         } catch (e) {}
 
         if (isBp) {
-          // 혈압계 카드
-          const bpGrade = getBpCategory(item.sys, item.dia);
+          // 혈압계: 날짜/시간 단위 1줄 컴팩트 행 (날짜+시간 | 혈압/맥박 | 삭제버튼)
+          card.className = `py-2.5 px-3 rounded-xl border transition text-xs flex items-center justify-between ${
+            isChecked
+              ? 'bg-blue-50/80 border-blue-300 shadow-sm'
+              : 'bg-white hover:bg-slate-50/80 border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+          } ${isDmEditMode ? 'cursor-pointer select-none' : ''}`;
+
           card.innerHTML = `
-            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                ${isDmEditMode ? `
-                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" />
-                ` : ''}
-                <span class="font-bold text-slate-900 font-mono text-[12px] flex items-center gap-1">
-                  <i class="fa-solid fa-heart-pulse text-rose-500 text-[11px]"></i>
-                  ${item.date}${dayOfWeekStr} <span class="text-[10px] text-slate-400 font-normal">${item.time ? item.time.slice(0, 5) : ''}</span>
-                </span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[9px] px-1.5 py-0.5 rounded-full font-medium ${bpGrade.badgeClass}">
-                  ${bpGrade.label}
-                </span>
-                <span class="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                  ${item.source || 'OCR'}
-                </span>
-                ${!isDmEditMode ? `
-                  <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', true)"
-                    class="w-6 h-6 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center ml-0.5" title="삭제">
-                    <i class="fa-regular fa-trash-can text-xs"></i>
-                  </button>
-                ` : ''}
+            <div class="flex items-center gap-2.5 min-w-0">
+              ${isDmEditMode ? `
+                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer flex-shrink-0" />
+              ` : ''}
+              <div class="flex items-center gap-1.5 font-mono text-[12px] text-slate-800">
+                <i class="fa-solid fa-heart-pulse text-rose-500 text-[11px]"></i>
+                <span class="font-bold">${item.date}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${item.time ? item.time.slice(0, 5) : ''}</span>
               </div>
             </div>
 
-            <div class="flex items-baseline justify-between pt-0.5">
-              <div class="flex items-baseline gap-2">
-                <span class="text-base font-black text-slate-900 font-mono tracking-tight">
-                  <span class="text-rose-600">${item.sys}</span> <span class="text-slate-300 font-light">/</span> <span class="text-blue-600">${item.dia}</span>
-                </span>
-                <span class="text-[10px] text-slate-400">mmHg</span>
-              </div>
-              <div class="flex items-center gap-1 text-slate-600 font-mono text-[11px]">
-                <span class="text-slate-400 text-[10px]">맥박</span>
-                <span class="font-bold text-slate-800">${item.pulse}</span>
-                <span class="text-[10px] text-slate-400">bpm</span>
-              </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="font-bold font-mono text-xs text-slate-800 tracking-tight">
+                <span class="text-rose-600">${item.sys}</span>/<span class="text-blue-600">${item.dia}</span>
+                <span class="text-[10px] text-slate-400 font-normal">(${item.pulse})</span>
+              </span>
+              ${!isDmEditMode ? `
+                <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', true)"
+                  class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center" title="삭제">
+                  <i class="fa-regular fa-trash-can text-xs"></i>
+                </button>
+              ` : ''}
             </div>
           `;
         } else {
-          // 체중계 카드 (체중 + 8대 체성분)
+          // 체중계: 날짜 단위 1줄 컴팩트 행 (날짜 | 체중 | 삭제버튼 - 모든 체성분 세부 항목 제거)
           const weightDisplay = typeof item.weight === 'number' ? item.weight.toFixed(2) : item.weight;
+          card.className = `py-2.5 px-3 rounded-xl border transition text-xs flex items-center justify-between ${
+            isChecked
+              ? 'bg-blue-50/80 border-blue-300 shadow-sm'
+              : 'bg-white hover:bg-slate-50/80 border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+          } ${isDmEditMode ? 'cursor-pointer select-none' : ''}`;
+
           card.innerHTML = `
-            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                ${isDmEditMode ? `
-                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" />
-                ` : ''}
-                <span class="font-bold text-slate-900 font-mono text-[12px] flex items-center gap-1">
-                  <i class="fa-solid fa-weight-scale text-blue-600 text-[11px]"></i>
-                  ${item.date}${dayOfWeekStr}
-                </span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                  ${item.source || 'BLE'}
-                </span>
-                ${!isDmEditMode ? `
-                  <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', false)"
-                    class="w-6 h-6 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center ml-0.5" title="삭제">
-                    <i class="fa-regular fa-trash-can text-xs"></i>
-                  </button>
-                ` : ''}
+            <div class="flex items-center gap-2.5 min-w-0">
+              ${isDmEditMode ? `
+                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer flex-shrink-0" />
+              ` : ''}
+              <div class="flex items-center gap-1.5 font-mono text-[12px] text-slate-800">
+                <i class="fa-solid fa-weight-scale text-blue-600 text-[11px]"></i>
+                <span class="font-bold">${item.date}</span>
+                <span class="text-[10px] text-slate-400 font-sans">${dayOfWeekStr}</span>
               </div>
             </div>
 
-            <div class="flex items-baseline justify-between pt-0.5">
-              <div class="flex items-baseline gap-1.5">
-                <span class="text-lg font-black text-slate-900 font-mono tracking-tight">${weightDisplay}</span>
-                <span class="text-[11px] font-bold text-slate-500">kg</span>
-              </div>
-              <span class="text-[10px] text-slate-400 font-medium">원천 1세트 기록</span>
-            </div>
-
-            <div class="grid grid-cols-3 gap-1 pt-1 text-[10px] text-slate-600 font-mono">
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">체지방</span>
-                <span class="font-bold text-slate-800">${item.bodyFat != null ? item.bodyFat + '%' : '-'}</span>
-              </div>
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">골격근</span>
-                <span class="font-bold text-slate-800">${item.muscleMass != null ? item.muscleMass + 'kg' : '-'}</span>
-              </div>
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">BMI</span>
-                <span class="font-bold text-slate-800">${item.bmi != null ? item.bmi : '-'}</span>
-              </div>
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">내장지방</span>
-                <span class="font-bold text-slate-800">${item.visceralFat != null ? 'Lv ' + item.visceralFat : '-'}</span>
-              </div>
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">체수분</span>
-                <span class="font-bold text-slate-800">${item.water != null ? item.water + '%' : '-'}</span>
-              </div>
-              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
-                <span class="text-slate-400">기초대사</span>
-                <span class="font-bold text-slate-800">${item.bmr != null ? item.bmr + 'kcal' : '-'}</span>
-              </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="font-black font-mono text-sm text-slate-900 tracking-tight">${weightDisplay} <span class="text-[10px] font-normal text-slate-500">kg</span></span>
+              ${!isDmEditMode ? `
+                <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', false)"
+                  class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center" title="삭제">
+                  <i class="fa-regular fa-trash-can text-xs"></i>
+                </button>
+              ` : ''}
             </div>
           `;
         }
