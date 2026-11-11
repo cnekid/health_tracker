@@ -524,17 +524,6 @@
             </button>
             <input type="file" id="jsonBackupFileInput" accept=".json,application/json" class="hidden" onchange="handleJsonBackupFile(event)" />
           </div>
-
-          <!-- 임시 과거 기록 195건 원클릭 복원 버튼 -->
-          <button id="btnRestoreServerBackup" onclick="restoreFromServerBackupJson()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-300 active:scale-[0.98] text-amber-900 font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-cloud-arrow-down text-amber-600 text-sm"></i>
-              <span>과거 기록 백업 원클릭 복원 (195건)</span>
-            </div>
-            <span class="text-[10px] font-semibold bg-amber-200/60 text-amber-800 px-2 py-0.5 rounded-full">
-              체중 24 · 혈압 171
-            </span>
-          </button>
         </div>
       </section>
 
@@ -5074,63 +5063,6 @@
       } catch (err) {
         console.error("백업 복원 오류:", err);
         alert("백업 파일 처리 중 오류가 발생했습니다:\n" + err.message);
-      }
-    }
-
-    async function restoreFromServerBackupJson() {
-      try {
-        const confirmMsg = "서버에 준비된 과거 실측 백업 데이터(체중 24건, 혈압 171건)를 이 기기에 복원하시겠습니까?\n\n현재 기기의 로컬 DB로 안전하게 병합됩니다.";
-        if (!confirm(confirmMsg)) return;
-
-        const res = await fetch('./record/HealthTracker_Backup_2026-11-11.json?t=' + Date.now());
-        if (!res.ok) throw new Error("서버에서 백업 파일(JSON)을 찾을 수 없습니다. (HTTP " + res.status + ")");
-        const data = await res.json();
-
-        const bodyList = Array.isArray(data.bodyMetrics) ? data.bodyMetrics : [];
-        const bpList = Array.isArray(data.bpMetrics) ? data.bpMetrics : [];
-
-        if (bodyList.length === 0 && bpList.length === 0) {
-          alert("백업 파일에 유효한 기록이 없습니다.");
-          return;
-        }
-
-        const db = await openDB();
-        const tx = db.transaction(["bodyMetrics", "bpMetrics"], "readwrite");
-        const bodyStore = tx.objectStore("bodyMetrics");
-        const bpStore = tx.objectStore("bpMetrics");
-
-        let bodySaved = 0;
-        for (const item of bodyList) {
-          if (item && item.date) {
-            bodyStore.put(item);
-            bodySaved++;
-          }
-        }
-
-        let bpSaved = 0;
-        for (const item of bpList) {
-          if (item && (item.id || item.date)) {
-            if (!item.id) item.id = `${item.date}_${item.time || '00:00:00'}`;
-            bpStore.put(item);
-            bpSaved++;
-          }
-        }
-
-        await new Promise((resolve, reject) => {
-          tx.oncomplete = () => resolve(true);
-          tx.onerror = () => reject(tx.error);
-        });
-
-        if (data.userProfile && typeof data.userProfile === 'object') {
-          saveUserProfile(data.userProfile);
-          renderProfileUI();
-        }
-
-        await refreshAllViews();
-        alert(`✅ 백업 데이터 복원 완료!\n체중 ${bodySaved}건, 혈압 ${bpSaved}건이 정상 복원되었습니다.\n\n홈 화면과 상세 탭에서 과거 기록을 확인해 보세요.`);
-      } catch (err) {
-        console.error("서버 백업 복원 오류:", err);
-        alert("백업 파일 불러오기 중 오류가 발생했습니다:\n" + err.message);
       }
     }
 

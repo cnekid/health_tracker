@@ -8,3 +8,7 @@ Thumbs.db
 tests/ble_simulator/scale_sim
 tests/ble_simulator/balanslab_device
 
+# 개인 실측 건강 데이터 및 사진 (프라이버시 보호 - GitHub 업로드 금지)
+record/
+*.json
+
