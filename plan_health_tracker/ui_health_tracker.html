@@ -217,28 +217,28 @@
           <h2 class="text-xl font-black text-slate-900 tracking-tight">건강 지표</h2>
         </div>
 
-        <!-- 3개 일자 건강 지표 매트릭스 테이블 -->
+        <!-- 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 4일 단위 무한 스크롤) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
+          <div id="metricsTableContainer" class="overflow-x-auto relative scroll-smooth overscroll-x-contain">
+            <table id="metricsTable" class="w-full text-left text-xs border-separate border-spacing-0">
               <thead>
-                <tr class="bg-slate-50/90 border-b border-slate-200 text-slate-600 text-[11px] font-semibold">
-                  <th class="py-3 px-3.5 text-left font-bold text-slate-700">지표 항목</th>
-                  <th id="thDateCol0" class="py-3 px-2 text-right font-bold text-slate-900">11/09</th>
-                  <th id="thDateCol1" class="py-3 px-2 text-right text-slate-500">11/08</th>
-                  <th id="thDateCol2" class="py-3 px-2.5 text-right text-slate-500">11/07</th>
-                  <th class="py-3 px-1 text-center w-5"></th>
+                <tr id="metricsTableHeaderRow" class="bg-slate-50/90 text-slate-600 text-[11px] font-semibold">
+                  <!-- 좌측 고정 열: 지표 항목 -->
+                  <th class="sticky left-0 bg-slate-50 z-20 py-3 px-3 text-left font-bold text-slate-700 border-r border-b border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)] whitespace-nowrap min-w-[105px]">
+                    지표 항목
+                  </th>
+                  <!-- 동적으로 날짜 th 셀들이 4개씩 추가됨 -->
                 </tr>
               </thead>
-              <tbody id="metricsTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                <!-- JS에서 동적 생성 (체중, 체지방률, 골격근량, 골격근율, BMI, 내장지방, 체수분, 기초대사량, 수축기 혈압, 이완기 혈압) -->
+              <tbody id="metricsTableBody" class="text-slate-700 font-medium">
+                <!-- JS에서 동적 생성 -->
               </tbody>
             </table>
           </div>
         </div>
 
         <div class="text-[11px] text-slate-400 text-center pt-1">
-          💡 각 항목을 터치하면 상세 가이드, 추이 그래프, 전체 기록을 볼 수 있습니다.
+          💡 지표명을 터치하면 상세 분석으로 이동하며, 표를 왼쪽으로 밀어 과거 기록을 확인할 수 있습니다.
         </div>
       </section>
 
@@ -1493,6 +1493,11 @@
         }
       });
 
+      // 상세 탭 진입 시 매트릭스 표 초기화 및 렌더링
+      if (tab === 'details') {
+        renderDetailsMatrixTable();
+      }
+
       // 스크롤 상단 리셋
       document.getElementById('screenContent').scrollTop = 0;
     }
@@ -1855,91 +1860,158 @@
       });
     }
 
-    // 상세 탭: 건강 지표 3개 일자 매트릭스 테이블 렌더링
+    // ----------------------------------------------------
+    // 상세 탭: 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 4일 단위 점진적 로드)
+    // ----------------------------------------------------
+    let detailsMatrixDates = [];
+    let detailsMatrixLoadedCount = 0;
+    const DETAILS_CHUNK_SIZE = 4;
+    let detailsMatrixRowsDef = [];
+    let detailsMatrixBodyMap = {};
+    let detailsMatrixBpMap = {};
+
     function renderDetailsMatrixTable() {
       const tbody = document.getElementById('metricsTableBody');
+      const headerRow = document.getElementById('metricsTableHeaderRow');
+      const container = document.getElementById('metricsTableContainer');
+      if (!tbody || !headerRow) return;
+
       tbody.innerHTML = '';
 
-      if (cachedBodyList.length === 0) return;
+      // 헤더 초기화: 첫 번째 고정 열인 '지표 항목' <th>만 남기고 기존 날짜 <th>는 모두 제거
+      while (headerRow.children.length > 1) {
+        headerRow.removeChild(headerRow.lastChild);
+      }
 
-      // 최근 3개 고유 날짜 추출 (내림차순: 최신 -> 과거)
-      const last3Records = cachedBodyList.slice(-3).reverse();
-      const colDates = [
-        last3Records[0] ? last3Records[0].date : null,
-        last3Records[1] ? last3Records[1].date : null,
-        last3Records[2] ? last3Records[2].date : null
-      ];
+      if (cachedBodyList.length === 0 && cachedBpList.length === 0) return;
 
-      // 테이블 헤더 날짜 갱신
-      ['thDateCol0', 'thDateCol1', 'thDateCol2'].forEach((id, idx) => {
-        const th = document.getElementById(id);
-        if (colDates[idx]) {
-          th.innerText = colDates[idx].slice(5).replace('-', '/');
-        } else {
-          th.innerText = "-";
-        }
-      });
+      // 전체 고유 날짜 추출 및 최신순(내림차순) 정렬
+      const dateSet = new Set();
+      cachedBodyList.forEach(b => dateSet.add(b.date));
+      cachedBpList.forEach(b => dateSet.add(b.date));
+      detailsMatrixDates = Array.from(dateSet).sort().reverse();
 
-      // 혈압 최근 3개 일자 맵핑
-      const bpMap = {};
-      cachedBpList.forEach(b => bpMap[b.date] = b);
+      // 빠른 조회를 위한 날짜별 맵핑
+      detailsMatrixBodyMap = {};
+      cachedBodyList.forEach(b => detailsMatrixBodyMap[b.date] = b);
+      detailsMatrixBpMap = {};
+      cachedBpList.forEach(b => detailsMatrixBpMap[b.date] = b);
 
-      // 건강 지표 리스트 정의 (맥박 제외, 혈압은 수축기/이완기 분리, 셀 내부에는 단위 없이 숫자만 표시)
-      const metricRows = [
-        { key: 'weight', title: '체중', unit: 'kg', getVal: (r) => r.weight.toFixed(2) },
-        { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (r) => r.bodyFat.toFixed(1) },
-        { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (r) => r.muscleMass.toFixed(2) },
-        { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (r) => r.muscleRate.toFixed(1) },
-        { key: 'bmi', title: 'BMI', unit: '지수', getVal: (r) => r.bmi.toFixed(1) },
-        { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (r) => `${r.visceralFat}` },
-        { key: 'water', title: '체수분율', unit: '%', getVal: (r) => r.water.toFixed(1) },
-        { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (r) => `${r.bmr}` },
+      // 건강 지표 리스트 정의 (수축기/이완기 혈압은 사용자 지시대로 단위 생략)
+      detailsMatrixRowsDef = [
+        { key: 'weight', title: '체중', unit: 'kg', getVal: (body, bp) => body ? body.weight.toFixed(2) : '-' },
+        { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (body, bp) => body ? body.bodyFat.toFixed(1) : '-' },
+        { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (body, bp) => body ? body.muscleMass.toFixed(2) : '-' },
+        { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (body, bp) => body ? body.muscleRate.toFixed(1) : '-' },
+        { key: 'bmi', title: 'BMI', unit: '지수', getVal: (body, bp) => body ? body.bmi.toFixed(1) : '-' },
+        { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (body, bp) => body ? `${body.visceralFat}` : '-' },
+        { key: 'water', title: '체수분율', unit: '%', getVal: (body, bp) => body ? body.water.toFixed(1) : '-' },
+        { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (body, bp) => body ? `${body.bmr}` : '-' },
         { 
           key: 'bp_sys', 
           metricDetailKey: 'bp',
           title: '수축기 혈압', 
-          unit: 'mmHg', 
-          getVal: (r, date) => {
-            const bp = bpMap[date];
-            return bp ? `${bp.sys}` : '-';
-          } 
+          unit: '', // 칸 여유를 위해 단위 생략
+          getVal: (body, bp) => bp ? `${bp.sys}` : '-' 
         },
         { 
           key: 'bp_dia', 
           metricDetailKey: 'bp',
           title: '이완기 혈압', 
-          unit: 'mmHg', 
-          getVal: (r, date) => {
-            const bp = bpMap[date];
-            return bp ? `${bp.dia}` : '-';
-          } 
+          unit: '', // 칸 여유를 위해 단위 생략
+          getVal: (body, bp) => bp ? `${bp.dia}` : '-' 
         }
       ];
 
-      metricRows.forEach(metric => {
+      // 각 지표별 행(tr) 및 좌측 고정 열(td) 생성
+      detailsMatrixRowsDef.forEach(metric => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50/80 active:bg-slate-100 cursor-pointer transition select-none group";
+        tr.id = `matrixRow_${metric.key}`;
+        tr.className = "hover:bg-slate-50/50 transition";
+
+        // 좌측 고정 열: 지표 항목 (터치 시 상세 화면 진입)
         const targetKey = metric.metricDetailKey || metric.key;
-        tr.onclick = () => openMetricDetail(targetKey, 'details');
+        const stickyTd = document.createElement('td');
+        stickyTd.className = "sticky left-0 bg-white z-10 py-3 px-3 border-r border-b border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.03)] whitespace-nowrap min-w-[105px] font-bold text-slate-800 cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition select-none";
+        stickyTd.onclick = (e) => {
+          e.stopPropagation();
+          openMetricDetail(targetKey, 'details');
+        };
 
-        const val0 = last3Records[0] ? metric.getVal(last3Records[0], colDates[0]) : '-';
-        const val1 = last3Records[1] ? metric.getVal(last3Records[1], colDates[1]) : '-';
-        const val2 = last3Records[2] ? metric.getVal(last3Records[2], colDates[2]) : '-';
-
-        tr.innerHTML = `
-          <td class="py-3 px-3.5 font-bold text-slate-800 flex items-center gap-1.5">
-            <span>${metric.title}</span>
-            <span class="text-[10px] text-slate-400 font-normal">(${metric.unit})</span>
-          </td>
-          <td class="py-3 px-2 text-right font-black text-slate-900 font-mono">${val0}</td>
-          <td class="py-3 px-2 text-right text-slate-500 font-mono">${val1}</td>
-          <td class="py-3 px-2.5 text-right text-slate-400 font-mono">${val2}</td>
-          <td class="py-3 px-1 text-center text-slate-300 group-hover:text-blue-600 transition">
-            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-          </td>
+        stickyTd.innerHTML = `
+          <div class="flex items-center justify-between gap-1 w-full">
+            <span class="truncate">${metric.title}</span>
+            ${metric.unit ? `<span class="text-[10px] text-slate-400 font-normal">(${metric.unit})</span>` : ''}
+            <i class="fa-solid fa-chevron-right text-[8px] text-slate-300 ml-auto pl-1"></i>
+          </div>
         `;
+        tr.appendChild(stickyTd);
         tbody.appendChild(tr);
       });
+
+      // 초기 4개 날짜 열 추가
+      detailsMatrixLoadedCount = 0;
+      appendDetailsMatrixDateColumns(DETAILS_CHUNK_SIZE);
+
+      // 스크롤 위치 초기화 및 가로 스크롤 이벤트 바인딩
+      if (container) {
+        container.scrollLeft = 0;
+        container.onscroll = () => {
+          if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 30) {
+            if (detailsMatrixLoadedCount < detailsMatrixDates.length) {
+              appendDetailsMatrixDateColumns(DETAILS_CHUNK_SIZE);
+            }
+          }
+        };
+      }
+    }
+
+    // 매트릭스 표에 N개 날짜 열 점진적 추가 (헤더 th 및 각 행 td)
+    function appendDetailsMatrixDateColumns(chunkSize) {
+      const headerRow = document.getElementById('metricsTableHeaderRow');
+      if (!headerRow) return;
+
+      const nextDates = detailsMatrixDates.slice(detailsMatrixLoadedCount, detailsMatrixLoadedCount + chunkSize);
+      if (nextDates.length === 0) return;
+
+      nextDates.forEach((dateStr, idx) => {
+        const globalIdx = detailsMatrixLoadedCount + idx;
+        const isLatest = (globalIdx === 0);
+        const mmdd = dateStr.slice(5).replace('-', '/');
+
+        // 1. 헤더 th 추가
+        const th = document.createElement('th');
+        th.className = isLatest 
+          ? "py-3 px-2.5 text-right font-black text-slate-900 border-b border-slate-200 whitespace-nowrap min-w-[62px]"
+          : "py-3 px-2.5 text-right font-semibold text-slate-500 border-b border-slate-200 whitespace-nowrap min-w-[62px]";
+        th.innerText = mmdd;
+        headerRow.appendChild(th);
+
+        // 2. 각 지표 행 td 추가
+        const bodyRecord = detailsMatrixBodyMap[dateStr];
+        const bpRecord = detailsMatrixBpMap[dateStr];
+
+        detailsMatrixRowsDef.forEach(metric => {
+          const tr = document.getElementById(`matrixRow_${metric.key}`);
+          if (!tr) return;
+
+          const td = document.createElement('td');
+          const val = metric.getVal(bodyRecord, bpRecord, dateStr);
+
+          td.className = isLatest
+            ? "py-3 px-2.5 text-right font-black text-slate-900 font-mono border-b border-slate-100 whitespace-nowrap min-w-[62px]"
+            : "py-3 px-2.5 text-right text-slate-500 font-mono border-b border-slate-100 whitespace-nowrap min-w-[62px]";
+
+          if (val === '-') {
+            td.classList.add('text-slate-300');
+          }
+
+          td.innerText = val;
+          tr.appendChild(td);
+        });
+      });
+
+      detailsMatrixLoadedCount += nextDates.length;
     }
 
     // 항목별 상세 화면 (Metric Detail View) 동적 렌더링

@@ -48,6 +48,7 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     
     var subscribedCentrals = Set<CBCentral>()
     var autoStreamTimer: Timer?
+    var isSteppedOn = false // 체중계에 사람이 올라섰는지 여부 ([발송] 클릭 시 true, [중단] 또는 ACK 수신 시 false)
     var currentFormat: PacketFormat = .okok
     var isAdvertising = false
     var bluetoothState: CBManagerState = .unknown
@@ -169,9 +170,9 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     
     func startAutoStreaming() {
         guard autoStreamTimer == nil else { return }
-        // 실제 체중계 표준 동작: 발을 올리고 측정 완료 시 1초 주기로 확정 패킷 연속 알림(Notification) 송출
+        // 실제 체중계 표준 동작: 체중계에 올라서서 측정 완료 시 1초 주기로 확정 패킷 연속 알림(Notification) 송출
         autoStreamTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self, !self.subscribedCentrals.isEmpty else { return }
+            guard let self = self, self.isSteppedOn, !self.subscribedCentrals.isEmpty else { return }
             self.transmit(payload: self.lastPayload, isLocked: true)
         }
     }
@@ -185,21 +186,24 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         subscribedCentrals.insert(central)
         let shortId = central.identifier.uuidString.prefix(8)
         let maxLen = central.maximumUpdateValueLength
-        appendLog("🎉 [연결 성공] 내 폰(\(shortId)...)이 특성(\(characteristic.uuid.uuidString)) 알림을 구독했습니다! (구독: \(subscribedCentrals.count)대, MTU: \(maxLen)B)", color: "emerald")
+        appendLog("📱 [연결 완료] 내 폰(\(shortId)...)이 체중계에 연결되었습니다. (체중계 올라서기 대기 중... 구독: \(subscribedCentrals.count)대, MTU: \(maxLen)B)", color: "blue")
         
-        // 구독 즉시 1회 측정 패킷 바로 발송 및 1초 주기 연속 표준 알림 스트리밍 시작 (실제 스마트 체중계 표준 규격)
-        let packet = buildPacket(payload: self.lastPayload, isLocked: true)
-        if let mChar = characteristic as? CBMutableCharacteristic {
-            let res = peripheralManager.updateValue(packet, for: mChar, onSubscribedCentrals: [central])
-            appendLog("🚀 [구독 즉시 발송] 결과: \(res ? "성공" : "대기열 대기") (체중 \(String(format: "%.2f", self.lastPayload.weight))kg)", color: res ? "emerald" : "amber")
+        // 사용자가 가상 체중계 어드민에서 이미 [발송 (체중계 올라섬)]을 누른 상태인 경우에만 패킷 즉시 발송
+        if isSteppedOn {
+            let packet = buildPacket(payload: self.lastPayload, isLocked: true)
+            if let mChar = characteristic as? CBMutableCharacteristic {
+                let res = peripheralManager.updateValue(packet, for: mChar, onSubscribedCentrals: [central])
+                appendLog("🚀 [스트리밍 발송] 결과: \(res ? "성공" : "대기열 대기") (체중 \(String(format: "%.2f", self.lastPayload.weight))kg)", color: res ? "emerald" : "amber")
+            }
+            startAutoStreaming()
         }
-        startAutoStreaming()
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
         subscribedCentrals.remove(central)
         appendLog("👋 [구독 해제] 핸드폰 연결이 해제되었습니다. (남은 기기: \(subscribedCentrals.count)대)", color: "slate")
         if subscribedCentrals.isEmpty {
+            isSteppedOn = false
             stopAutoStreaming()
         }
     }
@@ -208,6 +212,11 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
         let uuid = request.characteristic.uuid
         if uuid == OKOK_MEASUREMENT_CHAR_UUID || uuid == WEIGHT_MEASUREMENT_CHAR_UUID {
+            guard isSteppedOn else {
+                request.value = Data()
+                peripheralManager.respond(to: request, withResult: .success)
+                return
+            }
             let packet = buildPacket(payload: self.lastPayload, isLocked: true)
             if request.offset > packet.count {
                 peripheralManager.respond(to: request, withResult: .invalidOffset)
@@ -226,8 +235,9 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         for req in requests {
             if req.characteristic.uuid == OKOK_ACK_CHAR_UUID {
                 let centralId = req.central.identifier.uuidString.prefix(8)
-                appendLog("📱 [수신 확인] 핸드폰(\(centralId)...)에서 데이터 정상 수신 완료 신호(ACK) 도착! 스트리밍을 종료합니다.", color: "emerald")
+                appendLog("📱 [수신 확인] 핸드폰(\(centralId)...)에서 데이터 정상 수신 완료 신호(ACK) 도착! 송출을 종료합니다.", color: "emerald")
                 peripheralManager.respond(to: req, withResult: .success)
+                self.isSteppedOn = false
                 stopAutoStreaming()
             } else {
                 peripheralManager.respond(to: req, withResult: .success)
@@ -306,26 +316,31 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     
     // MARK: - 측정 시뮬레이션
     func runSimulation(payload: MeasurementPayload) {
+        guard isSteppedOn else { return }
         appendLog("🏃 [시뮬레이션 시작] 체중계 측정 재현 (목표: \(String(format: "%.2f", payload.weight))kg)", color: "amber")
         
         var step1 = payload
         step1.weight = max(30.0, payload.weight - Double.random(in: 1.5...3.0))
         self.transmit(payload: step1, isLocked: false)
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self = self, self.isSteppedOn else { return }
             var step2 = payload
             step2.weight = payload.weight + Double.random(in: -0.6...0.6)
             self.transmit(payload: step2, isLocked: false)
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            guard let self = self, self.isSteppedOn else { return }
             var step3 = payload
             step3.weight = payload.weight + Double.random(in: -0.1...0.1)
             self.transmit(payload: step3, isLocked: false)
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self = self, self.isSteppedOn else { return }
             self.transmit(payload: payload, isLocked: true)
+            self.startAutoStreaming()
             self.appendLog("✨ [시뮬레이션 완료] 목표 체중 \(String(format: "%.2f", payload.weight))kg 확정 발송 완료. 핸드폰 ACK 대기 중...", color: "emerald")
         }
     }
@@ -403,6 +418,7 @@ class LocalHttpServer {
                 "bluetoothState": "\(device.bluetoothState.rawValue)",
                 "isAdvertising": device.isAdvertising,
                 "subscribedCount": device.subscribedCentrals.count,
+                "isSteppedOn": device.isSteppedOn,
                 "logs": device.recentLogs.map { ["time": $0.time, "msg": $0.msg, "color": $0.color] }
             ]
             if let jsonData = try? JSONSerialization.data(withJSONObject: statusJson),
@@ -411,7 +427,7 @@ class LocalHttpServer {
             }
         }
         
-        // 2. POST /api/send
+        // 2. POST /api/send (체중계 올라섬 및 측정 발송)
         if method == "POST" && path.starts(with: "/api/send") {
             if let bodyRange = req.range(of: "\r\n\r\n") {
                 let bodyStr = String(req[bodyRange.upperBound...])
@@ -442,10 +458,12 @@ class LocalHttpServer {
                         isSimulated: isSimulated
                     )
                     
+                    device.isSteppedOn = true
                     if isSimulated {
                         device.runSimulation(payload: payload)
                     } else {
                         device.transmit(payload: payload, isLocked: true)
+                        device.startAutoStreaming()
                     }
                     
                     let res: [String: Any] = ["success": true, "message": "발송 명령이 접수되었습니다."]
@@ -454,6 +472,16 @@ class LocalHttpServer {
                 }
             }
             return buildResponse(status: 400, body: "{\"error\":\"Invalid JSON\"}", contentType: "application/json")
+        }
+
+        // 3. POST /api/stop (체중계 내려옴 및 송출 중단)
+        if method == "POST" && path.starts(with: "/api/stop") {
+            device.isSteppedOn = false
+            device.stopAutoStreaming()
+            device.appendLog("⏹️ [체중계 내려옴] 사용자가 체중계에서 내려왔습니다. (데이터 송출 중단)", color: "slate")
+            let res: [String: Any] = ["success": true, "message": "송출이 중단되었습니다."]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
         }
         
         // 3. GET / (웹 어드민 화면 서빙)

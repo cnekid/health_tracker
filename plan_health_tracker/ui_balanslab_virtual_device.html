@@ -414,13 +414,20 @@
     }
 
     // 5. 발송 중단 (체중계 내려온 상태)
-    function stopBroadcasting() {
+    async function stopBroadcasting() {
       if (!isBroadcasting) return;
       isBroadcasting = false;
 
       if (broadcastIntervalTimer) {
         clearInterval(broadcastIntervalTimer);
         broadcastIntervalTimer = null;
+      }
+
+      // 엔진에 송출 중단(체중계 내려옴) 알림
+      if (isEngineOnline) {
+        try {
+          await fetch(`${API_BASE}/api/stop`, { method: 'POST' });
+        } catch (e) {}
       }
 
       // UI 상태 복귀
