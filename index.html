@@ -5661,7 +5661,9 @@
       try {
         const jsonStr = JSON.stringify(payload);
         const encoded = encodeURIComponent(jsonStr);
-        const url = `shortcuts://run-shortcut?name=LogHealth&input=text&text=${encoded}`;
+        // 체중 측정은 LogHealth, 혈압 측정은 LogBP 단축어 호출 (조건문 없이 깔끔한 1:1 매핑)
+        const shortcutName = payload.type === 'bp' ? 'LogBP' : 'LogHealth';
+        const url = `shortcuts://run-shortcut?name=${shortcutName}&input=text&text=${encoded}`;
 
         // DB 트랜잭션 및 화면 렌더링 완료 후 단축어 앱 호출
         setTimeout(() => {

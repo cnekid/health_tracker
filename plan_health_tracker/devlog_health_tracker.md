@@ -422,7 +422,9 @@
        * 혈압계 카메라 OCR/수동 저장 시: `type: "bp"`, `sys`, `dia`, `pulse` 페이로드 전송.
        * 측정 시점 분리를 통해 체중 잴 때 과거 혈압이 중복 기록되거나 건강 앱에 오류가 발생하는 현상 원천 차단.
      * **온디바이스 단축어 호출기(`syncToAppleHealth`):**
-       * DB 트랜잭션 및 UI 업데이트가 100% 완료된 후 안전하게 iOS 단축어 URL Scheme(`shortcuts://run-shortcut?name=LogHealth...`)을 호출.
+       * 체중계 측정 시: `LogHealth` 단축어 호출.
+       * 혈압계 측정 시: `LogBP` 단축어 호출. (단축어 내부의 복잡한 조건문 없이 1:1 전용 단축어 매핑으로 사용자 경험 최적화).
+       * DB 트랜잭션 및 UI 업데이트가 100% 완료된 후 안전하게 iOS 단축어 URL Scheme을 호출.
        * 백업 복원(`handleJsonBackupFile`), 휴지통 복구(`restoreDeletedMetric`)에서는 단축어 호출 0% 차단 유지.
      * `index.html`과 `ui_health_tracker.html` 100% 동기화(`diff -u` 0) 및 JavaScriptCore 구문 검증 완료.
 
