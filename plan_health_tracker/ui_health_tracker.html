@@ -58,7 +58,7 @@
   </header>
 
   <!-- 아이폰 목업 프레임 -->
-  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-screen sm:min-h-0 sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-[100dvh] h-[100dvh] sm:min-h-0 sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
     
     <!-- 아이폰 상태바 & 다이내믹 아일랜드 -->
     <div class="h-11 w-full pt-3 px-7 hidden sm:flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
@@ -75,10 +75,10 @@
     </div>
 
     <!-- 본문 스크롤 영역 -->
-    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-3.5 pb-20 pt-1">
+    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-3.5 pb-16 pt-1">
       
       <!-- ================= 1. [홈] 탭 (HealthTracker 메인 대시보드) ================= -->
-      <section id="view-home" class="space-y-2.5">
+      <section id="view-home" class="space-y-2">
         <!-- 상단 헤더: 타이틀 & BLE 실시간 연동 버전 뱃지 -->
         <div class="pt-1 pb-0.5 flex justify-between items-center">
           <h1 class="text-xl font-black text-slate-900 tracking-tight">HealthTracker</h1>
@@ -88,7 +88,7 @@
         </div>
 
         <!-- 1) 체중 카드 (모바일 1화면 최적화 컴팩트) -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-sm space-y-2">
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3 py-2 shadow-sm space-y-1.5">
           <!-- 카드 헤더 (기준일 우측 끝 정렬) -->
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
@@ -110,7 +110,7 @@
           </div>
 
           <!-- 30일 최고 / 최저 몸무게 요약 바 (한 줄 표시, 소수점 1자리 표기) -->
-          <div class="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px]">
+          <div class="flex items-center justify-between px-2.5 py-1 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px]">
             <div class="flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               <span>최근 30일</span>
@@ -123,12 +123,12 @@
           </div>
 
           <!-- 체중 간략 미니 추이 그래프 (Sparkline) - 클릭 시 체중 상세 화면으로 이동 -->
-          <div onclick="openMetricDetail('weight', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-2 cursor-pointer transition group">
+          <div onclick="openMetricDetail('weight', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl px-2 py-1.5 cursor-pointer transition group">
             <div class="flex justify-between items-center mb-0.5 text-[10px]">
               <span class="text-slate-600 font-semibold">최근 체중 추이 (직전 5회)</span>
             </div>
             <!-- 체중 Sparkline SVG -->
-            <div class="h-12 w-full relative">
+            <div class="h-9 w-full relative">
               <svg id="weightSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 48" preserveAspectRatio="none">
                 <!-- 동적 렌더링 -->
               </svg>
@@ -141,17 +141,17 @@
 
           <!-- 버튼 2개: [체중 측정] [직접 수동 입력] -->
           <div class="grid grid-cols-2 gap-2 pt-0.5">
-            <button onclick="openScaleMeasureModal()" class="py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+            <button onclick="openScaleMeasureModal()" class="py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
               <i class="fa-brands fa-bluetooth-b text-xs"></i> 체중 측정
             </button>
-            <button onclick="openWeightManualModal()" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
+            <button onclick="openWeightManualModal()" class="py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
               <i class="fa-solid fa-pen text-slate-500 text-xs"></i> 직접 수동 입력
             </button>
           </div>
         </div>
 
         <!-- 2) 혈압 카드 (모바일 1화면 최적화 컴팩트) -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-sm space-y-2">
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3 py-2 shadow-sm space-y-1.5">
           <!-- 카드 헤더 (기준일 우측 끝 정렬) -->
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
@@ -179,7 +179,7 @@
           </div>
 
           <!-- 혈압 간략 미니 추이 그래프 (2-line Sparkline, 좌/우 이중 Y축) - 클릭 시 혈압 상세 화면으로 이동 -->
-          <div onclick="openMetricDetail('bp', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl p-2 cursor-pointer transition group">
+          <div onclick="openMetricDetail('bp', 'home')" class="bg-slate-50 hover:bg-slate-100/80 active:bg-slate-100 border border-slate-200/70 rounded-xl px-2 py-1.5 cursor-pointer transition group">
             <div class="flex justify-between items-center mb-0.5 text-[10px]">
               <span class="text-slate-600 font-semibold">최근 혈압 추이 (직전 5회)</span>
               <div class="flex items-center gap-2 font-semibold text-[9.5px]">
@@ -188,7 +188,7 @@
               </div>
             </div>
             <!-- 혈압 Sparkline SVG (이중 Y축 스케일) -->
-            <div class="h-12 w-full relative">
+            <div class="h-9 w-full relative">
               <svg id="bpSparklineSvg" class="w-full h-full overflow-visible" viewBox="0 0 280 48" preserveAspectRatio="none">
                 <!-- 동적 렌더링 -->
               </svg>
@@ -201,10 +201,10 @@
 
           <!-- 버튼 2개: [카메라 OCR 촬영] [직접 수동 입력] -->
           <div class="grid grid-cols-2 gap-2 pt-0.5">
-            <button onclick="openCameraOcrModal()" class="py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+            <button onclick="openCameraOcrModal()" class="py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
               <i class="fa-solid fa-camera text-xs"></i> 카메라 OCR 촬영
             </button>
-            <button onclick="openBpManualModal()" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
+            <button onclick="openBpManualModal()" class="py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
               <i class="fa-solid fa-pen text-slate-500 text-xs"></i> 직접 수동 입력
             </button>
           </div>
@@ -446,63 +446,63 @@
       </section>
 
       <!-- ================= 3. [설정] 탭 (사용자 프로필, 백업, 연동) ================= -->
-      <section id="view-settings" class="space-y-4 hidden">
-        <div class="pt-2">
+      <section id="view-settings" class="space-y-2.5 hidden">
+        <div class="pt-1">
           <h2 class="text-xl font-black text-slate-900 tracking-tight">설정</h2>
           <p class="text-xs text-slate-500 font-medium mt-0.5">사용자 신체 스펙 및 온디바이스 데이터 관리</p>
         </div>
 
         <!-- 사용자 신체 프로필 카드 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2.5">
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-slate-900">사용자 신체 정보</span>
             <span class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-100">정상 적용</span>
           </div>
-          <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
-            <div class="p-2 bg-slate-50 rounded-xl border border-slate-100">
+          <div class="grid grid-cols-3 gap-2 text-center text-xs pt-0.5">
+            <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 block">신장</span>
               <span class="font-bold text-slate-800 text-sm">176 cm</span>
             </div>
-            <div class="p-2 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 block">성별</span>
               <span class="font-bold text-slate-800 text-sm">남성</span>
             </div>
-            <div class="p-2 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 block">표준 체중</span>
               <span class="font-bold text-slate-800 text-sm">68.1 kg</span>
             </div>
           </div>
-          <p class="text-[11px] text-slate-400 pt-1">
+          <p class="text-[11px] text-slate-400 pt-0.5">
             * BMI 공식: <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[10px]">체중 / (1.76 × 1.76)</code>
           </p>
         </div>
 
         <!-- 데이터 백업 & OKOK 히스토리 승계 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2.5">
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
           <span class="text-xs font-bold text-slate-900 block">데이터 관리 (IndexedDB)</span>
-          <div class="space-y-2 pt-1 text-xs">
-            <button onclick="exportDataJson()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
+          <div class="space-y-1.5 pt-0.5 text-xs">
+            <button onclick="exportDataJson()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
               <i class="fa-solid fa-download text-slate-500"></i> 로컬 데이터 백업 파일 다운로드 (JSON)
             </button>
-            <button onclick="openImportModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
+            <button onclick="openImportModal()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
               <i class="fa-solid fa-file-import text-slate-500"></i> 과거 CSV 파일 가져오기
             </button>
-            <button onclick="reseedDefaultData()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 text-[11px]">
+            <button onclick="reseedDefaultData()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 text-[11px]">
               <i class="fa-solid fa-rotate text-slate-400"></i> 기본 샘플 데이터 (317일) 다시 적재
             </button>
           </div>
         </div>
 
         <!-- Apple HealthKit 단축어 브릿지 안내 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-1.5">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-slate-900">Apple HealthKit 단축어 브릿지</span>
             <button onclick="openShortcutGuideModal()" class="text-[11px] text-blue-600 hover:underline font-semibold">설정 방법</button>
           </div>
-          <p class="text-[11px] text-slate-500 leading-relaxed font-normal">
+          <p class="text-[11px] text-slate-500 leading-normal font-normal">
             측정된 체중 및 혈압 데이터는 아이폰 기본 [단축어] 앱을 통해 Apple 건강 앱으로 무료 자동 동기화할 수 있습니다.
           </p>
-          <button onclick="triggerShortcutSync()" class="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition">
+          <button onclick="triggerShortcutSync()" class="w-full py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition">
             최신 측정값 단축어로 전송 테스트
           </button>
         </div>
@@ -511,20 +511,20 @@
     </div>
 
     <!-- 하단 iOS 3탭 바: [홈] [상세] [설정] -->
-    <nav class="absolute bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex justify-around items-center z-20">
+    <nav class="absolute bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex justify-around items-center z-20">
       <button id="tabBtn-home" onclick="switchMainTab('home')" class="flex flex-col items-center text-slate-900 transition flex-1">
         <i class="fa-solid fa-house text-lg"></i>
-        <span class="text-[10px] mt-1 font-bold">홈</span>
+        <span class="text-[10px] mt-0.5 font-bold">홈</span>
       </button>
 
       <button id="tabBtn-details" onclick="switchMainTab('details')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1">
         <i class="fa-solid fa-chart-simple text-lg"></i>
-        <span class="text-[10px] mt-1 font-medium">상세</span>
+        <span class="text-[10px] mt-0.5 font-medium">상세</span>
       </button>
 
       <button id="tabBtn-settings" onclick="switchMainTab('settings')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1">
         <i class="fa-solid fa-gear text-lg"></i>
-        <span class="text-[10px] mt-1 font-medium">설정</span>
+        <span class="text-[10px] mt-0.5 font-medium">설정</span>
       </button>
     </nav>
 
