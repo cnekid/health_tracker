@@ -2368,14 +2368,12 @@
     }
 
     // ----------------------------------------------------
-    // 상세 탭: 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 4일 단위 점진적 로드)
+    // 상세 탭: 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 측정 회차별 점진적 로드)
     // ----------------------------------------------------
-    let detailsMatrixDates = [];
+    let detailsMatrixColumns = [];
     let detailsMatrixLoadedCount = 0;
     const DETAILS_CHUNK_SIZE = 4;
     let detailsMatrixRowsDef = [];
-    let detailsMatrixBodyMap = {};
-    let detailsMatrixBpMap = {};
 
     function renderDetailsMatrixTable() {
       const tbody = document.getElementById('metricsTableBody');
@@ -2395,17 +2393,55 @@
         return;
       }
 
-      // 전체 고유 날짜 추출 및 최신순(내림차순) 정렬
-      const dateSet = new Set();
-      cachedBodyList.forEach(b => dateSet.add(b.date));
-      cachedBpList.forEach(b => dateSet.add(b.date));
-      detailsMatrixDates = Array.from(dateSet).sort().reverse();
+      // 사용자가 삭제하지 않은 모든 측정 항목을 개별 열로 구성 (초 단위까지 보존된 고유 측정 세트)
+      const columnMap = new Map();
 
-      // 빠른 조회를 위한 날짜별 맵핑
-      detailsMatrixBodyMap = {};
-      cachedBodyList.forEach(b => detailsMatrixBodyMap[b.date] = b);
-      detailsMatrixBpMap = {};
-      cachedBpList.forEach(b => detailsMatrixBpMap[b.date] = b);
+      // 1. 체중계 측정 원천 기록 추가
+      cachedBodyList.forEach(body => {
+        const timeFull = body.time || "00:00:00";
+        const key = body.id || `body_${body.date}_${timeFull}`;
+        columnMap.set(key, {
+          id: key,
+          date: body.date,
+          timeFull: timeFull,
+          displayDate: body.date.slice(5).replace('-', '/'),
+          displayTime: body.time ? body.time.slice(0, 5) : '',
+          sortKey: `${body.date} ${timeFull}_${key}`,
+          body: body,
+          bp: null
+        });
+      });
+
+      // 2. 혈압계 측정 원천 기록 추가 (초 단위 시간까지 완전 일치 세션은 동일 열 병합, 그 외 독립 열)
+      cachedBpList.forEach(bp => {
+        const timeFull = bp.time || "00:00:00";
+        let merged = false;
+        if (bp.time) {
+          for (let col of columnMap.values()) {
+            if (col.date === bp.date && col.timeFull === timeFull && !col.bp) {
+              col.bp = bp;
+              merged = true;
+              break;
+            }
+          }
+        }
+        if (!merged) {
+          const key = bp.id || `bp_${bp.date}_${timeFull}`;
+          columnMap.set(key, {
+            id: key,
+            date: bp.date,
+            timeFull: timeFull,
+            displayDate: bp.date.slice(5).replace('-', '/'),
+            displayTime: bp.time ? bp.time.slice(0, 5) : '',
+            sortKey: `${bp.date} ${timeFull}_${key}`,
+            body: null,
+            bp: bp
+          });
+        }
+      });
+
+      // 3. 최신순(내림차순) 정렬: 가장 최신 측정이 맨 첫 번째 열
+      detailsMatrixColumns = Array.from(columnMap.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
       // 건강 지표 리스트 정의 (수축기/이완기 혈압은 사용자 지시대로 단위 생략)
       detailsMatrixRowsDef = [
@@ -2459,7 +2495,7 @@
         tbody.appendChild(tr);
       });
 
-      // 초기 4개 날짜 열 추가
+      // 초기 4개 측정 열 추가
       detailsMatrixLoadedCount = 0;
       appendDetailsMatrixDateColumns(DETAILS_CHUNK_SIZE);
 
@@ -2468,7 +2504,7 @@
         container.scrollLeft = 0;
         container.onscroll = () => {
           if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 30) {
-            if (detailsMatrixLoadedCount < detailsMatrixDates.length) {
+            if (detailsMatrixLoadedCount < detailsMatrixColumns.length) {
               appendDetailsMatrixDateColumns(DETAILS_CHUNK_SIZE);
             }
           }
@@ -2476,37 +2512,39 @@
       }
     }
 
-    // 매트릭스 표에 N개 날짜 열 점진적 추가 (헤더 th 및 각 행 td)
+    // 매트릭스 표에 N개 열 점진적 추가 (헤더 th 및 각 행 td)
     function appendDetailsMatrixDateColumns(chunkSize) {
       const headerRow = document.getElementById('metricsTableHeaderRow');
       if (!headerRow) return;
 
-      const nextDates = detailsMatrixDates.slice(detailsMatrixLoadedCount, detailsMatrixLoadedCount + chunkSize);
-      if (nextDates.length === 0) return;
+      const nextCols = detailsMatrixColumns.slice(detailsMatrixLoadedCount, detailsMatrixLoadedCount + chunkSize);
+      if (nextCols.length === 0) return;
 
-      nextDates.forEach((dateStr, idx) => {
+      nextCols.forEach((col, idx) => {
         const globalIdx = detailsMatrixLoadedCount + idx;
         const isLatest = (globalIdx === 0);
-        const mmdd = dateStr.slice(5).replace('-', '/');
 
-        // 1. 헤더 th 추가
+        // 1. 헤더 th 추가: 날짜 밑에 작은 글씨로 시간(00:00) 표기
         const th = document.createElement('th');
         th.className = isLatest 
-          ? "py-3 px-2.5 text-right font-black text-slate-900 border-b border-slate-200 whitespace-nowrap min-w-[62px]"
-          : "py-3 px-2.5 text-right font-semibold text-slate-500 border-b border-slate-200 whitespace-nowrap min-w-[62px]";
-        th.innerText = mmdd;
+          ? "py-2 px-2 text-right border-b border-slate-200 whitespace-nowrap min-w-[62px]"
+          : "py-2 px-2 text-right border-b border-slate-200 whitespace-nowrap min-w-[62px]";
+        
+        th.innerHTML = `
+          <div class="flex flex-col items-end justify-center leading-tight">
+            <span class="${isLatest ? 'font-black text-slate-900 text-xs' : 'font-semibold text-slate-600 text-xs'}">${col.displayDate}</span>
+            <span class="text-[10px] font-mono ${isLatest ? 'text-blue-600 font-bold' : 'text-slate-400 font-normal'} mt-0.5">${col.displayTime || '--:--'}</span>
+          </div>
+        `;
         headerRow.appendChild(th);
 
         // 2. 각 지표 행 td 추가
-        const bodyRecord = detailsMatrixBodyMap[dateStr];
-        const bpRecord = detailsMatrixBpMap[dateStr];
-
         detailsMatrixRowsDef.forEach(metric => {
           const tr = document.getElementById(`matrixRow_${metric.key}`);
           if (!tr) return;
 
           const td = document.createElement('td');
-          const val = metric.getVal(bodyRecord, bpRecord, dateStr);
+          const val = metric.getVal(col.body, col.bp);
 
           td.className = isLatest
             ? "py-3 px-2.5 text-right font-black text-slate-900 font-mono border-b border-slate-100 whitespace-nowrap min-w-[62px]"
@@ -2521,7 +2559,7 @@
         });
       });
 
-      detailsMatrixLoadedCount += nextDates.length;
+      detailsMatrixLoadedCount += nextCols.length;
     }
 
     // 항목별 상세 화면 (Metric Detail View) 동적 렌더링
