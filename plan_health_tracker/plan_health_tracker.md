@@ -221,9 +221,10 @@ flowchart TD
 ## 5. 단계별 개발 로드맵 (Milestones)
 
 | 단계 | 목표 | 주요 산출물 | 상태 |
-| :--- | :--- | :--- | :---: |
+| :--- | :--- | :--- | :--- |
 | **Phase 1** | 기획 및 인터랙티브 UI 확정 | `docs/01_plan_health_tracker.md`, `ui_health_tracker.html` | **완료** |
 | **Phase 2** | 데이터 구조 & 로컬 DB 엔진 구축 | 8대 생체지표 IndexedDB 스키마, OKOK 317일 파서/시드, 캘린더/차트 동적 렌더러 | **완료** |
 | **Phase 3** | Apple HealthKit 단축어 규격 구축 | Shortcuts JSON 스펙 정의, 원터치 URL Scheme 연동 브릿지 | **완료** |
 | **Phase 4** | Web BLE 체중계 & 카메라 OCR 모듈 결합 | Bluefy Web Bluetooth 통신 스크립트, 온디바이스 카메라 실시간 뷰파인더 & OCR 엔진 | **완료** |
 | **Phase 5** | 밸런스랩 가상 장치 구축 및 실기기 검증 | `ui_balanslab_virtual_device.html`, `scale_sim` (BLE Peripheral) | **진행 중** |
+| **Phase 6** | 온디바이스 데이터 관리 센터 구축 | 설정 탭 내 기기별 묶음 데이터 관리 모달, 신체 프로필 수정, 순수 조회 테이블 복원 | **완료** |

@@ -426,42 +426,20 @@
           </div>
         </div>
 
-        <!-- 3부: 전체 기록 수치 표 (전체 history & 10개씩 페이징 더보기 & 롱프레스/편집 삭제) -->
+        <!-- 3부: 전체 기록 수치 표 (전체 history & 10개씩 페이징 더보기) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <div class="flex justify-between items-center pb-1.5 border-b border-slate-100 text-xs">
-            <div class="flex items-center gap-1.5">
-              <span class="font-bold text-slate-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-table-list text-slate-600 text-xs"></i>
-                <span>전체 history</span>
-              </span>
-              <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 34건</span>
-            </div>
-            
-            <!-- 편집 모드 진입/완료 토글 버튼 -->
-            <button id="btnToggleHistoryEdit" onclick="toggleHistoryEditMode()" class="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition border border-slate-200 flex items-center gap-1 active:scale-95">
-              <i id="btnToggleHistoryEditIcon" class="fa-solid fa-pen text-[10px] text-slate-500"></i>
-              <span id="btnToggleHistoryEditLabel">편집</span>
-            </button>
-          </div>
-
-          <!-- 편집 모드 활성화 시 나타나는 다중 선택 액션 툴바 -->
-          <div id="historyEditToolbar" class="hidden flex items-center justify-between px-2.5 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs transition">
-            <label class="flex items-center gap-1.5 text-slate-700 font-semibold cursor-pointer select-none text-[11px]">
-              <input type="checkbox" id="historySelectAllCheckbox" onchange="toggleSelectAllHistory(this.checked)" class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
-              <span>전체 선택</span>
-            </label>
-            <button id="btnBatchDeleteHistory" onclick="requestBatchDeleteHistory()" disabled
-              class="px-2.5 py-1 bg-slate-200 text-slate-400 font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-not-allowed">
-              <i class="fa-solid fa-trash-can text-[10px]"></i>
-              <span id="btnBatchDeleteHistoryLabel">선택 삭제 (0개)</span>
-            </button>
+            <span class="font-bold text-slate-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-table-list text-slate-600 text-xs"></i>
+              <span>전체 history</span>
+            </span>
+            <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 34건</span>
           </div>
 
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-left">
               <thead>
                 <tr class="text-[10px] text-slate-400 border-b border-slate-100">
-                  <th id="thHistoryCheckCol" class="py-1.5 w-6 hidden font-medium text-center">선택</th>
                   <th class="py-1.5 font-medium">측정 일시</th>
                   <th class="py-1.5 text-right font-medium">측정값</th>
                   <th class="py-1.5 text-right font-medium">직전 대비</th>
@@ -472,10 +450,6 @@
                 <!-- 동적 생성 -->
               </tbody>
             </table>
-          </div>
-
-          <div class="text-[10px] text-slate-400 text-center pt-0.5">
-            💡 항목을 길게(0.7초) 누르거나 [편집]을 눌러 삭제할 수 있습니다.
           </div>
 
           <!-- 10개씩 더보기 버튼 -->
@@ -521,10 +495,26 @@
 
         <!-- 온디바이스 데이터 관리 (IndexedDB) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
-          <span class="text-xs font-bold text-slate-900 block">온디바이스 데이터 관리 (IndexedDB)</span>
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-900 block">온디바이스 데이터 관리 (IndexedDB)</span>
+            <span id="dataSummaryBadge" class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">체중계 34건 · 혈압계 34건</span>
+          </div>
           <p class="text-[11px] text-slate-500 leading-normal font-normal">
-            기기에 안전하게 보관된 체중 및 혈압 전체 데이터를 JSON 파일로 백업하거나 복원합니다.
+            기기에 안전하게 보관된 체중계 및 혈압계 원천 기록을 확인/삭제하거나 JSON 파일로 백업/복원합니다.
           </p>
+
+          <!-- 신규: 기록 데이터 상세 관리 진입 버튼 -->
+          <button onclick="openDataManagementModal()" class="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-database text-sm"></i>
+              <span>기록 데이터 상세 관리</span>
+            </div>
+            <span class="text-[10px] font-medium bg-white/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>체중계 · 혈압계</span>
+              <i class="fa-solid fa-chevron-right text-[9px]"></i>
+            </span>
+          </button>
+
           <div class="grid grid-cols-2 gap-2 pt-0.5 text-xs">
             <button onclick="exportDataJson()" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95">
               <i class="fa-solid fa-download text-slate-500"></i> 백업 다운로드
@@ -1204,6 +1194,89 @@
       </div>
     </div>
 
+    <!-- ================= MODAL: 온디바이스 기록 데이터 상세 관리 모달 ================= -->
+    <div id="dataManagementModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-3 flex flex-col justify-center items-center">
+      <div class="w-full max-h-[92vh] max-w-[393px] bg-white border border-slate-200 rounded-3xl p-4 text-left flex flex-col shadow-2xl overflow-hidden">
+        <!-- 모달 헤더 -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-database"></i>
+            </span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">기록 데이터 관리</h3>
+              <p class="text-[10px] text-slate-400">기기별 원천 세트 데이터 삭제 및 관리</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeDataManagementModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 세그먼트 탭: [체중계 기록] vs [혈압계 기록] -->
+        <div class="flex bg-slate-100/90 p-1 rounded-2xl gap-1 mt-2.5 flex-shrink-0 border border-slate-200/60 select-none">
+          <button id="dmTabBtnScale" type="button" onclick="switchDmTab('scale')"
+            class="flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-weight-scale text-[11px]"></i>
+            <span>체중계 기록</span>
+            <span id="dmTabScaleCount" class="text-[10px] px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded-full font-mono font-bold">0건</span>
+          </button>
+          <button id="dmTabBtnBp" type="button" onclick="switchDmTab('bp')"
+            class="flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-heart-pulse text-[11px]"></i>
+            <span>혈압계 기록</span>
+            <span id="dmTabBpCount" class="text-[10px] px-1.5 py-0.2 bg-slate-200 text-slate-600 rounded-full font-mono font-bold">0건</span>
+          </button>
+        </div>
+
+        <!-- 액션 툴바: 일반 모드(건수, 전체삭제, 편집버튼) vs 편집 모드(전체선택 체크박스, 완료) -->
+        <div class="flex items-center justify-between py-2 border-b border-slate-100 flex-shrink-0 text-xs">
+          <!-- 일반 모드 좌측 -->
+          <div id="dmNormalCountInfo" class="flex items-center gap-1 text-slate-500 text-[11px]">
+            <i class="fa-solid fa-list-check text-slate-400"></i>
+            <span>원천 기록 총 <strong id="dmCurrentCount" class="text-slate-900 font-mono">0</strong>건</span>
+          </div>
+
+          <!-- 편집 모드 좌측: 전체 선택 -->
+          <div id="dmSelectAllContainer" class="hidden flex items-center gap-1.5 text-slate-700 font-semibold cursor-pointer select-none text-[11px]">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="dmSelectAllCheckbox" onchange="toggleDmSelectAll(this.checked)" class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300" />
+              <span>전체 선택</span>
+            </label>
+          </div>
+
+          <!-- 우측 액션 버튼들 -->
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btnDmClearAll" onclick="requestDmClearAll()"
+              class="text-[11px] font-medium text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition border border-rose-100 flex items-center gap-1 active:scale-95">
+              <i class="fa-solid fa-trash text-[10px]"></i>
+              <span>전체 삭제</span>
+            </button>
+
+            <button type="button" id="btnDmToggleEdit" onclick="toggleDmEditMode()"
+              class="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition border border-slate-200 flex items-center gap-1 active:scale-95">
+              <i id="btnDmToggleEditIcon" class="fa-solid fa-pen text-[10px] text-slate-500"></i>
+              <span id="btnDmToggleEditLabel">편집</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 리스트 영역 (스크롤 가능) -->
+        <div id="dmListContainer" class="flex-1 overflow-y-auto space-y-2 pr-0.5 py-2 min-h-[220px]">
+          <!-- 동적 주입 -->
+        </div>
+
+        <!-- 편집 모드 시 노출되는 바닥 일괄 삭제 바 -->
+        <div id="dmBatchDeleteBar" class="hidden pt-2 border-t border-slate-100 flex-shrink-0">
+          <button type="button" id="btnDmBatchDelete" onclick="requestDmBatchDelete()" disabled
+            class="w-full py-2.5 bg-slate-200 text-slate-400 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-not-allowed">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+            <span id="btnDmBatchDeleteLabel">선택 항목 삭제 (0개)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= MODAL: 기록 삭제 확인 모달 ================= -->
     <div id="deleteConfirmModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-4 flex flex-col justify-center items-center">
       <div class="w-full max-w-[320px] bg-white border border-slate-200 rounded-3xl p-5 text-center flex flex-col shadow-2xl">
@@ -1779,12 +1852,6 @@
       // 지표 상세 서브뷰는 숨김 처리
       detailView.classList.add('hidden');
 
-      if (isHistoryEditMode) {
-        isHistoryEditMode = false;
-        selectedHistoryKeys.clear();
-        updateHistoryEditToolbar();
-      }
-
       Object.keys(views).forEach(k => {
         if (k === tab) {
           views[k].classList.remove('hidden');
@@ -1877,6 +1944,18 @@
       renderHomeWeightCard();
       renderHomeBpCard();
       renderDetailsMatrixTable();
+
+      // 설정 탭 데이터 요약 뱃지 동기화
+      const dataBadge = document.getElementById('dataSummaryBadge');
+      if (dataBadge) {
+        dataBadge.innerText = `체중계 ${cachedBodyList.length}건 · 혈압계 ${cachedBpList.length}건`;
+      }
+
+      // 데이터 관리 모달이 열려있다면 즉시 재렌더링
+      const dmModal = document.getElementById('dataManagementModal');
+      if (dmModal && !dmModal.classList.contains('hidden')) {
+        renderDmList();
+      }
 
       if (currentDetailMetricKey && !document.getElementById('view-metric-detail').classList.contains('hidden')) {
         renderMetricDetailView(currentDetailMetricKey);
@@ -2918,190 +2997,439 @@
     }
 
     // ----------------------------------------------------
-    // 상세 화면 기록 삭제 관리 (롱프레스 0.7초 및 [편집] 다중 선택 일괄 삭제)
+    // 설정 탭: 기록 데이터 상세 관리 (체중계 / 혈압계 모달 및 삭제 엔진)
     // ----------------------------------------------------
-    let isHistoryEditMode = false;
-    let selectedHistoryKeys = new Set();
+    let currentDmTab = 'scale'; // 'scale' | 'bp'
+    let isDmEditMode = false;
+    let selectedDmKeys = new Set();
     let pendingDeleteKeys = [];
     let pendingDeleteIsBp = false;
+    let pendingDeleteCallback = null;
 
-    function toggleHistoryEditMode() {
-      isHistoryEditMode = !isHistoryEditMode;
-      selectedHistoryKeys.clear();
-      updateHistoryEditToolbar();
-
-      if (currentDetailMetricKey) {
-        const isBpMetric = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
-        const spec = METRIC_SPECS[currentDetailMetricKey] || METRIC_SPECS.weight;
-        renderDetailHistoryTable(currentDetailMetricKey, isBpMetric, spec.unit);
+    // 한국 질병관리청/고혈압학회 기준 혈압 단계 판별
+    function getBpCategory(sys, dia) {
+      if (sys < 120 && dia < 80) {
+        return { label: '정상', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200' };
+      } else if (sys <= 129 && dia < 80) {
+        return { label: '주의', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200' };
+      } else if (sys <= 139 || dia <= 89) {
+        return { label: '전단계', badgeClass: 'bg-orange-50 text-orange-700 border border-orange-200' };
+      } else if (sys <= 159 || dia <= 99) {
+        return { label: '1기 고혈압', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200' };
+      } else {
+        return { label: '2기 고혈압', badgeClass: 'bg-red-100 text-red-800 border border-red-300 font-bold' };
       }
     }
 
-    function updateHistoryEditToolbar() {
-      const toolbar = document.getElementById('historyEditToolbar');
-      const btnLabel = document.getElementById('btnToggleHistoryEditLabel');
-      const btnIcon = document.getElementById('btnToggleHistoryEditIcon');
-      const thCheck = document.getElementById('thHistoryCheckCol');
-      const batchBtn = document.getElementById('btnBatchDeleteHistory');
-      const batchBtnLabel = document.getElementById('btnBatchDeleteHistoryLabel');
-      const selectAllBox = document.getElementById('historySelectAllCheckbox');
+    function openDataManagementModal(initialTab = 'scale') {
+      currentDmTab = initialTab;
+      isDmEditMode = false;
+      selectedDmKeys.clear();
+      updateDmTabStyles();
+      updateDmToolbar();
+      renderDmList();
+      document.getElementById('dataManagementModal').classList.remove('hidden');
+    }
 
-      if (isHistoryEditMode) {
-        if (toolbar) toolbar.classList.remove('hidden');
-        if (btnLabel) btnLabel.innerText = '완료';
-        if (btnIcon) btnIcon.className = 'fa-solid fa-check text-[10px] text-blue-600';
-        if (thCheck) thCheck.classList.remove('hidden');
+    function closeDataManagementModal() {
+      document.getElementById('dataManagementModal').classList.add('hidden');
+      isDmEditMode = false;
+      selectedDmKeys.clear();
+    }
+
+    function switchDmTab(tab) {
+      if (currentDmTab === tab) return;
+      currentDmTab = tab;
+      isDmEditMode = false;
+      selectedDmKeys.clear();
+      updateDmTabStyles();
+      updateDmToolbar();
+      renderDmList();
+    }
+
+    function updateDmTabStyles() {
+      const tabScale = document.getElementById('dmTabBtnScale');
+      const tabBp = document.getElementById('dmTabBtnBp');
+      const countScale = cachedBodyList.length;
+      const countBp = cachedBpList.length;
+
+      const scaleBadge = document.getElementById('dmTabScaleCount');
+      const bpBadge = document.getElementById('dmTabBpCount');
+      if (scaleBadge) scaleBadge.innerText = `${countScale}건`;
+      if (bpBadge) bpBadge.innerText = `${countBp}건`;
+
+      if (currentDmTab === 'scale') {
+        if (tabScale) tabScale.className = "flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5";
+        if (tabBp) tabBp.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5";
       } else {
-        if (toolbar) toolbar.classList.add('hidden');
-        if (btnLabel) btnLabel.innerText = '편집';
-        if (btnIcon) btnIcon.className = 'fa-solid fa-pen text-[10px] text-slate-500';
-        if (thCheck) thCheck.classList.add('hidden');
+        if (tabScale) tabScale.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5";
+        if (tabBp) tabBp.className = "flex-1 py-2 text-xs font-bold text-rose-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5";
+      }
+    }
+
+    function toggleDmEditMode() {
+      isDmEditMode = !isDmEditMode;
+      selectedDmKeys.clear();
+      updateDmToolbar();
+      renderDmList();
+    }
+
+    function updateDmToolbar() {
+      const editLabel = document.getElementById('btnDmToggleEditLabel');
+      const editIcon = document.getElementById('btnDmToggleEditIcon');
+      const batchBar = document.getElementById('dmBatchDeleteBar');
+      const selectAllContainer = document.getElementById('dmSelectAllContainer');
+      const normalInfo = document.getElementById('dmNormalCountInfo');
+      const currentCountSpan = document.getElementById('dmCurrentCount');
+      const clearAllBtn = document.getElementById('btnDmClearAll');
+
+      const count = currentDmTab === 'scale' ? cachedBodyList.length : cachedBpList.length;
+      if (currentCountSpan) currentCountSpan.innerText = count;
+
+      if (isDmEditMode) {
+        if (editLabel) editLabel.innerText = '완료';
+        if (editIcon) editIcon.className = 'fa-solid fa-check text-[10px] text-blue-600';
+        if (selectAllContainer) selectAllContainer.classList.remove('hidden');
+        if (normalInfo) normalInfo.classList.add('hidden');
+        if (clearAllBtn) clearAllBtn.classList.add('hidden');
+        if (batchBar) batchBar.classList.remove('hidden');
+      } else {
+        if (editLabel) editLabel.innerText = '편집';
+        if (editIcon) editIcon.className = 'fa-solid fa-pen text-[10px] text-slate-500';
+        if (selectAllContainer) selectAllContainer.classList.add('hidden');
+        if (normalInfo) normalInfo.classList.remove('hidden');
+        if (clearAllBtn) clearAllBtn.classList.remove('hidden');
+        if (batchBar) batchBar.classList.add('hidden');
       }
 
-      const count = selectedHistoryKeys.size;
-      if (batchBtn && batchBtnLabel) {
-        batchBtnLabel.innerText = `선택 삭제 (${count}개)`;
+      updateDmBatchBtn();
+    }
+
+    function updateDmBatchBtn() {
+      const batchBtn = document.getElementById('btnDmBatchDelete');
+      const batchLabel = document.getElementById('btnDmBatchDeleteLabel');
+      const selectAllChk = document.getElementById('dmSelectAllCheckbox');
+      const count = selectedDmKeys.size;
+
+      if (batchLabel) batchLabel.innerText = `선택 항목 삭제 (${count}개)`;
+
+      if (batchBtn) {
         if (count > 0) {
           batchBtn.disabled = false;
-          batchBtn.className = "px-2.5 py-1 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-pointer shadow-sm active:scale-95";
+          batchBtn.className = "w-full py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98";
         } else {
           batchBtn.disabled = true;
-          batchBtn.className = "px-2.5 py-1 bg-slate-200 text-slate-400 font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-not-allowed";
+          batchBtn.className = "w-full py-2.5 bg-slate-200 text-slate-400 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-not-allowed";
         }
       }
 
-      if (selectAllBox && currentDetailMetricKey) {
-        const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
-        const dataset = isBp ? cachedBpList : cachedBodyList;
-        const reversed = [...dataset].reverse();
-        const sliced = reversed.slice(0, detailHistoryDisplayLimit);
-        const allSelected = sliced.length > 0 && sliced.every(item => {
-          const k = isBp ? (item.id || item.date) : item.date;
-          return selectedHistoryKeys.has(k);
-        });
-        selectAllBox.checked = allSelected;
+      const dataset = currentDmTab === 'scale' ? cachedBodyList : cachedBpList;
+      if (selectAllChk) {
+        selectAllChk.checked = dataset.length > 0 && selectedDmKeys.size === dataset.length;
       }
     }
 
-    function toggleSelectAllHistory(checked) {
-      if (!currentDetailMetricKey) return;
-      const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
-      const dataset = isBp ? cachedBpList : cachedBodyList;
-      const reversed = [...dataset].reverse();
-      const sliced = reversed.slice(0, detailHistoryDisplayLimit);
-
+    function toggleDmSelectAll(checked) {
+      const dataset = currentDmTab === 'scale' ? cachedBodyList : cachedBpList;
       if (checked) {
-        sliced.forEach(item => {
-          const key = isBp ? (item.id || item.date) : item.date;
-          selectedHistoryKeys.add(key);
+        dataset.forEach(item => {
+          const key = currentDmTab === 'scale' ? item.date : (item.id || item.date);
+          selectedDmKeys.add(key);
         });
       } else {
-        selectedHistoryKeys.clear();
+        selectedDmKeys.clear();
       }
-
-      updateHistoryEditToolbar();
-      const spec = METRIC_SPECS[currentDetailMetricKey] || METRIC_SPECS.weight;
-      renderDetailHistoryTable(currentDetailMetricKey, isBp, spec.unit);
+      updateDmBatchBtn();
+      renderDmList();
     }
 
-    function toggleSelectHistoryItem(key) {
-      if (selectedHistoryKeys.has(key)) {
-        selectedHistoryKeys.delete(key);
+    function toggleDmSelectItem(key) {
+      if (selectedDmKeys.has(key)) {
+        selectedDmKeys.delete(key);
       } else {
-        selectedHistoryKeys.add(key);
+        selectedDmKeys.add(key);
       }
-      updateHistoryEditToolbar();
+      updateDmBatchBtn();
 
-      // DOM 행 상태 동기화
-      const rows = document.querySelectorAll(`tr[data-history-key="${CSS.escape(key)}"]`);
-      rows.forEach(row => {
-        const isChecked = selectedHistoryKeys.has(key);
-        row.classList.toggle('bg-blue-50/70', isChecked);
-        const chk = row.querySelector('.history-row-checkbox');
+      const card = document.querySelector(`div[data-dm-key="${CSS.escape(key)}"]`);
+      if (card) {
+        const isChecked = selectedDmKeys.has(key);
+        card.classList.toggle('bg-blue-50/80', isChecked);
+        card.classList.toggle('border-blue-300', isChecked);
+        const chk = card.querySelector('.dm-item-checkbox');
         if (chk) chk.checked = isChecked;
+      }
+    }
+
+    function executeDmSingleDelete(key, isBp) {
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+      const target = dataset.find(item => (isBp ? (item.id || item.date) === key : item.date === key));
+      if (!target) return;
+
+      let valueDisplay = "";
+      if (isBp) {
+        valueDisplay = `${target.sys}/${target.dia} mmHg (맥박 ${target.pulse} bpm)`;
+      } else {
+        valueDisplay = `체중 ${target.weight.toFixed(2)} kg · 체지방 ${target.bodyFat != null ? target.bodyFat + '%' : '-'} · 골격근 ${target.muscleMass != null ? target.muscleMass + 'kg' : '-'}`;
+      }
+
+      openDeleteConfirmModal([{
+        key: key,
+        date: target.date,
+        time: target.time ? target.time.slice(0, 5) : '',
+        valueDisplay: valueDisplay
+      }], isBp, () => {
+        selectedDmKeys.delete(key);
+        renderDmList();
       });
     }
 
-    function attachLongPressHandler(element, onLongPress) {
-      let timer = null;
-      let startX = 0;
-      let startY = 0;
-      let isMoved = false;
+    function requestDmBatchDelete() {
+      if (selectedDmKeys.size === 0) return;
+      const isBp = (currentDmTab === 'bp');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
 
-      function start(e) {
-        if (isHistoryEditMode) return;
-        const touch = e.touches ? e.touches[0] : e;
-        startX = touch.clientX;
-        startY = touch.clientY;
-        isMoved = false;
-
-        timer = setTimeout(() => {
-          timer = null;
-          if (!isMoved) {
-            if (navigator.vibrate) {
-              try { navigator.vibrate(40); } catch(err) {}
-            }
-            element.classList.add('bg-rose-100');
-            setTimeout(() => element.classList.remove('bg-rose-100'), 350);
-            onLongPress();
+      const items = [];
+      dataset.forEach(item => {
+        const key = isBp ? (item.id || item.date) : item.date;
+        if (selectedDmKeys.has(key)) {
+          let val = "";
+          if (isBp) {
+            val = `${item.sys}/${item.dia} mmHg (맥박 ${item.pulse} bpm)`;
+          } else {
+            val = `체중 ${item.weight.toFixed(2)} kg · 체지방 ${item.bodyFat != null ? item.bodyFat + '%' : '-'}`;
           }
-        }, 700);
-      }
-
-      function move(e) {
-        if (!timer) return;
-        const touch = e.touches ? e.touches[0] : e;
-        const diffX = Math.abs(touch.clientX - startX);
-        const diffY = Math.abs(touch.clientY - startY);
-        if (diffX > 10 || diffY > 10) {
-          isMoved = true;
-          clearTimeout(timer);
-          timer = null;
+          items.push({
+            key: key,
+            date: item.date,
+            time: item.time ? item.time.slice(0, 5) : '',
+            valueDisplay: val
+          });
         }
+      });
+
+      if (items.length > 0) {
+        openDeleteConfirmModal(items, isBp, () => {
+          selectedDmKeys.clear();
+          renderDmList();
+        });
       }
-
-      function cancel() {
-        if (timer) {
-          clearTimeout(timer);
-          timer = null;
-        }
-      }
-
-      element.addEventListener('touchstart', start, { passive: true });
-      element.addEventListener('touchmove', move, { passive: true });
-      element.addEventListener('touchend', cancel);
-      element.addEventListener('touchcancel', cancel);
-
-      element.addEventListener('mousedown', start);
-      element.addEventListener('mousemove', move);
-      element.addEventListener('mouseup', cancel);
-      element.addEventListener('mouseleave', cancel);
     }
 
-    function openDeleteConfirmModal(items, isBp) {
+    function requestDmClearAll() {
+      const isBp = (currentDmTab === 'bp');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+      if (dataset.length === 0) {
+        alert("삭제할 데이터가 없습니다.");
+        return;
+      }
+
+      const items = dataset.map(item => ({
+        key: isBp ? (item.id || item.date) : item.date,
+        date: item.date,
+        time: item.time ? item.time.slice(0, 5) : '',
+        valueDisplay: isBp ? `${item.sys}/${item.dia} mmHg` : `${item.weight.toFixed(2)} kg`
+      }));
+
+      openDeleteConfirmModal(items, isBp, () => {
+        selectedDmKeys.clear();
+        renderDmList();
+      });
+    }
+
+    function renderDmList() {
+      const container = document.getElementById('dmListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      updateDmTabStyles();
+
+      const isBp = (currentDmTab === 'bp');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+      const countEl = document.getElementById('dmCurrentCount');
+      if (countEl) countEl.innerText = dataset.length;
+
+      if (dataset.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-folder-open text-3xl text-slate-300"></i>
+            <p class="text-xs font-medium">기록된 ${isBp ? '혈압계' : '체중계'} 데이터가 없습니다.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 최신순 정렬
+      const reversed = [...dataset].reverse();
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+
+      reversed.forEach(item => {
+        const key = isBp ? (item.id || item.date) : item.date;
+        const isChecked = selectedDmKeys.has(key);
+
+        const card = document.createElement('div');
+        card.dataset.dmKey = key;
+        card.className = `p-3 rounded-2xl border transition text-xs space-y-1.5 relative ${
+          isChecked
+            ? 'bg-blue-50/80 border-blue-300 shadow-sm'
+            : 'bg-white hover:bg-slate-50/80 border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'
+        } ${isDmEditMode ? 'cursor-pointer select-none' : ''}`;
+
+        if (isDmEditMode) {
+          card.onclick = (e) => {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+              toggleDmSelectItem(key);
+            }
+          };
+        }
+
+        // 요일 계산
+        let dayOfWeekStr = '';
+        try {
+          const d = new Date(item.date);
+          if (!isNaN(d.getTime())) dayOfWeekStr = ` (${days[d.getDay()]})`;
+        } catch (e) {}
+
+        if (isBp) {
+          // 혈압계 카드
+          const bpGrade = getBpCategory(item.sys, item.dia);
+          card.innerHTML = `
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                ${isDmEditMode ? `
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" />
+                ` : ''}
+                <span class="font-bold text-slate-900 font-mono text-[12px] flex items-center gap-1">
+                  <i class="fa-solid fa-heart-pulse text-rose-500 text-[11px]"></i>
+                  ${item.date}${dayOfWeekStr} <span class="text-[10px] text-slate-400 font-normal">${item.time ? item.time.slice(0, 5) : ''}</span>
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full font-medium ${bpGrade.badgeClass}">
+                  ${bpGrade.label}
+                </span>
+                <span class="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                  ${item.source || 'OCR'}
+                </span>
+                ${!isDmEditMode ? `
+                  <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', true)"
+                    class="w-6 h-6 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center ml-0.5" title="삭제">
+                    <i class="fa-regular fa-trash-can text-xs"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-baseline justify-between pt-0.5">
+              <div class="flex items-baseline gap-2">
+                <span class="text-base font-black text-slate-900 font-mono tracking-tight">
+                  <span class="text-rose-600">${item.sys}</span> <span class="text-slate-300 font-light">/</span> <span class="text-blue-600">${item.dia}</span>
+                </span>
+                <span class="text-[10px] text-slate-400">mmHg</span>
+              </div>
+              <div class="flex items-center gap-1 text-slate-600 font-mono text-[11px]">
+                <span class="text-slate-400 text-[10px]">맥박</span>
+                <span class="font-bold text-slate-800">${item.pulse}</span>
+                <span class="text-[10px] text-slate-400">bpm</span>
+              </div>
+            </div>
+          `;
+        } else {
+          // 체중계 카드 (체중 + 8대 체성분)
+          const weightDisplay = typeof item.weight === 'number' ? item.weight.toFixed(2) : item.weight;
+          card.innerHTML = `
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                ${isDmEditMode ? `
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDmSelectItem('${key}')" class="dm-item-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" />
+                ` : ''}
+                <span class="font-bold text-slate-900 font-mono text-[12px] flex items-center gap-1">
+                  <i class="fa-solid fa-weight-scale text-blue-600 text-[11px]"></i>
+                  ${item.date}${dayOfWeekStr}
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                  ${item.source || 'BLE'}
+                </span>
+                ${!isDmEditMode ? `
+                  <button type="button" onclick="event.stopPropagation(); executeDmSingleDelete('${key}', false)"
+                    class="w-6 h-6 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition flex items-center justify-center ml-0.5" title="삭제">
+                    <i class="fa-regular fa-trash-can text-xs"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-baseline justify-between pt-0.5">
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-lg font-black text-slate-900 font-mono tracking-tight">${weightDisplay}</span>
+                <span class="text-[11px] font-bold text-slate-500">kg</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-medium">원천 1세트 기록</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-1 pt-1 text-[10px] text-slate-600 font-mono">
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">체지방</span>
+                <span class="font-bold text-slate-800">${item.bodyFat != null ? item.bodyFat + '%' : '-'}</span>
+              </div>
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">골격근</span>
+                <span class="font-bold text-slate-800">${item.muscleMass != null ? item.muscleMass + 'kg' : '-'}</span>
+              </div>
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">BMI</span>
+                <span class="font-bold text-slate-800">${item.bmi != null ? item.bmi : '-'}</span>
+              </div>
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">내장지방</span>
+                <span class="font-bold text-slate-800">${item.visceralFat != null ? 'Lv ' + item.visceralFat : '-'}</span>
+              </div>
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">체수분</span>
+                <span class="font-bold text-slate-800">${item.water != null ? item.water + '%' : '-'}</span>
+              </div>
+              <div class="bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100/80 flex justify-between">
+                <span class="text-slate-400">기초대사</span>
+                <span class="font-bold text-slate-800">${item.bmr != null ? item.bmr + 'kcal' : '-'}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        container.appendChild(card);
+      });
+    }
+
+    // ----------------------------------------------------
+    // 공통 삭제 확인 모달 제어
+    // ----------------------------------------------------
+    function openDeleteConfirmModal(items, isBp, callback = null) {
       pendingDeleteKeys = items.map(it => it.key);
       pendingDeleteIsBp = isBp;
+      pendingDeleteCallback = callback;
 
       const titleEl = document.getElementById('deleteConfirmTitle');
       const msgEl = document.getElementById('deleteConfirmMessage');
       const boxEl = document.getElementById('deleteConfirmTargetBox');
 
       if (items.length === 1) {
-        titleEl.innerText = '기록 개별 삭제';
-        msgEl.innerHTML = '선택하신 측정 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 영구히 복구할 수 없습니다.</span>';
+        titleEl.innerText = isBp ? '혈압계 기록 개별 삭제' : '체중계 기록 개별 삭제';
+        msgEl.innerHTML = '선택하신 측정 세트 기록을 영구 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>';
         boxEl.innerHTML = `
           <div class="flex justify-between items-center text-slate-700">
             <span class="text-slate-400">측정 일시</span>
             <span class="font-bold text-slate-900">${items[0].date} ${items[0].time || ''}</span>
           </div>
           <div class="flex justify-between items-center text-slate-700 pt-1 border-t border-slate-200/60 mt-1">
-            <span class="text-slate-400">측정 수치</span>
+            <span class="text-slate-400">${isBp ? '측정 혈압' : '측정 체중/스펙'}</span>
             <span class="font-bold text-slate-900">${items[0].valueDisplay}</span>
           </div>
         `;
       } else {
-        titleEl.innerText = `기록 일괄 삭제 (${items.length}건)`;
-        msgEl.innerHTML = `선택하신 총 <b>${items.length}개</b>의 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 영구히 복구할 수 없습니다.</span>`;
+        titleEl.innerText = `${isBp ? '혈압계' : '체중계'} 기록 일괄 삭제 (${items.length}건)`;
+        msgEl.innerHTML = `선택하신 총 <b>${items.length}개</b>의 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>`;
         boxEl.innerHTML = items.slice(0, 5).map(it => `
           <div class="flex justify-between items-center text-[11px] text-slate-700 border-b border-slate-100 last:border-0 py-0.5">
             <span>${it.date} ${it.time || ''}</span>
@@ -3116,6 +3444,7 @@
     function closeDeleteConfirmModal() {
       document.getElementById('deleteConfirmModal').classList.add('hidden');
       pendingDeleteKeys = [];
+      pendingDeleteCallback = null;
     }
 
     async function executeDeleteConfirmed() {
@@ -3136,9 +3465,8 @@
           }
         }
 
-        selectedHistoryKeys.clear();
-        if (isHistoryEditMode) {
-          updateHistoryEditToolbar();
+        if (pendingDeleteCallback) {
+          pendingDeleteCallback();
         }
 
         await refreshAllViews();
@@ -3152,43 +3480,17 @@
       }
     }
 
-    function requestBatchDeleteHistory() {
-      if (selectedHistoryKeys.size === 0) return;
-      const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
-      const dataset = isBp ? cachedBpList : cachedBodyList;
-
-      const items = [];
-      dataset.forEach(item => {
-        const key = isBp ? (item.id || item.date) : item.date;
-        if (selectedHistoryKeys.has(key)) {
-          let val = "";
-          if (currentDetailMetricKey === 'bp') val = `${item.sys}/${item.dia} mmHg`;
-          else if (currentDetailMetricKey === 'pulse') val = `${item.pulse} bpm`;
-          else {
-            const spec = METRIC_SPECS[currentDetailMetricKey] || {};
-            val = `${item[currentDetailMetricKey]} ${spec.unit || ''}`;
-          }
-          items.push({
-            key: key,
-            date: item.date,
-            time: item.time ? item.time.slice(0, 5) : '',
-            valueDisplay: val
-          });
-        }
-      });
-
-      if (items.length > 0) {
-        openDeleteConfirmModal(items, isBp);
-      }
-    }
-
-    // 3부: 전체 기록 수치 테이블 렌더링 (10개씩 페이징 더보기 & 롱프레스/편집 삭제 연동)
+    // ----------------------------------------------------
+    // 상세 화면 3부: 전체 기록 수치 테이블 렌더링 (순수 조회 및 페이징)
+    // ----------------------------------------------------
     function renderDetailHistoryTable(metricKey, isBpMetric, unit) {
       const tbody = document.getElementById('detailHistoryTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
 
       const dataset = isBpMetric ? cachedBpList : cachedBodyList;
-      document.getElementById('detailRecordCount').innerText = `총 ${dataset.length}건`;
+      const countEl = document.getElementById('detailRecordCount');
+      if (countEl) countEl.innerText = `총 ${dataset.length}건`;
 
       // 역순 (최신순 정렬)
       const reversed = [...dataset].reverse();
@@ -3196,7 +3498,6 @@
 
       sliced.forEach((item, idx) => {
         const nextItem = reversed[idx + 1]; // 시간상 직전 데이터
-        const itemKey = isBpMetric ? (item.id || item.date) : item.date;
         let currentValDisplay = "";
         let deltaDisplay = "-";
 
@@ -3222,43 +3523,14 @@
           }
         }
 
-        const isChecked = selectedHistoryKeys.has(itemKey);
         const tr = document.createElement('tr');
-        tr.dataset.historyKey = itemKey;
-        tr.className = `transition ${isHistoryEditMode ? 'cursor-pointer hover:bg-slate-100/70 select-none' : 'hover:bg-slate-50 active:bg-slate-100 select-none'}`;
-        if (isHistoryEditMode && isChecked) {
-          tr.classList.add('bg-blue-50/70');
-        }
-
-        let checkColHtml = '';
-        if (isHistoryEditMode) {
-          checkColHtml = `
-            <td class="py-2 text-center w-6" onclick="event.stopPropagation(); toggleSelectHistoryItem('${itemKey}')">
-              <input type="checkbox" ${isChecked ? 'checked' : ''} class="history-row-checkbox w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 pointer-events-none" />
-            </td>
-          `;
-        }
-
+        tr.className = 'hover:bg-slate-50 transition';
         tr.innerHTML = `
-          ${checkColHtml}
           <td class="py-2 text-slate-600 font-mono">${item.date} <span class="text-[9px] text-slate-400">${item.time ? item.time.slice(0,5) : ''}</span></td>
           <td class="py-2 text-right font-bold text-slate-900 font-mono">${currentValDisplay}</td>
           <td class="py-2 text-right text-slate-500 font-mono">${deltaDisplay}</td>
           <td class="py-2 text-right text-[10px] text-slate-400 pr-1">${item.source || 'BLE'}</td>
         `;
-
-        if (isHistoryEditMode) {
-          tr.onclick = () => toggleSelectHistoryItem(itemKey);
-        } else {
-          attachLongPressHandler(tr, () => {
-            openDeleteConfirmModal([{
-              key: itemKey,
-              date: item.date,
-              time: item.time ? item.time.slice(0, 5) : '',
-              valueDisplay: currentValDisplay
-            }], isBpMetric);
-          });
-        }
 
         tbody.appendChild(tr);
       });
