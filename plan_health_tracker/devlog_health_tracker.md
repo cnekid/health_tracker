@@ -415,6 +415,16 @@
      * 임시 백업 JSON 파일(`HealthTracker_Backup_2026-11-11.json`, `통합_건강기록_백업_2026-11-11.json`) 로컬 삭제 완료.
      * `.gitignore`에 `record/` 및 `*.json`을 등록하여 향후 개인 실측 기록 및 사진 등이 GitHub 원격 저장소에 업로드되지 않도록 차단.
      * 원격 GitHub에 올라간 `record/` 디렉터리 추적 해제 및 커밋/푸시 명령어 가이드 제공.
+  5. **신규 측정 데이터 Apple [건강] 앱(Shortcuts) 자동 연동 및 복원 시 중복 방지 규격 구현:**
+     * **배경 및 원칙:** 사용자의 개인정보 보호 및 데이터 무결성을 위해, 백업 복원이나 휴지통 복구 시에는 단축어 전송을 철저히 차단하고, 새롭게 실측되는 데이터에 대해서만 애플 건강 앱으로 전송하도록 분리.
+     * **지표별 `type` 분리 전송 체계 수립:**
+       * 체중계 측정/수동 저장 시: `type: "scale"`, `weight`, `bodyFat`, `bmi`, `muscleMass` 페이로드 전송.
+       * 혈압계 카메라 OCR/수동 저장 시: `type: "bp"`, `sys`, `dia`, `pulse` 페이로드 전송.
+       * 측정 시점 분리를 통해 체중 잴 때 과거 혈압이 중복 기록되거나 건강 앱에 오류가 발생하는 현상 원천 차단.
+     * **온디바이스 단축어 호출기(`syncToAppleHealth`):**
+       * DB 트랜잭션 및 UI 업데이트가 100% 완료된 후 안전하게 iOS 단축어 URL Scheme(`shortcuts://run-shortcut?name=LogHealth...`)을 호출.
+       * 백업 복원(`handleJsonBackupFile`), 휴지통 복구(`restoreDeletedMetric`)에서는 단축어 호출 0% 차단 유지.
+     * `index.html`과 `ui_health_tracker.html` 100% 동기화(`diff -u` 0) 및 JavaScriptCore 구문 검증 완료.
 
 ---
 

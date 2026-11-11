@@ -786,21 +786,6 @@
             </div>
           </div>
 
-          <div>
-            <label class="text-[11px] text-slate-500 font-medium block mb-1">측정 시간대</label>
-            <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
-              <button type="button" id="bpSlotBtnMorning" onclick="selectManualBpSlot('morning')" class="py-2 rounded-lg bg-white text-slate-900 shadow-xs flex items-center justify-center gap-1 font-bold">
-                <i class="fa-solid fa-mountain-sun text-amber-500 text-xs"></i> 아침
-              </button>
-              <button type="button" id="bpSlotBtnNoon" onclick="selectManualBpSlot('noon')" class="py-2 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center gap-1">
-                <i class="fa-solid fa-sun text-yellow-500 text-xs"></i> 점심
-              </button>
-              <button type="button" id="bpSlotBtnNight" onclick="selectManualBpSlot('night')" class="py-2 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center gap-1">
-                <i class="fa-solid fa-moon text-indigo-500 text-xs"></i> 저녁
-              </button>
-            </div>
-          </div>
-
           <div class="grid grid-cols-3 gap-2 text-center pt-1">
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
               <label class="text-[10px] text-slate-500 font-medium block mb-1">수축기 (SYS)</label>
@@ -1108,11 +1093,13 @@
 
           <div class="font-bold text-slate-800 flex items-center gap-1.5">
             <span class="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold">2</span>
-            동작 추가
+            동작 추가 (조건문)
           </div>
-          <div class="pl-5 text-[11px] text-slate-600 space-y-0.5 font-mono">
-            <div>• [건강 샘플 기록] 체중: <span class="text-blue-600">입력.weight</span> kg</div>
-            <div>• [건강 샘플 기록] 혈압: <span class="text-rose-600">입력.sys</span> / <span class="text-sky-600">입력.dia</span></div>
+          <div class="pl-5 text-[11px] text-slate-600 space-y-1 font-mono">
+            <div>• <span class="font-bold text-slate-800">체중 측정 시 (type = scale):</span></div>
+            <div class="pl-2">- 체중: <span class="text-blue-600">입력.weight</span> kg, 체지방: <span class="text-amber-600">입력.bodyFat</span> %</div>
+            <div>• <span class="font-bold text-slate-800">혈압 측정 시 (type = bp):</span></div>
+            <div class="pl-2">- 혈압: <span class="text-rose-600">입력.sys</span> / <span class="text-sky-600">입력.dia</span>, 맥박: <span class="text-emerald-600">입력.pulse</span> bpm</div>
           </div>
         </div>
 
@@ -4412,23 +4399,21 @@
       await refreshAllViews();
 
       showToast(`✅ 체중 ${weightVal.toFixed(2)} kg 및 생체분석 지표가 저장되었습니다.`);
+
+      // 신규 수동 체중 데이터 Apple 건강(단축어) 자동 전송
+      syncToAppleHealth({
+        type: "scale",
+        weight: Number(record.weight.toFixed(2)),
+        bodyFat: record.bodyFat ? Number(Number(record.bodyFat).toFixed(1)) : null,
+        bmi: record.bmi ? Number(Number(record.bmi).toFixed(1)) : null,
+        muscleMass: record.muscleMass ? Number(Number(record.muscleMass).toFixed(1)) : null,
+        timestamp: `${record.date}T${record.time || '00:00:00'}`
+      });
     }
 
     // ----------------------------------------------------
     // 7. 혈압 수동 입력 모달 동작
     // ----------------------------------------------------
-    let activeManualBpSlot = "morning";
-
-    function selectManualBpSlot(slot) {
-      activeManualBpSlot = slot;
-      ['Morning', 'Noon', 'Night'].forEach(s => {
-        const btn = document.getElementById(`bpSlotBtn${s}`);
-        btn.className = "py-2 rounded-lg text-slate-500 hover:text-slate-900 flex items-center justify-center gap-1 font-medium";
-      });
-      const activeBtn = document.getElementById(`bpSlotBtn${slot.charAt(0).toUpperCase() + slot.slice(1)}`);
-      activeBtn.className = "py-2 rounded-lg bg-white text-slate-900 shadow-xs flex items-center justify-center gap-1 font-bold";
-    }
-
     function openBpManualModal() {
       const now = new Date();
       document.getElementById('bpManualDate').value = now.toISOString().split('T')[0];
@@ -4460,11 +4445,11 @@
         return;
       }
 
+      const timeFormatted = timeVal.length === 5 ? `${timeVal}:00` : timeVal;
       const record = {
-        id: `${dateVal}_${activeManualBpSlot}_${timeVal.replace(':', '')}`,
+        id: `bp_${dateVal}_${timeVal.replace(/[^0-9]/g, '')}`,
         date: dateVal,
-        time: `${timeVal}:00`,
-        slot: activeManualBpSlot,
+        time: timeFormatted,
         sys: sysVal,
         dia: diaVal,
         pulse: pulseVal,
@@ -4477,6 +4462,15 @@
       await refreshAllViews();
 
       showToast(`✅ 혈압 ${sysVal}/${diaVal} mmHg (${pulseVal} bpm)이 저장되었습니다.`);
+
+      // 신규 수동 혈압 데이터 Apple 건강(단축어) 자동 전송
+      syncToAppleHealth({
+        type: "bp",
+        sys: Number(record.sys),
+        dia: Number(record.dia),
+        pulse: Number(record.pulse),
+        timestamp: `${record.date}T${record.time}`
+      });
     }
 
     // ----------------------------------------------------
@@ -4858,9 +4852,11 @@
       // 신장 176cm 기준 BMI 및 파생 질량 지표 연산
       const hM = (USER_PROFILE?.height || 176) / 100;
       const bmi = +(weight / (hM * hM)).toFixed(1);
-      const muscleMass = +((weight * ((100 - bodyFat) * 0.94)) / 100).toFixed(1);
-      const muscleRate = +((muscleMass / weight) * 100).toFixed(1);
+      const totalMuscleMass = +((weight * ((100 - bodyFat) * 0.94)) / 100).toFixed(1);
+      const totalMuscleRate = +((totalMuscleMass / weight) * 100).toFixed(1);
       const skeletalMass = +((weight * skeletalRate) / 100).toFixed(1);
+      const fatMass = +((weight * bodyFat) / 100).toFixed(1);
+      const waterMass = +((weight * waterRate) / 100).toFixed(1);
 
       const now = new Date();
       const record = {
@@ -4869,13 +4865,18 @@
         time: now.toTimeString().split(" ")[0],
         weight: +weight.toFixed(2),
         bodyFat: +bodyFat.toFixed(1),
-        muscleRate: +muscleRate.toFixed(1),
-        muscleMass: +muscleMass.toFixed(1),
+        fatMass: fatMass,
+        // 골격근량/율 통일 (앱 전체 표준: muscleMass = 골격근량, muscleRate = 골격근율)
+        muscleRate: +skeletalRate.toFixed(1),
+        muscleMass: +skeletalMass.toFixed(1),
         skeletalRate: +skeletalRate.toFixed(1),
         skeletalMass: +skeletalMass.toFixed(1),
+        totalMuscleRate: +totalMuscleRate.toFixed(1),
+        totalMuscleMass: +totalMuscleMass.toFixed(1),
         bmi: +bmi.toFixed(1),
         visceralFat: +visceralFat.toFixed(1),
         water: +waterRate.toFixed(1),
+        waterMass: waterMass,
         bmr: Math.round(bmr),
         deltaWeight: cachedBodyList.length > 0 ? +(weight - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
         source: "BLE체중계",
@@ -4938,10 +4939,22 @@
     // 사용자가 [확인 (저장)] 클릭 시 최종 로컬 DB 저장
     async function confirmAndSaveScaleData() {
       if (!pendingScaleData) return;
-      await dbSaveBodyMetric(pendingScaleData);
+      const dataToSave = { ...pendingScaleData, syncedHealthKit: true };
+      await dbSaveBodyMetric(dataToSave);
       await refreshAllViews();
       closeScaleMeasureModal();
-      showToast(`✅ 체중 ${pendingScaleData.weight.toFixed(2)} kg 및 생체 데이터가 저장되었습니다.`);
+      showToast(`✅ 체중 ${dataToSave.weight.toFixed(2)} kg 및 생체 데이터가 저장되었습니다.`);
+
+      // 신규 실측 체중 데이터 Apple 건강(단축어) 자동 전송
+      syncToAppleHealth({
+        type: "scale",
+        weight: Number(dataToSave.weight.toFixed(2)),
+        bodyFat: dataToSave.bodyFat ? Number(Number(dataToSave.bodyFat).toFixed(1)) : null,
+        bmi: dataToSave.bmi ? Number(Number(dataToSave.bmi).toFixed(1)) : null,
+        muscleMass: dataToSave.muscleMass ? Number(Number(dataToSave.muscleMass).toFixed(1)) : null,
+        timestamp: `${dataToSave.date}T${dataToSave.time || '00:00:00'}`
+      });
+
       pendingScaleData = null;
     }
 
@@ -5607,25 +5620,58 @@
       const dateStr = now.toISOString().split('T')[0];
       const timeStr = now.toTimeString().split(' ')[0];
 
-      await dbSaveBpMetric({
-        id: `${dateStr}_morning_${timeStr.replace(/:/g, '')}`,
+      const bpRecord = {
+        id: `bp_${dateStr}_${timeStr.replace(/:/g, '')}`,
         date: dateStr,
         time: timeStr,
-        slot: "morning",
         sys: pendingOcrData.sys,
         dia: pendingOcrData.dia,
         pulse: pendingOcrData.pulse,
         source: "카메라OCR",
         syncedHealthKit: true
-      });
+      };
+
+      await dbSaveBpMetric(bpRecord);
 
       await refreshAllViews();
-      showToast(`✅ 혈압 수치(${pendingOcrData.sys}/${pendingOcrData.dia} mmHg, 맥박 ${pendingOcrData.pulse} bpm)가 저장되었습니다.`);
+      showToast(`✅ 혈압 수치(${bpRecord.sys}/${bpRecord.dia} mmHg, 맥박 ${bpRecord.pulse} bpm)가 저장되었습니다.`);
+
+      // 신규 카메라 OCR 혈압 데이터 Apple 건강(단축어) 자동 전송
+      syncToAppleHealth({
+        type: "bp",
+        sys: Number(bpRecord.sys),
+        dia: Number(bpRecord.dia),
+        pulse: Number(bpRecord.pulse),
+        timestamp: `${bpRecord.date}T${bpRecord.time}`
+      });
     }
 
     // ----------------------------------------------------
     // 10. 단축어 및 백업/설정 모듈
     // ----------------------------------------------------
+    function syncToAppleHealth(payload) {
+      if (!payload || !payload.type) return;
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (!isIOS) {
+        console.log("📲 Apple Health 단축어 호출 (시뮬레이션):", payload);
+        return;
+      }
+
+      try {
+        const jsonStr = JSON.stringify(payload);
+        const encoded = encodeURIComponent(jsonStr);
+        const url = `shortcuts://run-shortcut?name=LogHealth&input=text&text=${encoded}`;
+
+        // DB 트랜잭션 및 화면 렌더링 완료 후 단축어 앱 호출
+        setTimeout(() => {
+          window.location.href = url;
+        }, 350);
+      } catch (err) {
+        console.warn("단축어 호출 실패:", err);
+      }
+    }
+
     function openShortcutGuideModal() {
       document.getElementById('shortcutGuideModal').classList.remove('hidden');
     }
@@ -5634,27 +5680,16 @@
     }
 
     function triggerShortcutSync() {
-      const latestBody = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : { weight: 80.30 };
-      const latestBp = cachedBpList.length > 0 ? cachedBpList[cachedBpList.length - 1] : { sys: 105, dia: 83, pulse: 87 };
-
+      const latestBody = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : { weight: 80.30, bodyFat: 25.0 };
       const payload = {
-        timestamp: new Date().toISOString(),
-        weight: latestBody.weight,
-        sys: latestBp.sys,
-        dia: latestBp.dia,
-        pulse: latestBp.pulse
+        type: "scale",
+        weight: Number(latestBody.weight.toFixed(2)),
+        bodyFat: latestBody.bodyFat ? Number(Number(latestBody.bodyFat).toFixed(1)) : null,
+        bmi: latestBody.bmi ? Number(Number(latestBody.bmi).toFixed(1)) : null,
+        muscleMass: latestBody.muscleMass ? Number(Number(latestBody.muscleMass).toFixed(1)) : null,
+        timestamp: new Date().toISOString()
       };
-
-      const jsonStr = JSON.stringify(payload);
-      const encoded = encodeURIComponent(jsonStr);
-      const url = `shortcuts://run-shortcut?name=LogHealth&input=text&text=${encoded}`;
-
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        window.location.href = url;
-      } else {
-        alert(`📲 Apple Health 단축어 호출 시뮬레이션:\n- 체중: ${payload.weight}kg\n- 혈압: ${payload.sys}/${payload.dia} mmHg (${payload.pulse} bpm)`);
-      }
+      syncToAppleHealth(payload);
     }
 
     function openImportModal() {
