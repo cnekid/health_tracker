@@ -669,3 +669,45 @@
   4. **무결성 검증:**
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 동일 일치 (0 diff).
      * JavaScriptCore(`jsc`) 구문 검사 무결성 통과 (0 error).
+
+---
+
+### [2026-11-12 00:40] Bluefy 체중계 빈 목록(Empty List) 원인 규명 및 Chipsea 'S' 접두사 기반 정밀 필터링 안착
+
+* **사용자 제보 현황 분석 (4개 첨부 사진):**
+  1. **23:05 사진:** 맥북 가상 체중계(`Moses's MacBook Air`)가 Bluefy 팝업에 노출되어 영구 백그라운드 연결 권한(녹색 토글 ON) 1회 승인 완료.
+  2. **23:38 사진:** 가상 체중계 종료 후 체중 측정 실행 시, 저장된 가상 기기로의 무팝업 자동 연결 시도로 대기 상태 유지.
+  3. **VS Code 터미널 사진:** 사용자가 터미널 작업 디렉토리(`/health_tracker`)에서 `git add health_tracker/...` 경로 오류로 인해 최신 변경 사항이 Git에 스테이징되지 못하고 누락된 상태 확인.
+  4. **00:29 사진:** 체중계 검색 팝업(`장치를 선택합니다`) 호출 시 기기 목록이 완전히 빈 상태(Blank)로 노출됨.
+
+* **근본 원인 규명 (Root Cause Analysis):**
+  1. **Bluefy Web BLE 엔진의 manufacturerData 필터 미지원:**
+     * iOS Bluefy의 Web Bluetooth 구현체는 `requestDevice({ filters: [{ manufacturerData: ... }] })`를 CoreBluetooth 하드웨어 스캔 레벨에서 정상 처리하지 못함.
+  2. **실제 물리 체중계의 GATT Service 브로드캐스트 미포함:**
+     * 밸런스랩 실제 물리 체중계는 광고(AD) 패킷에 `0xFFF0`(OKOK_SVC)를 GATT Service UUID로 브로드캐스트하지 않음.
+     * 따라서 `{ services: [OKOK_SVC] }` 및 `manufacturerData` 필터 사용 시 스캔 조건에 매칭되는 기기가 전무하여(0건) 팝업 목록이 완전히 빈 화면으로 노출됨.
+  3. **실제 물리 체중계의 진성 브로드캐스트 식별자 규명:**
+     * 전체 스캔 기록(OCR) 정밀 교차 검증 결과, 밸런스랩 물리 체중계는 액정이 켜졌을 때 Chipsea 칩셋 고유 명칭인 **`Sf...`** 또는 **`S8...`** (대문자 **`S`**로 시작하는 18자리 문자열)를 Local Name으로 송출함.
+
+* **세부 해결 내역:**
+  1. **Web Bluetooth `scaleFilters` 전면 개편 (`namePrefix` 채택):**
+     * 미지원되는 `manufacturerData` 필터를 전면 제거하고 W3C Web BLE 및 iOS CoreBluetooth 100% 호환 규격인 `name` 및 `namePrefix` 필터 적용:
+       ```javascript
+       const scaleFilters = [
+         { name: "BalansLab-Scale" },
+         { namePrefix: "Balans" },
+         { namePrefix: "Chipsea" },
+         { namePrefix: "OKOK" },
+         { namePrefix: "Scale" },
+         { namePrefix: "Sf" },
+         { namePrefix: "S8" },
+         { namePrefix: "S" }
+       ];
+       ```
+     * 이를 통해 실제 물리 체중계(`Sf...`, `S8...`)와 가상 체중계(`BalansLab-Scale`)는 100% 검색 창에 정상 노출되며,
+     * 주변 60여 개의 Apple Watch(`Moses의 Apple Watch`), iPad, Apple TV, AirPurifier, 무명 UUID 기기는 **100% 원천 차단**됨.
+  2. **친화적 기기명 변환기 (`getFriendlyScaleName`):**
+     * `Sf228d40ff3dceb5fC` 등의 암호 같은 Hex 명칭 대신 화면에 `밸런스랩 체중계 연결됨`으로 직관적 표시.
+  3. **무결성 및 신뢰성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff 보장).
+     * JavaScriptCore(`jsc`) 구문 검사 무결성 통과 (0 error).

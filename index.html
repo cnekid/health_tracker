@@ -4564,19 +4564,19 @@
       const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       // 오직 스마트 체중계 2종(실제 밸런스랩 체중계 칩셋 + 가상 체중계)만 감지하는 엄격한 타겟 필터
+      // iOS Bluefy는 manufacturerData 필터 미지원 -> Chipsea 실제 체중계 고유 브로드캐스트 이름 접두사('S')로 매칭
       // 잡다한 Apple(0x004C), Samsung(0x0075), 가전 기기 등 50여 개 비체중계 기기 100% 원천 차단
       const scaleFilters = [
-        // 1) 맥북 가상 체중계
+        // 1) 맥북 가상 체중계 및 표준 체중계 브랜드
         { name: "BalansLab-Scale" },
-        // 2) 실제 밸런스랩 물리 체중계 (Chipsea 제조사 식별자 0xFFFF 및 확장 식별자)
-        { manufacturerData: [{ companyIdentifier: 0xffff }] },
-        { manufacturerData: [{ companyIdentifier: 0x0015 }] },
-        { manufacturerData: [{ companyIdentifier: 0x1500 }] },
-        { manufacturerData: [{ companyIdentifier: 0x4311 }] },
-        { manufacturerData: [{ companyIdentifier: 0x1143 }] },
-        // 3) 표준 OKOK / WSS 체중계 서비스
-        { services: [OKOK_SVC] },
-        { services: [WSS_SVC] }
+        { namePrefix: "Balans" },
+        { namePrefix: "Chipsea" },
+        { namePrefix: "OKOK" },
+        { namePrefix: "Scale" },
+        // 2) 실제 밸런스랩 물리 체중계 (Chipsea 칩셋 고유 명칭: Sf..., S8... 등 접두사 'S')
+        { namePrefix: "Sf" },
+        { namePrefix: "S8" },
+        { namePrefix: "S" }
       ];
 
       const optionalScaleServices = [
@@ -4588,6 +4588,14 @@
         "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
       ];
 
+      const getFriendlyScaleName = (d) => {
+        if (!d || !d.name) return "밸런스랩 체중계";
+        const n = d.name;
+        if (n.includes("Moses") || n.includes("MacBook") || n.includes("BalansLab")) return "가상 체중계";
+        if (n.startsWith("S") || n.includes("Chipsea") || n.includes("OKOK") || n.includes("Scale")) return "밸런스랩 체중계";
+        return n;
+      };
+
       try {
         let device = null;
         let server = null;
@@ -4596,8 +4604,7 @@
         if (!forceNewScan && lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
           device = lastBleDeviceInstance;
           server = lastBleDeviceInstance.gatt;
-          const friendlyName = (device.name && (device.name.includes("Moses") || device.name.includes("MacBook") || device.name.includes("BalansLab"))) ? "가상 체중계" : (device.name || "스마트 체중계");
-          document.getElementById("scaleStatusText").innerText = `${friendlyName} 연결됨`;
+          document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
         }
 
         // 2) 이전에 권한 승인된 기기가 있는 경우: 빠른 무팝업 직행 연결 시도 (1.2초)
@@ -4626,7 +4633,7 @@
               hasSavedCandidate = true;
               const cand = candidateDevices[0];
               if (cand && cand.gatt) {
-                const candName = (cand.name && (cand.name.includes("Moses") || cand.name.includes("MacBook") || cand.name.includes("BalansLab"))) ? "가상 체중계" : (cand.name || "스마트 체중계");
+                const candName = getFriendlyScaleName(cand);
                 document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결 중...`;
                 try {
                   const s = await Promise.race([
@@ -4683,8 +4690,8 @@
             device = await navigator.bluetooth.requestDevice({
               filters: [
                 { name: "BalansLab-Scale" },
-                { services: [OKOK_SVC] },
-                { services: [WSS_SVC] }
+                { namePrefix: "Balans" },
+                { namePrefix: "S" }
               ],
               optionalServices: optionalScaleServices
             });
