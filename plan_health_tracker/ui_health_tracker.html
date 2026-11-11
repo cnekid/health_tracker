@@ -426,20 +426,42 @@
           </div>
         </div>
 
-        <!-- 3부: 전체 기록 수치 표 (전체 history & 10개씩 페이징 더보기) -->
+        <!-- 3부: 전체 기록 수치 표 (전체 history & 10개씩 페이징 더보기 & 롱프레스/편집 삭제) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-          <div class="flex justify-between items-center pb-1 border-b border-slate-100 text-xs">
-            <span class="font-bold text-slate-900 flex items-center gap-1.5">
-              <i class="fa-solid fa-table-list text-slate-600 text-xs"></i>
-              <span>전체 history</span>
-            </span>
-            <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 34건</span>
+          <div class="flex justify-between items-center pb-1.5 border-b border-slate-100 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-table-list text-slate-600 text-xs"></i>
+                <span>전체 history</span>
+              </span>
+              <span id="detailRecordCount" class="text-[10px] text-slate-400 font-medium">총 34건</span>
+            </div>
+            
+            <!-- 편집 모드 진입/완료 토글 버튼 -->
+            <button id="btnToggleHistoryEdit" onclick="toggleHistoryEditMode()" class="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition border border-slate-200 flex items-center gap-1 active:scale-95">
+              <i id="btnToggleHistoryEditIcon" class="fa-solid fa-pen text-[10px] text-slate-500"></i>
+              <span id="btnToggleHistoryEditLabel">편집</span>
+            </button>
+          </div>
+
+          <!-- 편집 모드 활성화 시 나타나는 다중 선택 액션 툴바 -->
+          <div id="historyEditToolbar" class="hidden flex items-center justify-between px-2.5 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs transition">
+            <label class="flex items-center gap-1.5 text-slate-700 font-semibold cursor-pointer select-none text-[11px]">
+              <input type="checkbox" id="historySelectAllCheckbox" onchange="toggleSelectAllHistory(this.checked)" class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
+              <span>전체 선택</span>
+            </label>
+            <button id="btnBatchDeleteHistory" onclick="requestBatchDeleteHistory()" disabled
+              class="px-2.5 py-1 bg-slate-200 text-slate-400 font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-not-allowed">
+              <i class="fa-solid fa-trash-can text-[10px]"></i>
+              <span id="btnBatchDeleteHistoryLabel">선택 삭제 (0개)</span>
+            </button>
           </div>
 
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-left">
               <thead>
                 <tr class="text-[10px] text-slate-400 border-b border-slate-100">
+                  <th id="thHistoryCheckCol" class="py-1.5 w-6 hidden font-medium text-center">선택</th>
                   <th class="py-1.5 font-medium">측정 일시</th>
                   <th class="py-1.5 text-right font-medium">측정값</th>
                   <th class="py-1.5 text-right font-medium">직전 대비</th>
@@ -450,6 +472,10 @@
                 <!-- 동적 생성 -->
               </tbody>
             </table>
+          </div>
+
+          <div class="text-[10px] text-slate-400 text-center pt-0.5">
+            💡 항목을 길게(0.7초) 누르거나 [편집]을 눌러 삭제할 수 있습니다.
           </div>
 
           <!-- 10개씩 더보기 버튼 -->
@@ -1178,6 +1204,37 @@
       </div>
     </div>
 
+    <!-- ================= MODAL: 기록 삭제 확인 모달 ================= -->
+    <div id="deleteConfirmModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-4 flex flex-col justify-center items-center">
+      <div class="w-full max-w-[320px] bg-white border border-slate-200 rounded-3xl p-5 text-center flex flex-col shadow-2xl">
+        <!-- 경고 아이콘 -->
+        <div class="w-12 h-12 mx-auto rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-xl mb-2.5 border border-rose-100">
+          <i class="fa-solid fa-trash-can"></i>
+        </div>
+        
+        <h3 id="deleteConfirmTitle" class="text-base font-bold text-slate-900">기록 삭제 확인</h3>
+        <p id="deleteConfirmMessage" class="text-xs text-slate-600 mt-1 leading-relaxed">
+          선택한 기록을 삭제하시겠습니까?<br>삭제된 데이터는 복구할 수 없습니다.
+        </p>
+
+        <!-- 삭제 대상 상세 미리보기 박스 -->
+        <div id="deleteConfirmTargetBox" class="mt-3 p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-left text-xs font-mono text-slate-800 space-y-1 max-h-36 overflow-y-auto">
+          <!-- 동적 주입 -->
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <button type="button" onclick="closeDeleteConfirmModal()"
+            class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition">
+            취소
+          </button>
+          <button type="button" id="btnExecuteDeleteConfirm" onclick="executeDeleteConfirmed()"
+            class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-xl shadow-md transition">
+            삭제하기
+          </button>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <footer class="mt-3 text-center text-xs text-slate-400 max-w-[393px]">
@@ -1721,6 +1778,12 @@
 
       // 지표 상세 서브뷰는 숨김 처리
       detailView.classList.add('hidden');
+
+      if (isHistoryEditMode) {
+        isHistoryEditMode = false;
+        selectedHistoryKeys.clear();
+        updateHistoryEditToolbar();
+      }
 
       Object.keys(views).forEach(k => {
         if (k === tab) {
@@ -2854,7 +2917,272 @@
       initDetailChartSwipeGestures();
     }
 
-    // 3부: 전체 기록 수치 테이블 렌더링 (10개씩 페이징 더보기)
+    // ----------------------------------------------------
+    // 상세 화면 기록 삭제 관리 (롱프레스 0.7초 및 [편집] 다중 선택 일괄 삭제)
+    // ----------------------------------------------------
+    let isHistoryEditMode = false;
+    let selectedHistoryKeys = new Set();
+    let pendingDeleteKeys = [];
+    let pendingDeleteIsBp = false;
+
+    function toggleHistoryEditMode() {
+      isHistoryEditMode = !isHistoryEditMode;
+      selectedHistoryKeys.clear();
+      updateHistoryEditToolbar();
+
+      if (currentDetailMetricKey) {
+        const isBpMetric = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+        const spec = METRIC_SPECS[currentDetailMetricKey] || METRIC_SPECS.weight;
+        renderDetailHistoryTable(currentDetailMetricKey, isBpMetric, spec.unit);
+      }
+    }
+
+    function updateHistoryEditToolbar() {
+      const toolbar = document.getElementById('historyEditToolbar');
+      const btnLabel = document.getElementById('btnToggleHistoryEditLabel');
+      const btnIcon = document.getElementById('btnToggleHistoryEditIcon');
+      const thCheck = document.getElementById('thHistoryCheckCol');
+      const batchBtn = document.getElementById('btnBatchDeleteHistory');
+      const batchBtnLabel = document.getElementById('btnBatchDeleteHistoryLabel');
+      const selectAllBox = document.getElementById('historySelectAllCheckbox');
+
+      if (isHistoryEditMode) {
+        if (toolbar) toolbar.classList.remove('hidden');
+        if (btnLabel) btnLabel.innerText = '완료';
+        if (btnIcon) btnIcon.className = 'fa-solid fa-check text-[10px] text-blue-600';
+        if (thCheck) thCheck.classList.remove('hidden');
+      } else {
+        if (toolbar) toolbar.classList.add('hidden');
+        if (btnLabel) btnLabel.innerText = '편집';
+        if (btnIcon) btnIcon.className = 'fa-solid fa-pen text-[10px] text-slate-500';
+        if (thCheck) thCheck.classList.add('hidden');
+      }
+
+      const count = selectedHistoryKeys.size;
+      if (batchBtn && batchBtnLabel) {
+        batchBtnLabel.innerText = `선택 삭제 (${count}개)`;
+        if (count > 0) {
+          batchBtn.disabled = false;
+          batchBtn.className = "px-2.5 py-1 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-pointer shadow-sm active:scale-95";
+        } else {
+          batchBtn.disabled = true;
+          batchBtn.className = "px-2.5 py-1 bg-slate-200 text-slate-400 font-bold rounded-lg text-[11px] transition flex items-center gap-1 cursor-not-allowed";
+        }
+      }
+
+      if (selectAllBox && currentDetailMetricKey) {
+        const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+        const dataset = isBp ? cachedBpList : cachedBodyList;
+        const reversed = [...dataset].reverse();
+        const sliced = reversed.slice(0, detailHistoryDisplayLimit);
+        const allSelected = sliced.length > 0 && sliced.every(item => {
+          const k = isBp ? (item.id || item.date) : item.date;
+          return selectedHistoryKeys.has(k);
+        });
+        selectAllBox.checked = allSelected;
+      }
+    }
+
+    function toggleSelectAllHistory(checked) {
+      if (!currentDetailMetricKey) return;
+      const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+      const reversed = [...dataset].reverse();
+      const sliced = reversed.slice(0, detailHistoryDisplayLimit);
+
+      if (checked) {
+        sliced.forEach(item => {
+          const key = isBp ? (item.id || item.date) : item.date;
+          selectedHistoryKeys.add(key);
+        });
+      } else {
+        selectedHistoryKeys.clear();
+      }
+
+      updateHistoryEditToolbar();
+      const spec = METRIC_SPECS[currentDetailMetricKey] || METRIC_SPECS.weight;
+      renderDetailHistoryTable(currentDetailMetricKey, isBp, spec.unit);
+    }
+
+    function toggleSelectHistoryItem(key) {
+      if (selectedHistoryKeys.has(key)) {
+        selectedHistoryKeys.delete(key);
+      } else {
+        selectedHistoryKeys.add(key);
+      }
+      updateHistoryEditToolbar();
+
+      // DOM 행 상태 동기화
+      const rows = document.querySelectorAll(`tr[data-history-key="${CSS.escape(key)}"]`);
+      rows.forEach(row => {
+        const isChecked = selectedHistoryKeys.has(key);
+        row.classList.toggle('bg-blue-50/70', isChecked);
+        const chk = row.querySelector('.history-row-checkbox');
+        if (chk) chk.checked = isChecked;
+      });
+    }
+
+    function attachLongPressHandler(element, onLongPress) {
+      let timer = null;
+      let startX = 0;
+      let startY = 0;
+      let isMoved = false;
+
+      function start(e) {
+        if (isHistoryEditMode) return;
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        isMoved = false;
+
+        timer = setTimeout(() => {
+          timer = null;
+          if (!isMoved) {
+            if (navigator.vibrate) {
+              try { navigator.vibrate(40); } catch(err) {}
+            }
+            element.classList.add('bg-rose-100');
+            setTimeout(() => element.classList.remove('bg-rose-100'), 350);
+            onLongPress();
+          }
+        }, 700);
+      }
+
+      function move(e) {
+        if (!timer) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const diffX = Math.abs(touch.clientX - startX);
+        const diffY = Math.abs(touch.clientY - startY);
+        if (diffX > 10 || diffY > 10) {
+          isMoved = true;
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+
+      function cancel() {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+
+      element.addEventListener('touchstart', start, { passive: true });
+      element.addEventListener('touchmove', move, { passive: true });
+      element.addEventListener('touchend', cancel);
+      element.addEventListener('touchcancel', cancel);
+
+      element.addEventListener('mousedown', start);
+      element.addEventListener('mousemove', move);
+      element.addEventListener('mouseup', cancel);
+      element.addEventListener('mouseleave', cancel);
+    }
+
+    function openDeleteConfirmModal(items, isBp) {
+      pendingDeleteKeys = items.map(it => it.key);
+      pendingDeleteIsBp = isBp;
+
+      const titleEl = document.getElementById('deleteConfirmTitle');
+      const msgEl = document.getElementById('deleteConfirmMessage');
+      const boxEl = document.getElementById('deleteConfirmTargetBox');
+
+      if (items.length === 1) {
+        titleEl.innerText = '기록 개별 삭제';
+        msgEl.innerHTML = '선택하신 측정 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 영구히 복구할 수 없습니다.</span>';
+        boxEl.innerHTML = `
+          <div class="flex justify-between items-center text-slate-700">
+            <span class="text-slate-400">측정 일시</span>
+            <span class="font-bold text-slate-900">${items[0].date} ${items[0].time || ''}</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700 pt-1 border-t border-slate-200/60 mt-1">
+            <span class="text-slate-400">측정 수치</span>
+            <span class="font-bold text-slate-900">${items[0].valueDisplay}</span>
+          </div>
+        `;
+      } else {
+        titleEl.innerText = `기록 일괄 삭제 (${items.length}건)`;
+        msgEl.innerHTML = `선택하신 총 <b>${items.length}개</b>의 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 영구히 복구할 수 없습니다.</span>`;
+        boxEl.innerHTML = items.slice(0, 5).map(it => `
+          <div class="flex justify-between items-center text-[11px] text-slate-700 border-b border-slate-100 last:border-0 py-0.5">
+            <span>${it.date} ${it.time || ''}</span>
+            <span class="font-bold text-slate-900">${it.valueDisplay}</span>
+          </div>
+        `).join('') + (items.length > 5 ? `<div class="text-[10px] text-slate-400 text-center pt-1 font-sans">... 외 ${items.length - 5}건</div>` : '');
+      }
+
+      document.getElementById('deleteConfirmModal').classList.remove('hidden');
+    }
+
+    function closeDeleteConfirmModal() {
+      document.getElementById('deleteConfirmModal').classList.add('hidden');
+      pendingDeleteKeys = [];
+    }
+
+    async function executeDeleteConfirmed() {
+      if (pendingDeleteKeys.length === 0) return;
+
+      const btn = document.getElementById('btnExecuteDeleteConfirm');
+      btn.disabled = true;
+      btn.innerText = '삭제 중...';
+
+      try {
+        if (pendingDeleteIsBp) {
+          for (const key of pendingDeleteKeys) {
+            await dbDeleteBpMetric(key);
+          }
+        } else {
+          for (const key of pendingDeleteKeys) {
+            await dbDeleteBodyMetric(key);
+          }
+        }
+
+        selectedHistoryKeys.clear();
+        if (isHistoryEditMode) {
+          updateHistoryEditToolbar();
+        }
+
+        await refreshAllViews();
+        closeDeleteConfirmModal();
+      } catch (err) {
+        console.error("기록 삭제 오류:", err);
+        alert("기록 삭제 중 오류가 발생했습니다: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '삭제하기';
+      }
+    }
+
+    function requestBatchDeleteHistory() {
+      if (selectedHistoryKeys.size === 0) return;
+      const isBp = (currentDetailMetricKey === 'bp' || currentDetailMetricKey === 'pulse');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+
+      const items = [];
+      dataset.forEach(item => {
+        const key = isBp ? (item.id || item.date) : item.date;
+        if (selectedHistoryKeys.has(key)) {
+          let val = "";
+          if (currentDetailMetricKey === 'bp') val = `${item.sys}/${item.dia} mmHg`;
+          else if (currentDetailMetricKey === 'pulse') val = `${item.pulse} bpm`;
+          else {
+            const spec = METRIC_SPECS[currentDetailMetricKey] || {};
+            val = `${item[currentDetailMetricKey]} ${spec.unit || ''}`;
+          }
+          items.push({
+            key: key,
+            date: item.date,
+            time: item.time ? item.time.slice(0, 5) : '',
+            valueDisplay: val
+          });
+        }
+      });
+
+      if (items.length > 0) {
+        openDeleteConfirmModal(items, isBp);
+      }
+    }
+
+    // 3부: 전체 기록 수치 테이블 렌더링 (10개씩 페이징 더보기 & 롱프레스/편집 삭제 연동)
     function renderDetailHistoryTable(metricKey, isBpMetric, unit) {
       const tbody = document.getElementById('detailHistoryTableBody');
       tbody.innerHTML = '';
@@ -2868,6 +3196,7 @@
 
       sliced.forEach((item, idx) => {
         const nextItem = reversed[idx + 1]; // 시간상 직전 데이터
+        const itemKey = isBpMetric ? (item.id || item.date) : item.date;
         let currentValDisplay = "";
         let deltaDisplay = "-";
 
@@ -2893,14 +3222,44 @@
           }
         }
 
+        const isChecked = selectedHistoryKeys.has(itemKey);
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50";
+        tr.dataset.historyKey = itemKey;
+        tr.className = `transition ${isHistoryEditMode ? 'cursor-pointer hover:bg-slate-100/70 select-none' : 'hover:bg-slate-50 active:bg-slate-100 select-none'}`;
+        if (isHistoryEditMode && isChecked) {
+          tr.classList.add('bg-blue-50/70');
+        }
+
+        let checkColHtml = '';
+        if (isHistoryEditMode) {
+          checkColHtml = `
+            <td class="py-2 text-center w-6" onclick="event.stopPropagation(); toggleSelectHistoryItem('${itemKey}')">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} class="history-row-checkbox w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 pointer-events-none" />
+            </td>
+          `;
+        }
+
         tr.innerHTML = `
+          ${checkColHtml}
           <td class="py-2 text-slate-600 font-mono">${item.date} <span class="text-[9px] text-slate-400">${item.time ? item.time.slice(0,5) : ''}</span></td>
           <td class="py-2 text-right font-bold text-slate-900 font-mono">${currentValDisplay}</td>
           <td class="py-2 text-right text-slate-500 font-mono">${deltaDisplay}</td>
           <td class="py-2 text-right text-[10px] text-slate-400 pr-1">${item.source || 'BLE'}</td>
         `;
+
+        if (isHistoryEditMode) {
+          tr.onclick = () => toggleSelectHistoryItem(itemKey);
+        } else {
+          attachLongPressHandler(tr, () => {
+            openDeleteConfirmModal([{
+              key: itemKey,
+              date: item.date,
+              time: item.time ? item.time.slice(0, 5) : '',
+              valueDisplay: currentValDisplay
+            }], isBpMetric);
+          });
+        }
+
         tbody.appendChild(tr);
       });
 
