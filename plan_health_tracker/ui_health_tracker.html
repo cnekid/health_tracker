@@ -847,6 +847,10 @@
             <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
             <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
             <p class="text-[10px] text-blue-500 font-medium">💡 발로 살짝 눌러 체중계 화면이 켜지면 즉시 연결됩니다.</p>
+            <p id="scaleGuideTip" class="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-1.5 mt-1 leading-tight">
+              🔍 <strong>최초 1회 등록 안내:</strong> 체중계를 밟아 액정을 켠 뒤 목록에서 <span class="text-blue-600 font-bold">44E3</span>(또는 BalansLab)을 선택하세요.<br>
+              (하단 <span class="text-emerald-600 font-semibold">초록색 스위치</span>를 켜두시면 다음부터는 <strong>목록 없이 무팝업 100% 자동 연결</strong>됩니다.)
+            </p>
           </div>
 
           <div class="pt-2 space-y-2">
@@ -4529,12 +4533,22 @@
       }
     }
 
-    function resetBleScaleSavedDevice() {
+    async function resetBleScaleSavedDevice() {
       localStorage.removeItem("health_tracker_last_scale_id");
       localStorage.removeItem("health_tracker_last_scale_name");
       if (lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
         try { lastBleDeviceInstance.gatt.disconnect(); } catch (_) {}
       }
+      try {
+        if (navigator.bluetooth && typeof navigator.bluetooth.getDevices === "function") {
+          const devs = await navigator.bluetooth.getDevices();
+          for (const d of devs) {
+            if (typeof d.forget === "function") {
+              try { await d.forget(); } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
       lastBleDeviceInstance = null;
       document.getElementById("scaleStatusText").innerText = "연결 정보 초기화됨 (새로 연결해주세요)";
       showToast("체중계 연결 정보가 초기화되었습니다.");
@@ -4563,22 +4577,7 @@
       const WSS_NOTIFY = "00002a9d-0000-1000-8000-00805f9b34fb";
       const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
-      // 오직 스마트 체중계 2종(실제 밸런스랩 체중계 칩셋 + 가상 체중계)만 감지하는 엄격한 타겟 필터
-      // iOS Bluefy는 manufacturerData 필터 미지원 -> Chipsea 실제 체중계 고유 브로드캐스트 이름 접두사('S')로 매칭
-      // 잡다한 Apple(0x004C), Samsung(0x0075), 가전 기기 등 50여 개 비체중계 기기 100% 원천 차단
-      const scaleFilters = [
-        // 1) 맥북 가상 체중계 및 표준 체중계 브랜드
-        { name: "BalansLab-Scale" },
-        { namePrefix: "Balans" },
-        { namePrefix: "Chipsea" },
-        { namePrefix: "OKOK" },
-        { namePrefix: "Scale" },
-        // 2) 실제 밸런스랩 물리 체중계 (Chipsea 칩셋 고유 명칭: Sf..., S8... 등 접두사 'S')
-        { namePrefix: "Sf" },
-        { namePrefix: "S8" },
-        { namePrefix: "S" }
-      ];
-
+      // 실제 밸런스랩 물리 체중계(광고 이름 미포함, Chipsea 0xFFFF) 및 가상 체중계 탐색용 규격 서비스
       const optionalScaleServices = [
         OKOK_SVC,
         WSS_SVC,
@@ -4673,26 +4672,22 @@
         }
 
         // 4) 저장된 기기가 없거나, 사용자가 직접 [체중계 새로 검색] 또는 [체중계 연결하기]를 누른 경우
-        // -> 타겟 필터가 적용된 시스템 기기 선택창 호출 (잡다한 기기 배제, 오직 체중계만 노출)
+        // -> 실제 밸런스랩 체중계(광고 이름 없음, Chipsea FFF0) 및 가상 체중계를 모두 감지하는 acceptAllDevices 호출
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
           try {
             device = await navigator.bluetooth.requestDevice({
-              filters: scaleFilters,
+              acceptAllDevices: true,
               optionalServices: optionalScaleServices
             });
           } catch (filterErr) {
             if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
               throw filterErr;
             }
-            console.warn("확장 필터 fallback 가동:", filterErr);
+            console.warn("기기 요청 재시도:", filterErr);
             device = await navigator.bluetooth.requestDevice({
-              filters: [
-                { name: "BalansLab-Scale" },
-                { namePrefix: "Balans" },
-                { namePrefix: "S" }
-              ],
+              acceptAllDevices: true,
               optionalServices: optionalScaleServices
             });
           }
