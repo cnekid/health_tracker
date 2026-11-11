@@ -529,8 +529,8 @@
 
     </div>
 
-    <!-- 하단 iOS 3탭 바: [홈] [상세] [설정] (Safe Area 및 하단 툴바 완벽 대응) -->
-    <nav class="shrink-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex justify-around items-center z-20"
+    <!-- 하단 iOS 4탭 바: [홈] [상세] [설정] [새로고침] (Safe Area 및 하단 툴바 완벽 대응) -->
+    <nav class="shrink-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 flex justify-around items-center z-20"
          style="padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px); padding-top: 6px; min-height: 56px;">
       <button id="tabBtn-home" onclick="switchMainTab('home')" class="flex flex-col items-center text-slate-900 transition flex-1 py-0.5 active:scale-95">
         <i class="fa-solid fa-house text-lg"></i>
@@ -545,6 +545,11 @@
       <button id="tabBtn-settings" onclick="switchMainTab('settings')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1 py-0.5 active:scale-95">
         <i class="fa-solid fa-gear text-lg"></i>
         <span class="text-[10px] mt-0.5 font-medium">설정</span>
+      </button>
+
+      <button id="tabBtn-refresh" onclick="triggerAppReload()" class="flex flex-col items-center text-slate-400 hover:text-slate-700 active:text-blue-600 transition flex-1 py-0.5 active:scale-95" title="새로고침">
+        <i id="refreshTabIcon" class="fa-solid fa-rotate-right text-lg"></i>
+        <span class="text-[10px] mt-0.5 font-medium">새로고침</span>
       </button>
     </nav>
 
@@ -1962,6 +1967,17 @@
 
       // 스크롤 상단 리셋
       document.getElementById('screenContent').scrollTop = 0;
+    }
+
+    // 하단 탭 바: 앱 및 데이터 즉시 새로고침
+    function triggerAppReload() {
+      const icon = document.getElementById('refreshTabIcon');
+      if (icon) {
+        icon.classList.add('fa-spin');
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 180);
     }
 
     // ----------------------------------------------------

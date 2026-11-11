@@ -83,6 +83,16 @@
 
 ## 6. 진행 현황 및 향후 계획 (Progress & Next Steps)
 
+* **2026-11-11 진행 완료 (하단 네비게이션 탭 바: [설정] 옆 [새로고침] 원터치 액션 버튼 추가):**
+  * **사용자 요구사항:**
+    * 모바일 환경(Bluefy 브라우저 등)에서 주소창이나 메뉴를 거치지 않고 하단 메뉴 바에서 원터치로 페이지와 데이터를 즉시 새로고침할 수 있는 기능 요청.
+  * **구현 세부사항:**
+    * 하단 네비게이션 바 레이아웃을 기존 3탭(`[홈] [상세] [설정]`)에서 4버튼(`[홈] [상세] [설정] [새로고침]`)으로 균등 확장 (`flex-1`).
+    * 회전 화살표 아이콘(`<i class="fa-solid fa-rotate-right"></i>`) 및 라벨(`새로고침`) 적용.
+    * 터치 시 부드러운 스핀 피드백 애니메이션(`fa-spin`)과 함께 `window.location.reload()`를 즉시 트리거하는 `triggerAppReload()` 엔진 탑재.
+  * **산출물 전수 동기화:**
+    * [index.html](file:///Users/moses/myfolder/Project/health_tracker/index.html) 및 [ui_health_tracker.html](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html) 동기화 완료 (`diff -u` 0건 일치 검증).
+
 * **2026-11-11 진행 완료 ([상세] 탭 건강 지표 매트릭스 표: 동일 일자 다건 측정 전건 노출 및 헤더 시:분(`HH:MM`) 표기 개편):**
   * **원인 및 문제 해결:**
     * 기존 상세 매트릭스 표는 일자(YYYY-MM-DD) 단위로 열을 묶어 해당 일자의 최신 측정값 1건만 대표값으로 덮어써 표시하여, 당일 5회 측정한 데이터가 기록 관리 모달에는 모두 있으나 상세 표에는 1건만 보이던 현상 해결.
