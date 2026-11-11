@@ -819,6 +819,11 @@
             <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
+            <div class="mt-2 text-center">
+              <button type="button" onclick="startBleScaleConnection(true)" class="text-[11px] text-slate-400 hover:text-blue-600 underline">
+                다른 체중계로 변경 (새로 검색)
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2758,17 +2763,37 @@
       document.getElementById('weightManualModal').classList.add('hidden');
     }
 
+    // ----------------------------------------------------
+    // 네이티브 토스트 알림 헬퍼 (시스템 alert 팝업 및 오역 방지)
+    // ----------------------------------------------------
+    function showToast(msg) {
+      let toast = document.getElementById("appToast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "appToast";
+        toast.className = "fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300 opacity-0 pointer-events-none max-w-[90%] text-center";
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.classList.remove("opacity-0", "pointer-events-none");
+      toast.classList.add("opacity-100");
+      setTimeout(() => {
+        toast.classList.remove("opacity-100");
+        toast.classList.add("opacity-0", "pointer-events-none");
+      }, 2500);
+    }
+
     async function saveWeightManualRecord() {
       const dateVal = document.getElementById('weightManualDate').value;
       const timeVal = document.getElementById('weightManualTime').value || "08:00";
       const weightVal = parseFloat(document.getElementById('weightManualInput').value);
 
       if (!dateVal) {
-        alert("측정 일자를 선택해주세요.");
+        showToast("⚠️ 측정 일자를 선택해주세요.");
         return;
       }
       if (isNaN(weightVal) || weightVal <= 20 || weightVal > 250) {
-        alert("올바른 체중을 입력해주세요 (예: 80.30)");
+        showToast("⚠️ 올바른 체중을 입력해주세요 (예: 80.30)");
         return;
       }
 
@@ -2830,7 +2855,7 @@
       closeWeightManualModal();
       await refreshAllViews();
 
-      alert(`✅ 체중 ${weightVal.toFixed(2)} kg 및 생체분석 지표가 저장되었습니다.`);
+      showToast(`✅ 체중 ${weightVal.toFixed(2)} kg 및 생체분석 지표가 저장되었습니다.`);
     }
 
     // ----------------------------------------------------
@@ -2875,7 +2900,7 @@
       const pulseVal = parseInt(document.getElementById('bpManualPulse').value);
 
       if (isNaN(sysVal) || isNaN(diaVal) || isNaN(pulseVal)) {
-        alert("수축기, 이완기, 맥박 수치를 올바르게 입력해주세요.");
+        showToast("⚠️ 수축기, 이완기, 맥박 수치를 올바르게 입력해주세요.");
         return;
       }
 
@@ -2895,27 +2920,7 @@
       closeBpManualModal();
       await refreshAllViews();
 
-      alert(`✅ 혈압 ${sysVal}/${diaVal} mmHg (${pulseVal} bpm)이 저장되었습니다.`);
-    }
-
-    // ----------------------------------------------------
-    // 네이티브 토스트 알림 헬퍼 (시스템 alert 팝업 및 오역 방지)
-    // ----------------------------------------------------
-    function showToast(msg) {
-      let toast = document.getElementById("appToast");
-      if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "appToast";
-        toast.className = "fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300 opacity-0 pointer-events-none max-w-[90%] text-center";
-        document.body.appendChild(toast);
-      }
-      toast.innerText = msg;
-      toast.classList.remove("opacity-0", "pointer-events-none");
-      toast.classList.add("opacity-100");
-      setTimeout(() => {
-        toast.classList.remove("opacity-100");
-        toast.classList.add("opacity-0", "pointer-events-none");
-      }, 2500);
+      showToast(`✅ 혈압 ${sysVal}/${diaVal} mmHg (${pulseVal} bpm)이 저장되었습니다.`);
     }
 
     // ----------------------------------------------------
@@ -2925,6 +2930,7 @@
     let bleServer = null;
     let bleNotifyChar = null;
     let bleAckChar = null;
+    let lastBleDeviceInstance = null;
     let scaleCountdownTimer = null;
     let scaleCountdownRemaining = 20;
     let pendingScaleData = null;
@@ -2957,8 +2963,8 @@
         }
       }, 1000);
 
-      // 3) Web Bluetooth 실시간 기기 연결 시도 (Bluefy 등 Web BLE 브라우저)
-      startBleScaleConnection();
+      // 3) Web Bluetooth 실시간 기기 연결 시도 (저장된 기기 우선 원터치 자동 연결)
+      startBleScaleConnection(false);
     }
 
     function updateScaleCountdownUI() {
@@ -2968,7 +2974,7 @@
       }
     }
 
-    async function startBleScaleConnection() {
+    async function startBleScaleConnection(forceNewScan = false) {
       if (isBleConnecting) return;
       isBleConnecting = true;
 
@@ -2987,44 +2993,104 @@
       const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       try {
-        document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
-
-        // 체중계 기기 필터 (주변의 불필요한 스마트기기, 차량, 비콘 등을 배제하고 체중계/맥북 시뮬레이터만 타겟팅)
-        const scaleFilterList = [
-          { namePrefix: "Moses" },
-          { namePrefix: "Mac" },
-          { namePrefix: "BalansLab" },
-          { namePrefix: "OKOK" },
-          { namePrefix: "Scale" },
-          { namePrefix: "Electronic" },
-          { services: [OKOK_SVC] },
-          { services: [WSS_SVC] }
-        ];
-
         let device = null;
-        try {
-          device = await navigator.bluetooth.requestDevice({
-            filters: scaleFilterList,
-            optionalServices: [OKOK_SVC, WSS_SVC]
-          });
-        } catch (filterErr) {
-          const errStr = String(filterErr?.message || filterErr);
-          if (filterErr?.name === "NotFoundError" || errStr.includes("cancel") || errStr.includes("cancelled") || errStr.includes("User cancelled")) {
-            throw filterErr;
+        let server = null;
+        const savedDeviceId = localStorage.getItem("health_tracker_last_scale_id");
+        const savedDeviceName = localStorage.getItem("health_tracker_last_scale_name");
+
+        // [원터치 자동 재연결]
+        // 강제 새 기기 검색(forceNewScan)이 아닌 경우, 직전 기기 또는 Bluefy 영구 권한(getDevices) 기기로 즉시 연결 시도
+        if (!forceNewScan) {
+          // A. 현재 세션 메모리에 기기 인스턴스가 남아있는 경우
+          if (lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
+            device = lastBleDeviceInstance;
+            document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "체중계"} 자동 연결 중...`;
           }
-          console.warn("필터링 요청 실패, 전체 검색으로 전환 시도:", filterErr);
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [OKOK_SVC, WSS_SVC]
-          });
+          // B. W3C Web Bluetooth Persistent Permissions (getDevices) 지원 환경
+          else if (navigator.bluetooth.getDevices) {
+            try {
+              const devices = await navigator.bluetooth.getDevices();
+              if (devices && devices.length > 0) {
+                if (savedDeviceId) {
+                  device = devices.find(d => d.id === savedDeviceId);
+                }
+                if (!device) {
+                  device = devices.find(d => {
+                    const n = d.name || "";
+                    return n.includes("Moses") || n.includes("BalansLab") || n.includes("Scale") || n.includes("OKOK") || n.includes("Mac");
+                  }) || devices[0];
+                }
+                if (device) {
+                  document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "저장된 체중계"} 자동 연결 중...`;
+                }
+              }
+            } catch (eGet) {
+              console.warn("getDevices 자동 연결 조회 생략:", eGet);
+            }
+          }
+
+          // 기억된 기기로 팝업 없이 GATT 연결 시도
+          if (device) {
+            try {
+              bleDevice = device;
+              lastBleDeviceInstance = device;
+              device.addEventListener("gattserverdisconnected", onBleDisconnected);
+              server = await device.gatt.connect();
+              bleServer = server;
+            } catch (autoConnErr) {
+              console.warn("자동 연결 실패, 기기 선택 팝업으로 전환:", autoConnErr);
+              device = null;
+              server = null;
+            }
+          }
         }
 
-        bleDevice = device;
-        device.addEventListener("gattserverdisconnected", onBleDisconnected);
+        // 2) 최초 연결이거나 자동 재연결 실패 시, 표준 기기 선택 팝업 호출
+        if (!device || !server) {
+          document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
-        document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
-        const server = await device.gatt.connect();
-        bleServer = server;
+          const scaleFilterList = [
+            { namePrefix: "Moses" },
+            { namePrefix: "Mac" },
+            { namePrefix: "BalansLab" },
+            { namePrefix: "OKOK" },
+            { namePrefix: "Scale" },
+            { namePrefix: "Electronic" },
+            { services: [OKOK_SVC] },
+            { services: [WSS_SVC] }
+          ];
+
+          try {
+            device = await navigator.bluetooth.requestDevice({
+              filters: scaleFilterList,
+              optionalServices: [OKOK_SVC, WSS_SVC]
+            });
+          } catch (filterErr) {
+            const errStr = String(filterErr?.message || filterErr);
+            if (filterErr?.name === "NotFoundError" || errStr.includes("cancel") || errStr.includes("cancelled") || errStr.includes("User cancelled")) {
+              throw filterErr;
+            }
+            console.warn("필터링 요청 실패, 전체 검색으로 전환 시도:", filterErr);
+            device = await navigator.bluetooth.requestDevice({
+              acceptAllDevices: true,
+              optionalServices: [OKOK_SVC, WSS_SVC]
+            });
+          }
+
+          bleDevice = device;
+          lastBleDeviceInstance = device;
+          device.addEventListener("gattserverdisconnected", onBleDisconnected);
+
+          document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
+          server = await device.gatt.connect();
+          bleServer = server;
+        }
+
+        // 정상 연결된 기기 정보 영구 기억 (다음 측정 시 원터치 직행용)
+        if (device && device.id) {
+          localStorage.setItem("health_tracker_last_scale_id", device.id);
+          localStorage.setItem("health_tracker_last_scale_name", device.name || "스마트 체중계");
+        }
 
         // FFF0 (OKOK) 및 181D (WSS) 서비스 탐색
         const activeCharacteristics = [];
@@ -3258,6 +3324,9 @@
         try {
           bleDevice.gatt.disconnect();
         } catch (e) {}
+      }
+      if (bleDevice) {
+        lastBleDeviceInstance = bleDevice;
       }
       bleDevice = null;
       bleServer = null;
@@ -3979,7 +4048,7 @@
       });
 
       await refreshAllViews();
-      alert(`✅ 혈압 수치(${pendingOcrData.sys}/${pendingOcrData.dia} mmHg, 맥박 ${pendingOcrData.pulse} bpm)가 저장되었습니다.`);
+      showToast(`✅ 혈압 수치(${pendingOcrData.sys}/${pendingOcrData.dia} mmHg, 맥박 ${pendingOcrData.pulse} bpm)가 저장되었습니다.`);
     }
 
     // ----------------------------------------------------
