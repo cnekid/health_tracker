@@ -359,16 +359,160 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     }
 }
 
+// MARK: - 실시간 BLE 레이더 (주변 신호 탐색기) 모델 및 매니저
+struct BleDeviceInfo {
+    let id: String
+    var name: String
+    var rssi: Int
+    var services: [String]
+    var manufacturerHex: String
+    var category: String // "scale", "apple", "samsung", "home_appliance", "other"
+    var lastSeen: Date
+    
+    var isLive: Bool {
+        return Date().timeIntervalSince(lastSeen) < 4.0
+    }
+}
+
+class BleRadarManager: NSObject, CBCentralManagerDelegate {
+    var centralManager: CBCentralManager!
+    var isScanning = false
+    var bluetoothState: CBManagerState = .unknown
+    var devices: [String: BleDeviceInfo] = [:]
+    var deviceOrder: [String] = [] // 순서 래칭용 (신호가 꺼져도 아래로 밀리지 않음)
+    
+    override init() {
+        super.init()
+        self.centralManager = CBCentralManager(delegate: self, queue: DispatchQueue.main)
+    }
+    
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        self.bluetoothState = central.state
+        if central.state != .poweredOn && isScanning {
+            stopScan()
+        }
+    }
+    
+    func startScan() {
+        guard centralManager.state == .poweredOn else { return }
+        isScanning = true
+        centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+    }
+    
+    func stopScan() {
+        centralManager.stopScan()
+        isScanning = false
+    }
+    
+    func clear() {
+        devices.removeAll()
+        deviceOrder.removeAll()
+    }
+    
+    func deleteDevice(id: String) {
+        devices.removeValue(forKey: id)
+        deviceOrder.removeAll { $0 == id }
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        let id = peripheral.identifier.uuidString
+        let advName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        let rawName = advName ?? peripheral.name ?? ""
+        var displayName = rawName.isEmpty ? "이름 없음 (\(id.prefix(8)))" : rawName
+        
+        var services: [String] = []
+        if let uuids = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
+            services = uuids.map { $0.uuidString }
+        }
+        
+        var mfgHex = ""
+        if let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
+            mfgHex = mfgData.map { String(format: "%02X", $0) }.joined()
+        }
+        
+        // 장치 유형 분류 로직
+        let upperName = rawName.uppercased()
+        let upperMfg = mfgHex.uppercased()
+        
+        let hasScaleUUID = services.contains { s in
+            let u = s.uppercased()
+            return u.contains("FFF0") || u.contains("181D") || u.contains("181B") || u.contains("FFF1")
+        }
+        let hasScaleName = upperName.contains("SCALE") || upperName.contains("OKOK") || upperName.contains("CHIPSEA") ||
+                           upperName.contains("BALANS") || upperName.contains("WEIGHT") || upperName.contains("BODY") ||
+                           upperName.starts(with: "SF") || upperName.starts(with: "S88")
+        
+        // 밸런스랩 실제 체중계 칩셋 패킷 식별 (0xFFFF 제조사 ID + 4311 Chipsea + FFF0 OKOK 서비스)
+        let isBalansLabScale = (upperMfg.contains("4311") && upperMfg.contains("FFF0")) ||
+                               (upperMfg.starts(with: "FFFF") && upperMfg.contains("FFF0"))
+        
+        var category = "other"
+        if isBalansLabScale {
+            category = "scale"
+            if rawName.isEmpty {
+                displayName = "⚖️ 밸런스랩 체중계 (\(id.prefix(8)))"
+            }
+        } else if upperMfg.starts(with: "4C00") || upperName.contains("APPLE") || upperName.contains("MACBOOK") || upperName.contains("IPHONE") || upperName.contains("IPAD") || upperName.contains("WATCH") {
+            category = "apple"
+        } else if upperMfg.starts(with: "7500") || upperName.contains("SAMSUNG") || upperName.contains("TV") || upperName.contains("AIRPURIFIER") {
+            category = "home_appliance"
+        } else if (hasScaleUUID || hasScaleName || upperMfg.starts(with: "CA11")) && !upperName.contains("INBODY") {
+            category = "scale"
+        }
+        
+        let info = BleDeviceInfo(
+            id: id,
+            name: displayName,
+            rssi: RSSI.intValue,
+            services: services,
+            manufacturerHex: mfgHex,
+            category: category,
+            lastSeen: Date()
+        )
+        
+        // 래칭(Latching): 한 번 잡힌 순서를 보존하여 신호가 꺼져도 위치가 밀리지 않음
+        if devices[id] == nil {
+            if category == "scale" {
+                deviceOrder.insert(id, at: 0) // 체중계 후보는 최상단에 고정
+            } else {
+                deviceOrder.append(id)
+            }
+        }
+        devices[id] = info
+    }
+    
+    func getRadarSnapshot() -> [[String: Any]] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        
+        return deviceOrder.compactMap { id -> [String: Any]? in
+            guard let dev = devices[id] else { return nil }
+            return [
+                "id": dev.id,
+                "name": dev.name,
+                "rssi": dev.rssi,
+                "services": dev.services,
+                "manufacturerHex": dev.manufacturerHex,
+                "category": dev.category,
+                "isLive": dev.isLive,
+                "lastSeen": formatter.string(from: dev.lastSeen)
+            ]
+        }
+    }
+}
+
 // MARK: - 초경량 로컬 HTTP 서버 (NWListener 기반)
 class LocalHttpServer {
     let port: NWEndpoint.Port
     var listener: NWListener?
     let device: BalansLabVirtualDevice
+    let radar: BleRadarManager
     let htmlPath: String
     
-    init(port: UInt16 = DEFAULT_HTTP_PORT, device: BalansLabVirtualDevice) {
+    init(port: UInt16 = DEFAULT_HTTP_PORT, device: BalansLabVirtualDevice, radar: BleRadarManager) {
         self.port = NWEndpoint.Port(rawValue: port)!
         self.device = device
+        self.radar = radar
         
         let cwd = FileManager.default.currentDirectoryPath
         self.htmlPath = (cwd as NSString).appendingPathComponent("plan_health_tracker/ui_balanslab_virtual_device.html")
@@ -500,7 +644,60 @@ class LocalHttpServer {
             return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
         }
         
-        // 3. GET / (웹 어드민 화면 서빙)
+        // 4. POST /api/radar/start (사용자 요청 시에만 스캔 시작)
+        if method == "POST" && path.starts(with: "/api/radar/start") {
+            radar.startScan()
+            let res: [String: Any] = ["success": true, "isScanning": radar.isScanning]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
+        }
+        
+        // 5. POST /api/radar/stop (스캔 즉시 중단 - 맥 리소스 낭비 방지)
+        if method == "POST" && path.starts(with: "/api/radar/stop") {
+            radar.stopScan()
+            let res: [String: Any] = ["success": true, "isScanning": radar.isScanning]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
+        }
+        
+        // 6. GET /api/radar (현재 감지된 BLE 장치 래칭 스냅샷 조회)
+        if method == "GET" && path.starts(with: "/api/radar") {
+            let list = radar.getRadarSnapshot()
+            let res: [String: Any] = [
+                "isScanning": radar.isScanning,
+                "count": list.count,
+                "devices": list
+            ]
+            if let jsonData = try? JSONSerialization.data(withJSONObject: res),
+               let jsonStr = String(data: jsonData, encoding: .utf8) {
+                return buildResponse(status: 200, body: jsonStr, contentType: "application/json")
+            }
+        }
+        
+        // 7. POST /api/radar/clear (감지 목록 전체 비우기)
+        if method == "POST" && path.starts(with: "/api/radar/clear") {
+            radar.clear()
+            let res: [String: Any] = ["success": true]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
+        }
+        
+        // 8. POST /api/radar/delete (단일 기기 목록에서 삭제)
+        if method == "POST" && path.starts(with: "/api/radar/delete") {
+            if let bodyRange = req.range(of: "\r\n\r\n") {
+                let bodyStr = String(req[bodyRange.upperBound...])
+                if let bodyData = bodyStr.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any],
+                   let id = json["id"] as? String {
+                    radar.deleteDevice(id: id)
+                }
+            }
+            let res: [String: Any] = ["success": true]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
+        }
+        
+        // 9. GET / (웹 어드민 화면 서빙)
         if method == "GET" && (path == "/" || path == "/index.html") {
             if let htmlContent = try? String(contentsOfFile: htmlPath, encoding: .utf8) {
                 return buildResponse(status: 200, body: htmlContent, contentType: "text/html; charset=utf-8")
@@ -539,7 +736,8 @@ class LocalHttpServer {
 
 // MARK: - 메인 실행부
 let device = BalansLabVirtualDevice()
-let server = LocalHttpServer(port: DEFAULT_HTTP_PORT, device: device)
+let radar = BleRadarManager()
+let server = LocalHttpServer(port: DEFAULT_HTTP_PORT, device: device, radar: radar)
 server.start()
 
 print("""

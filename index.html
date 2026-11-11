@@ -853,14 +853,18 @@
             <!-- 재연결 필요 시 원터치 팝업 호출 버튼 -->
             <button id="scaleReconnectBtn" type="button" onclick="startBleScaleConnection(true)" class="hidden w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-rotate-right"></i>
-              <span>체중계 다시 찾기 (연결 팝업)</span>
+              <span>⚖️ 체중계 연결하기 (액정 켠 후 터치)</span>
             </button>
             <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
-            <div class="mt-2 text-center">
-              <button type="button" onclick="startBleScaleConnection(true)" class="text-[11px] text-slate-400 hover:text-blue-600 underline">
-                다른 체중계로 변경 (새로 검색)
+            <div class="mt-2 flex items-center justify-center gap-3 text-[11px] text-slate-400">
+              <button type="button" onclick="startBleScaleConnection(true)" class="hover:text-blue-600 underline">
+                체중계 새로 검색
+              </button>
+              <span>•</span>
+              <button type="button" onclick="resetBleScaleSavedDevice()" class="hover:text-rose-500 underline">
+                기존 연결 초기화
               </button>
             </div>
           </div>
@@ -4525,6 +4529,18 @@
       }
     }
 
+    function resetBleScaleSavedDevice() {
+      localStorage.removeItem("health_tracker_last_scale_id");
+      localStorage.removeItem("health_tracker_last_scale_name");
+      if (lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
+        try { lastBleDeviceInstance.gatt.disconnect(); } catch (_) {}
+      }
+      lastBleDeviceInstance = null;
+      document.getElementById("scaleStatusText").innerText = "연결 정보 초기화됨 (새로 연결해주세요)";
+      showToast("체중계 연결 정보가 초기화되었습니다.");
+      startBleScaleConnection(true);
+    }
+
     async function startBleScaleConnection(forceNewScan = false) {
       if (isBleConnecting) return;
       isBleConnecting = true;
@@ -4547,6 +4563,31 @@
       const WSS_NOTIFY = "00002a9d-0000-1000-8000-00805f9b34fb";
       const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
+      // 오직 스마트 체중계 2종(실제 밸런스랩 체중계 칩셋 + 가상 체중계)만 감지하는 엄격한 타겟 필터
+      // 잡다한 Apple(0x004C), Samsung(0x0075), 가전 기기 등 50여 개 비체중계 기기 100% 원천 차단
+      const scaleFilters = [
+        // 1) 맥북 가상 체중계
+        { name: "BalansLab-Scale" },
+        // 2) 실제 밸런스랩 물리 체중계 (Chipsea 제조사 식별자 0xFFFF 및 확장 식별자)
+        { manufacturerData: [{ companyIdentifier: 0xffff }] },
+        { manufacturerData: [{ companyIdentifier: 0x0015 }] },
+        { manufacturerData: [{ companyIdentifier: 0x1500 }] },
+        { manufacturerData: [{ companyIdentifier: 0x4311 }] },
+        { manufacturerData: [{ companyIdentifier: 0x1143 }] },
+        // 3) 표준 OKOK / WSS 체중계 서비스
+        { services: [OKOK_SVC] },
+        { services: [WSS_SVC] }
+      ];
+
+      const optionalScaleServices = [
+        OKOK_SVC,
+        WSS_SVC,
+        "0000181b-0000-1000-8000-00805f9b34fb", // Body Composition
+        "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
+        "0000fee7-0000-1000-8000-00805f9b34fb", // Chipsea / Tencent
+        "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
+      ];
+
       try {
         let device = null;
         let server = null;
@@ -4555,12 +4596,12 @@
         if (!forceNewScan && lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
           device = lastBleDeviceInstance;
           server = lastBleDeviceInstance.gatt;
-          const friendlyName = (device.name && (device.name.includes("Moses") || device.name.includes("MacBook"))) ? "가상 체중계" : (device.name || "스마트 체중계");
+          const friendlyName = (device.name && (device.name.includes("Moses") || device.name.includes("MacBook") || device.name.includes("BalansLab"))) ? "가상 체중계" : (device.name || "스마트 체중계");
           document.getElementById("scaleStatusText").innerText = `${friendlyName} 연결됨`;
         }
 
-        // 2) 이전에 연결했던 기기 인스턴스 또는 권한 부여된 기기(getDevices)가 있는 경우
-        // -> 팝업 선택창 없이 배경에서 완전 자동 직행 재연결 시도!
+        // 2) 이전에 권한 승인된 기기가 있는 경우: 빠른 무팝업 직행 연결 시도 (1.2초)
+        let hasSavedCandidate = false;
         if (!device && !forceNewScan) {
           try {
             const candidateDevices = [];
@@ -4571,7 +4612,7 @@
               const authed = await navigator.bluetooth.getDevices();
               if (authed && authed.length > 0) {
                 const savedId = localStorage.getItem("health_tracker_last_scale_id");
-                // 직전 연결 기기 최우선 배치
+                // 직전 연결 기기를 최우선으로 단 1개만 시도 (대기 지연 최소화)
                 const sorted = authed.slice().sort((a, b) => (a.id === savedId ? -1 : (b.id === savedId ? 1 : 0)));
                 for (const d of sorted) {
                   if (!candidateDevices.some(c => c.id === d.id)) {
@@ -4581,27 +4622,30 @@
               }
             }
 
-            for (const cand of candidateDevices) {
-              if (!cand || !cand.gatt) continue;
-              const candName = (cand.name && (cand.name.includes("Moses") || cand.name.includes("MacBook"))) ? "가상 체중계" : (cand.name || "스마트 체중계");
-              document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결 중 (무팝업)...`;
-              try {
-                const s = await Promise.race([
-                  cand.gatt.connect(),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500))
-                ]);
-                if (s && s.connected) {
-                  device = cand;
-                  server = s;
-                  bleDevice = device;
-                  lastBleDeviceInstance = device;
-                  bleServer = server;
-                  device.addEventListener("gattserverdisconnected", onBleDisconnected);
-                  document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결됨`;
-                  break;
+            if (candidateDevices.length > 0) {
+              hasSavedCandidate = true;
+              const cand = candidateDevices[0];
+              if (cand && cand.gatt) {
+                const candName = (cand.name && (cand.name.includes("Moses") || cand.name.includes("MacBook") || cand.name.includes("BalansLab"))) ? "가상 체중계" : (cand.name || "스마트 체중계");
+                document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결 중...`;
+                try {
+                  const s = await Promise.race([
+                    cand.gatt.connect(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 1200))
+                  ]);
+                  if (s && s.connected) {
+                    device = cand;
+                    server = s;
+                    bleDevice = device;
+                    lastBleDeviceInstance = device;
+                    bleServer = server;
+                    device.addEventListener("gattserverdisconnected", onBleDisconnected);
+                    document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결됨`;
+                  }
+                } catch (eCand) {
+                  console.warn("기기 자동 연결 대기 초과 또는 오프라인:", cand.id, eCand);
+                  try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
                 }
-              } catch (eCand) {
-                console.warn("기기 자동 연결 대기 초과 또는 실패:", cand.id, eCand);
               }
             }
           } catch (eAuto) {
@@ -4609,26 +4653,42 @@
           }
         }
 
-        // 3) 자동 연결 기기가 없거나 실패한 경우, 또는 사용자가 '새로 검색'을 누른 경우 -> 기기 선택 팝업 호출
+        // 3) 자동 연결 기기가 오프라인/미응답인 경우:
+        // 지연 시간으로 인해 브라우저 사용자 제스처 유효기간이 지났을 수 있으므로 강제 자동 팝업 대신
+        // [체중계 연결하기] 원터치 버튼을 활성화하여 사용자의 신선한 터치로 즉시 팝업을 열도록 유도!
+        if (!device && !forceNewScan && hasSavedCandidate) {
+          document.getElementById("scaleStatusText").innerText = "체중계 전원(액정)을 켠 후 아래 연결 터치";
+          if (reconnectBtn) {
+            reconnectBtn.classList.remove("hidden");
+          }
+          isBleConnecting = false;
+          return;
+        }
+
+        // 4) 저장된 기기가 없거나, 사용자가 직접 [체중계 새로 검색] 또는 [체중계 연결하기]를 누른 경우
+        // -> 타겟 필터가 적용된 시스템 기기 선택창 호출 (잡다한 기기 배제, 오직 체중계만 노출)
         if (!device || !server) {
-          document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (체중계에 올라서세요)";
+          document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
-          const optionalScaleServices = [
-            OKOK_SVC,
-            WSS_SVC,
-            "0000181b-0000-1000-8000-00805f9b34fb", // Body Composition
-            "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
-            "0000fee7-0000-1000-8000-00805f9b34fb", // Chipsea / Tencent
-            "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
-          ];
-
-          // Bluefy 및 Web BLE 호환: 실제 밸런스랩 체중계는 Local Name 없이 Manufacturer Data만 방송하므로,
-          // 특정 이름 필터로 제한하면 실제 체중계가 제외됩니다.
-          // 따라서 acceptAllDevices: true로 호출하여 실제 체중계와 가상 체중계 모두 목록에 나타나도록 합니다.
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: optionalScaleServices
-          });
+          try {
+            device = await navigator.bluetooth.requestDevice({
+              filters: scaleFilters,
+              optionalServices: optionalScaleServices
+            });
+          } catch (filterErr) {
+            if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
+              throw filterErr;
+            }
+            console.warn("확장 필터 fallback 가동:", filterErr);
+            device = await navigator.bluetooth.requestDevice({
+              filters: [
+                { name: "BalansLab-Scale" },
+                { services: [OKOK_SVC] },
+                { services: [WSS_SVC] }
+              ],
+              optionalServices: optionalScaleServices
+            });
+          }
 
           bleDevice = device;
           lastBleDeviceInstance = device;
@@ -4723,10 +4783,9 @@
         const errName = err?.name || "";
         const errMsg = err?.message || String(err) || "";
         if (errName === "NotFoundError" || errMsg.includes("cancelled") || errMsg.includes("canceled") || errMsg.includes("User cancelled")) {
-          document.getElementById("scaleStatusText").innerText = "기기 선택이 취소되었습니다.";
+          document.getElementById("scaleStatusText").innerText = "기기 선택이 취소되었습니다. (아래 연결 터치)";
         } else {
-          const devName = device?.name ? ` (${device.name})` : "";
-          document.getElementById("scaleStatusText").innerText = `연결 실패${devName}: ${errMsg || "체중계를 다시 찾아주세요"}`;
+          document.getElementById("scaleStatusText").innerText = "체중계 전원(액정)을 켠 후 아래 연결 터치";
         }
         // 연결 실패 또는 브라우저 보안 제약 시 즉시 재연결 버튼 활성화
         const reconnectBtn = document.getElementById("scaleReconnectBtn");
