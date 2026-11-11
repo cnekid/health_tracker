@@ -225,13 +225,27 @@
         </div>
       </section>
 
-      <!-- ================= 2. [상세] 탭: '건강 지표' 3일 매트릭스 표 ================= -->
+      <!-- ================= 2. [상세] 탭: '건강 지표' 매트릭스 표 (체중계 vs 혈압계 분리) ================= -->
       <section id="view-details" class="space-y-4 hidden">
         <div class="pt-2">
           <h2 class="text-xl font-black text-slate-900 tracking-tight">건강 지표</h2>
         </div>
 
-        <!-- 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 4일 단위 무한 스크롤) -->
+        <!-- 기기별 2단 세그먼트 탭: [체중계 지표] vs [혈압계 지표] -->
+        <div class="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200/70">
+          <button id="detailsTabBtnScale" onclick="switchDetailsSubTab('scale')" class="flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-weight-scale text-[11px]"></i>
+            <span>체중계 지표</span>
+            <span id="detailsTabScaleCount" class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-mono font-bold">0건</span>
+          </button>
+          <button id="detailsTabBtnBp" onclick="switchDetailsSubTab('bp')" class="flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-heart-pulse text-[11px]"></i>
+            <span>혈압계 지표</span>
+            <span id="detailsTabBpCount" class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-mono font-medium">0건</span>
+          </button>
+        </div>
+
+        <!-- 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 측정 회차별 점진적 로드) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
           <div id="metricsTableContainer" class="overflow-x-auto relative scroll-smooth overscroll-x-contain">
             <table id="metricsTable" class="w-full text-left text-xs border-separate border-spacing-0">
@@ -241,7 +255,7 @@
                   <th class="sticky left-0 bg-slate-50 z-20 py-3 px-3 text-left font-bold text-slate-700 border-r border-b border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)] whitespace-nowrap min-w-[105px]">
                     지표 항목
                   </th>
-                  <!-- 동적으로 날짜 th 셀들이 4개씩 추가됨 -->
+                  <!-- 동적으로 날짜/시간 th 셀들이 점진적으로 추가됨 -->
                 </tr>
               </thead>
               <tbody id="metricsTableBody" class="text-slate-700 font-medium">
@@ -1932,6 +1946,11 @@
 
     function switchMainTab(tab) {
       currentMainTab = tab;
+      try {
+        sessionStorage.setItem('healthTracker_activeTab', tab);
+        sessionStorage.removeItem('healthTracker_metricDetailKey');
+      } catch (e) {}
+
       const views = {
         home: document.getElementById('view-home'),
         details: document.getElementById('view-details'),
@@ -1989,6 +2008,12 @@
       detailHistoryDisplayLimit = 10;
       detailChartPageOffset = 0; // 차트 페이징 항상 최신 6일 구간으로 초기화
 
+      try {
+        sessionStorage.setItem('healthTracker_activeTab', 'metric_detail');
+        sessionStorage.setItem('healthTracker_metricDetailKey', metricKey);
+        sessionStorage.setItem('healthTracker_metricDetailSource', fromSource);
+      } catch (e) {}
+
       // 뒤로가기 버튼 텍스트: 들어온 곳에 따라 '← 홈' 또는 '← 상세'로 표기
       const backLabel = document.getElementById('detailBackBtnLabel');
       if (backLabel) {
@@ -2017,6 +2042,9 @@
     }
 
     function closeMetricDetail() {
+      try {
+        sessionStorage.removeItem('healthTracker_metricDetailKey');
+      } catch (e) {}
       // 진입했던 소스 탭(홈 또는 상세)으로 정확하게 복귀
       switchMainTab(metricDetailSourceTab || 'home');
     }
@@ -2384,14 +2412,58 @@
     }
 
     // ----------------------------------------------------
-    // 상세 탭: 건강 지표 가로 스와이프 매트릭스 테이블 (좌측 항목 고정 + 측정 회차별 점진적 로드)
+    // 상세 탭: 건강 지표 가로 스와이프 매트릭스 테이블 (체중계 vs 혈압계 분리 탭)
     // ----------------------------------------------------
+    let currentDetailsSubTab = 'scale'; // 'scale' | 'bp'
+    try {
+      const savedSub = sessionStorage.getItem('healthTracker_detailsSubTab');
+      if (savedSub === 'bp' || savedSub === 'scale') {
+        currentDetailsSubTab = savedSub;
+      }
+    } catch (e) {}
+
     let detailsMatrixColumns = [];
     let detailsMatrixLoadedCount = 0;
     const DETAILS_CHUNK_SIZE = 4;
     let detailsMatrixRowsDef = [];
 
+    function switchDetailsSubTab(tab) {
+      if (currentDetailsSubTab === tab) return;
+      currentDetailsSubTab = tab;
+      try {
+        sessionStorage.setItem('healthTracker_detailsSubTab', tab);
+      } catch (e) {}
+      updateDetailsTabStyles();
+      renderDetailsMatrixTable();
+    }
+
+    function updateDetailsTabStyles() {
+      const btnScale = document.getElementById('detailsTabBtnScale');
+      const btnBp = document.getElementById('detailsTabBtnBp');
+      const countScale = cachedBodyList.length;
+      const countBp = cachedBpList.length;
+
+      const countScaleEl = document.getElementById('detailsTabScaleCount');
+      const countBpEl = document.getElementById('detailsTabBpCount');
+      if (countScaleEl) countScaleEl.innerText = `${countScale}건`;
+      if (countBpEl) countBpEl.innerText = `${countBp}건`;
+
+      if (currentDetailsSubTab === 'scale') {
+        if (btnScale) btnScale.className = "flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (btnBp) btnBp.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (countScaleEl) countScaleEl.className = "text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-mono font-bold";
+        if (countBpEl) countBpEl.className = "text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-mono font-medium";
+      } else {
+        if (btnScale) btnScale.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (btnBp) btnBp.className = "flex-1 py-2 text-xs font-bold text-rose-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (countScaleEl) countScaleEl.className = "text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-mono font-medium";
+        if (countBpEl) countBpEl.className = "text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded-full font-mono font-bold";
+      }
+    }
+
     function renderDetailsMatrixTable() {
+      updateDetailsTabStyles();
+
       const tbody = document.getElementById('metricsTableBody');
       const headerRow = document.getElementById('metricsTableHeaderRow');
       const container = document.getElementById('metricsTableContainer');
@@ -2399,91 +2471,66 @@
 
       tbody.innerHTML = '';
 
-      // 헤더 초기화: 첫 번째 고정 열인 '지표 항목' <th>만 남기고 기존 날짜 <th>는 모두 제거
+      // 헤더 초기화: 첫 번째 고정 열인 '지표 항목' <th>만 남기고 기존 측정 <th>는 모두 제거
       while (headerRow.children.length > 1) {
         headerRow.removeChild(headerRow.lastChild);
       }
 
-      if (cachedBodyList.length === 0 && cachedBpList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-xs text-slate-400 font-medium">기록된 건강 데이터가 없습니다.</td></tr>';
+      const isBp = (currentDetailsSubTab === 'bp');
+      const dataset = isBp ? cachedBpList : cachedBodyList;
+
+      if (dataset.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-xs text-slate-400 font-medium">기록된 ${isBp ? '혈압계' : '체중계'} 데이터가 없습니다.</td></tr>`;
         return;
       }
 
-      // 사용자가 삭제하지 않은 모든 측정 항목을 개별 열로 구성 (초 단위까지 보존된 고유 측정 세트)
-      const columnMap = new Map();
-
-      // 1. 체중계 측정 원천 기록 추가
-      cachedBodyList.forEach(body => {
-        const timeFull = body.time || "00:00:00";
-        const key = body.id || `body_${body.date}_${timeFull}`;
-        columnMap.set(key, {
+      // 기기별 독립 열 목록 구성 (초 단위 시간까지 보존하여 고유성 확보, 화면에는 00:00 시:분 표시)
+      detailsMatrixColumns = dataset.map(item => {
+        const timeFull = item.time || "00:00:00";
+        const key = item.id || `${isBp ? 'bp' : 'body'}_${item.date}_${timeFull}`;
+        return {
           id: key,
-          date: body.date,
+          date: item.date,
           timeFull: timeFull,
-          displayDate: body.date.slice(5).replace('-', '/'),
-          displayTime: body.time ? body.time.slice(0, 5) : '',
-          sortKey: `${body.date} ${timeFull}_${key}`,
-          body: body,
-          bp: null
-        });
-      });
+          displayDate: item.date.slice(5).replace('-', '/'),
+          displayTime: item.time ? item.time.slice(0, 5) : '',
+          sortKey: `${item.date} ${timeFull}_${key}`,
+          data: item
+        };
+      }).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
-      // 2. 혈압계 측정 원천 기록 추가 (초 단위 시간까지 완전 일치 세션은 동일 열 병합, 그 외 독립 열)
-      cachedBpList.forEach(bp => {
-        const timeFull = bp.time || "00:00:00";
-        let merged = false;
-        if (bp.time) {
-          for (let col of columnMap.values()) {
-            if (col.date === bp.date && col.timeFull === timeFull && !col.bp) {
-              col.bp = bp;
-              merged = true;
-              break;
-            }
+      // 기기별 지표 항목 정의
+      if (isBp) {
+        // [혈압계 지표]: 사용자 지침대로 맥박 제외, 수축기 혈압 / 이완기 혈압 (단위 생략)
+        detailsMatrixRowsDef = [
+          { 
+            key: 'bp_sys', 
+            metricDetailKey: 'bp',
+            title: '수축기 혈압', 
+            unit: '', 
+            getVal: (d) => d && d.sys != null ? `${d.sys}` : '-' 
+          },
+          { 
+            key: 'bp_dia', 
+            metricDetailKey: 'bp',
+            title: '이완기 혈압', 
+            unit: '', 
+            getVal: (d) => d && d.dia != null ? `${d.dia}` : '-' 
           }
-        }
-        if (!merged) {
-          const key = bp.id || `bp_${bp.date}_${timeFull}`;
-          columnMap.set(key, {
-            id: key,
-            date: bp.date,
-            timeFull: timeFull,
-            displayDate: bp.date.slice(5).replace('-', '/'),
-            displayTime: bp.time ? bp.time.slice(0, 5) : '',
-            sortKey: `${bp.date} ${timeFull}_${key}`,
-            body: null,
-            bp: bp
-          });
-        }
-      });
-
-      // 3. 최신순(내림차순) 정렬: 가장 최신 측정이 맨 첫 번째 열
-      detailsMatrixColumns = Array.from(columnMap.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
-
-      // 건강 지표 리스트 정의 (수축기/이완기 혈압은 사용자 지시대로 단위 생략)
-      detailsMatrixRowsDef = [
-        { key: 'weight', title: '체중', unit: 'kg', getVal: (body, bp) => body ? body.weight.toFixed(2) : '-' },
-        { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (body, bp) => body ? body.bodyFat.toFixed(1) : '-' },
-        { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (body, bp) => body ? body.muscleMass.toFixed(2) : '-' },
-        { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (body, bp) => body ? body.muscleRate.toFixed(1) : '-' },
-        { key: 'bmi', title: 'BMI', unit: '지수', getVal: (body, bp) => body ? body.bmi.toFixed(1) : '-' },
-        { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (body, bp) => body ? `${body.visceralFat}` : '-' },
-        { key: 'water', title: '체수분율', unit: '%', getVal: (body, bp) => body ? body.water.toFixed(1) : '-' },
-        { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (body, bp) => body ? `${body.bmr}` : '-' },
-        { 
-          key: 'bp_sys', 
-          metricDetailKey: 'bp',
-          title: '수축기 혈압', 
-          unit: '', // 칸 여유를 위해 단위 생략
-          getVal: (body, bp) => bp ? `${bp.sys}` : '-' 
-        },
-        { 
-          key: 'bp_dia', 
-          metricDetailKey: 'bp',
-          title: '이완기 혈압', 
-          unit: '', // 칸 여유를 위해 단위 생략
-          getVal: (body, bp) => bp ? `${bp.dia}` : '-' 
-        }
-      ];
+        ];
+      } else {
+        // [체중계 지표]: 8대 BIA 체성분
+        detailsMatrixRowsDef = [
+          { key: 'weight', title: '체중', unit: 'kg', getVal: (d) => d && d.weight != null ? d.weight.toFixed(2) : '-' },
+          { key: 'bodyFat', title: '체지방률', unit: '%', getVal: (d) => d && d.bodyFat != null ? d.bodyFat.toFixed(1) : '-' },
+          { key: 'muscleMass', title: '골격근량', unit: 'kg', getVal: (d) => d && d.muscleMass != null ? d.muscleMass.toFixed(2) : '-' },
+          { key: 'muscleRate', title: '골격근율', unit: '%', getVal: (d) => d && d.muscleRate != null ? d.muscleRate.toFixed(1) : '-' },
+          { key: 'bmi', title: 'BMI', unit: '지수', getVal: (d) => d && d.bmi != null ? d.bmi.toFixed(1) : '-' },
+          { key: 'visceralFat', title: '내장지방', unit: 'Lv', getVal: (d) => d && d.visceralFat != null ? `${d.visceralFat}` : '-' },
+          { key: 'water', title: '체수분율', unit: '%', getVal: (d) => d && d.water != null ? d.water.toFixed(1) : '-' },
+          { key: 'bmr', title: '기초대사량', unit: 'kcal', getVal: (d) => d && d.bmr != null ? `${d.bmr}` : '-' }
+        ];
+      }
 
       // 각 지표별 행(tr) 및 좌측 고정 열(td) 생성
       detailsMatrixRowsDef.forEach(metric => {
@@ -2536,6 +2583,9 @@
       const nextCols = detailsMatrixColumns.slice(detailsMatrixLoadedCount, detailsMatrixLoadedCount + chunkSize);
       if (nextCols.length === 0) return;
 
+      const isBp = (currentDetailsSubTab === 'bp');
+      const timeColor = isBp ? 'text-rose-600' : 'text-blue-600';
+
       nextCols.forEach((col, idx) => {
         const globalIdx = detailsMatrixLoadedCount + idx;
         const isLatest = (globalIdx === 0);
@@ -2549,7 +2599,7 @@
         th.innerHTML = `
           <div class="flex flex-col items-end justify-center leading-tight">
             <span class="${isLatest ? 'font-black text-slate-900 text-xs' : 'font-semibold text-slate-600 text-xs'}">${col.displayDate}</span>
-            <span class="text-[10px] font-mono ${isLatest ? 'text-blue-600 font-bold' : 'text-slate-400 font-normal'} mt-0.5">${col.displayTime || '--:--'}</span>
+            <span class="text-[10px] font-mono ${isLatest ? `${timeColor} font-bold` : 'text-slate-400 font-normal'} mt-0.5">${col.displayTime || '--:--'}</span>
           </div>
         `;
         headerRow.appendChild(th);
@@ -2560,7 +2610,7 @@
           if (!tr) return;
 
           const td = document.createElement('td');
-          const val = metric.getVal(col.body, col.bp);
+          const val = metric.getVal(col.data);
 
           td.className = isLatest
             ? "py-3 px-2.5 text-right font-black text-slate-900 font-mono border-b border-slate-100 whitespace-nowrap min-w-[62px]"
@@ -5243,6 +5293,19 @@
         renderProfileUI();
         await openDB();
         await refreshAllViews();
+
+        // 새로고침 전 머물던 탭 상태 완벽 복원
+        const savedTab = sessionStorage.getItem('healthTracker_activeTab');
+        const savedMetricKey = sessionStorage.getItem('healthTracker_metricDetailKey');
+        const savedMetricSource = sessionStorage.getItem('healthTracker_metricDetailSource');
+
+        if (savedTab === 'metric_detail' && savedMetricKey) {
+          await openMetricDetail(savedMetricKey, savedMetricSource || 'home');
+        } else if (savedTab && ['home', 'details', 'settings'].includes(savedTab)) {
+          switchMainTab(savedTab);
+        } else {
+          switchMainTab('home');
+        }
       } catch (err) {
         console.error("초기 로드 실패:", err);
       }
