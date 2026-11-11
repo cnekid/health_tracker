@@ -506,6 +506,27 @@
   6. **무결성 검증 및 동기화:**
      * `index.html`과 `plan_health_tracker/ui_health_tracker.html` 100% 동일 동기화 (0 diff 보장).
 
+---
+
+### [2026-11-11] Apple 건강(HealthKit) 단축어 연동 & Bluefy 스마트 체중계 BLE 직행 연결 최적화
+
+* **작업 배경:**
+  * 신규 실측 체중 및 혈압 데이터가 Apple 건강 앱과 자동 동기화되도록 iOS 단축어(`LogHealth`, `LogBP`) 브릿지 구축.
+  * 백업 복원 및 휴지통 복구 시 중복 전송 원천 차단.
+  * iOS Bluefy 브라우저에서 `navigator.bluetooth.getDevices()` 미해결 프로미스 무한 대기로 인해 체중계 모달이 "기기 검색 중..."에서 멈추던 결함 긴급 패치.
+
+* **세부 작업 내역:**
+  1. **단축어 분기 라우팅 엔진 구축 (`syncToAppleHealth`):**
+     * 체중 측정(`scale`) ➔ `shortcuts://run-shortcut?name=LogHealth&input=text&text={JSON}`
+     * 혈압 측정(`bp`) ➔ `shortcuts://run-shortcut?name=LogBP&input=text&text={JSON}` (맥박 제외, 수축기/이완기 전용)
+     * 신규 실측/수동 저장 시에만 단축어를 호출하며, 백업 복원 및 휴지통 복구 루틴에서는 호출을 원천 차단하여 중복 기록 방지.
+  2. **체중계 BLE 연결 무한 대기 버그 수정 (`startBleScaleConnection`):**
+     * iOS Bluefy 환경에서 미지원/무응답 프로미스를 반환하는 `navigator.bluetooth.getDevices()` 대기 블록을 제거.
+     * 사용자가 `[체중 측정]` 버튼을 클릭한 즉각적 사용자 제스처(User Gesture) 유효 시간 내에 `navigator.bluetooth.requestDevice`가 다이렉트 호출되도록 개편하여 iOS 네이티브 블루투스 페어링 시트가 즉각 팝업되도록 보장.
+  3. **코드 동기화 및 무결성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff).
+     * JavaScriptCore 구문 분석 0 error 통과.
+
 
 
 

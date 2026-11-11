@@ -4549,67 +4549,15 @@
       try {
         let device = null;
         let server = null;
-        const savedDeviceId = localStorage.getItem("health_tracker_last_scale_id");
-        const savedDeviceName = localStorage.getItem("health_tracker_last_scale_name");
 
-        // [원터치 자동 재연결]
-        // 강제 새 기기 검색(forceNewScan)이 아닌 경우, 직전 기기 또는 Bluefy 영구 권한(getDevices) 기기로 즉시 연결 시도
-        if (!forceNewScan) {
-          // A. 현재 세션 메모리에 이미 연결된 기기 인스턴스가 살아있는 경우 즉시 재사용
-          if (lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
-            device = lastBleDeviceInstance;
-            server = lastBleDeviceInstance.gatt;
-            document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "체중계"} 연결됨`;
-          }
-          // B. 메모리에 기기 인스턴스가 남아있는 경우 타임아웃과 함께 재연결 시도
-          else if (lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
-            device = lastBleDeviceInstance;
-            document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "체중계"} 자동 연결 중...`;
-          }
-          // C. W3C Web Bluetooth Persistent Permissions (getDevices) 지원 환경
-          else if (navigator.bluetooth.getDevices) {
-            try {
-              const devices = await navigator.bluetooth.getDevices();
-              if (devices && devices.length > 0) {
-                if (savedDeviceId) {
-                  device = devices.find(d => d.id === savedDeviceId);
-                }
-                if (!device) {
-                  device = devices.find(d => {
-                    const n = d.name || "";
-                    return n.includes("Moses") || n.includes("BalansLab") || n.includes("Scale") || n.includes("OKOK") || n.includes("Mac");
-                  }) || devices[0];
-                }
-                if (device) {
-                  document.getElementById("scaleStatusText").innerText = `${device.name || savedDeviceName || "저장된 체중계"} 자동 연결 중...`;
-                }
-              }
-            } catch (eGet) {
-              console.warn("getDevices 자동 연결 조회 생략:", eGet);
-            }
-          }
-
-          // 기억된 기기로 GATT 연결 시도 (무한 대기 방지 2.5초 타임아웃)
-          if (device && !server) {
-            try {
-              bleDevice = device;
-              lastBleDeviceInstance = device;
-              device.addEventListener("gattserverdisconnected", onBleDisconnected);
-              server = await Promise.race([
-                device.gatt.connect(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("자동 재연결 시간 초과")), 2500))
-              ]);
-              bleServer = server;
-            } catch (autoConnErr) {
-              console.warn("자동 재연결 실패, 세션 초기화:", autoConnErr);
-              device = null;
-              server = null;
-              lastBleDeviceInstance = null;
-            }
-          }
+        // 이미 연결된 GATT 세션이 살아있는 경우 즉시 재사용
+        if (!forceNewScan && lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
+          device = lastBleDeviceInstance;
+          server = lastBleDeviceInstance.gatt;
+          document.getElementById("scaleStatusText").innerText = `${device.name || "체중계"} 연결됨`;
         }
 
-        // 2) 최초 연결이거나 자동 재연결 실패 시, 표준 기기 선택 팝업 호출
+        // 새 기기 연결 또는 재연결 시 즉시 표준 기기 선택 팝업 호출 (사용자 제스처 유효성 보장)
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
 
