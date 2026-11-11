@@ -47,9 +47,22 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     var okokAckChar: CBMutableCharacteristic?
     
     var subscribedCentrals = Set<CBCentral>()
+    var autoStreamTimer: Timer?
     var currentFormat: PacketFormat = .okok
     var isAdvertising = false
     var bluetoothState: CBManagerState = .unknown
+    var lastPayload = MeasurementPayload(
+        weight: 81.15,
+        bmi: 26.2,
+        bodyFat: 24.5,
+        skeletalRate: 38.0,
+        muscleRate: 69.9,
+        waterRate: 52.3,
+        visceralFat: 14.6,
+        bmr: 1646.0,
+        format: .okok,
+        isSimulated: false
+    )
     
     var recentLogs: [(time: String, msg: String, color: String)] = []
     let maxLogCount = 100
@@ -107,7 +120,7 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         // 2. OKOK / 밸런스랩 커스텀 서비스 (0xFFF0)
         let oNotifyChar = CBMutableCharacteristic(
             type: OKOK_MEASUREMENT_CHAR_UUID,
-            properties: [.notify, .read],
+            properties: [.notify, .indicate, .read],
             value: nil,
             permissions: [.readable]
         )
@@ -154,15 +167,58 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         }
     }
     
+    func startAutoStreaming() {
+        guard autoStreamTimer == nil else { return }
+        // 실제 체중계 표준 동작: 발을 올리고 측정 완료 시 1초 주기로 확정 패킷 연속 알림(Notification) 송출
+        autoStreamTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self, !self.subscribedCentrals.isEmpty else { return }
+            self.transmit(payload: self.lastPayload, isLocked: true)
+        }
+    }
+    
+    func stopAutoStreaming() {
+        autoStreamTimer?.invalidate()
+        autoStreamTimer = nil
+    }
+
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
         subscribedCentrals.insert(central)
         let shortId = central.identifier.uuidString.prefix(8)
-        appendLog("🎉 [연결 성공] 내 폰(\(shortId)...)이 체중계 알림을 구독했습니다! (구독 기기: \(subscribedCentrals.count)대)", color: "emerald")
+        let maxLen = central.maximumUpdateValueLength
+        appendLog("🎉 [연결 성공] 내 폰(\(shortId)...)이 특성(\(characteristic.uuid.uuidString)) 알림을 구독했습니다! (구독: \(subscribedCentrals.count)대, MTU: \(maxLen)B)", color: "emerald")
+        
+        // 구독 즉시 1회 측정 패킷 바로 발송 및 1초 주기 연속 표준 알림 스트리밍 시작 (실제 스마트 체중계 표준 규격)
+        let packet = buildPacket(payload: self.lastPayload, isLocked: true)
+        if let mChar = characteristic as? CBMutableCharacteristic {
+            let res = peripheralManager.updateValue(packet, for: mChar, onSubscribedCentrals: [central])
+            appendLog("🚀 [구독 즉시 발송] 결과: \(res ? "성공" : "대기열 대기") (체중 \(String(format: "%.2f", self.lastPayload.weight))kg)", color: res ? "emerald" : "amber")
+        }
+        startAutoStreaming()
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
         subscribedCentrals.remove(central)
         appendLog("👋 [구독 해제] 핸드폰 연결이 해제되었습니다. (남은 기기: \(subscribedCentrals.count)대)", color: "slate")
+        if subscribedCentrals.isEmpty {
+            stopAutoStreaming()
+        }
+    }
+
+    // MARK: - GATT 직접 읽기(Read) 핸들러 (핸드폰이 readValue 호출 시 즉시 패킷 반환)
+    func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
+        let uuid = request.characteristic.uuid
+        if uuid == OKOK_MEASUREMENT_CHAR_UUID || uuid == WEIGHT_MEASUREMENT_CHAR_UUID {
+            let packet = buildPacket(payload: self.lastPayload, isLocked: true)
+            if request.offset > packet.count {
+                peripheralManager.respond(to: request, withResult: .invalidOffset)
+                return
+            }
+            request.value = packet.subdata(in: request.offset..<packet.count)
+            peripheralManager.respond(to: request, withResult: .success)
+            appendLog("📖 [직접 읽기 응답] 핸드폰으로 패킷 직접 전달 완료 (\(request.value?.count ?? 0)B, 특성: \(uuid.uuidString))", color: "emerald")
+        } else {
+            peripheralManager.respond(to: request, withResult: .success)
+        }
     }
     
     // MARK: - 핸드폰의 수신 확인(ACK) 수신 핸들러
@@ -170,8 +226,9 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
         for req in requests {
             if req.characteristic.uuid == OKOK_ACK_CHAR_UUID {
                 let centralId = req.central.identifier.uuidString.prefix(8)
-                appendLog("📱 [수신 확인] 핸드폰(\(centralId)...)에서 데이터 정상 수신 및 HealthKit 저장 완료 신호(ACK) 도착!", color: "emerald")
+                appendLog("📱 [수신 확인] 핸드폰(\(centralId)...)에서 데이터 정상 수신 완료 신호(ACK) 도착! 스트리밍을 종료합니다.", color: "emerald")
                 peripheralManager.respond(to: req, withResult: .success)
+                stopAutoStreaming()
             } else {
                 peripheralManager.respond(to: req, withResult: .success)
             }
@@ -227,20 +284,23 @@ class BalansLabVirtualDevice: NSObject, CBPeripheralManagerDelegate {
     // MARK: - 데이터 전송
     @discardableResult
     func transmit(payload: MeasurementPayload, isLocked: Bool) -> String {
+        self.lastPayload = payload
         let packet = buildPacket(payload: payload, isLocked: isLocked)
         let hexString = packet.map { String(format: "%02X", $0) }.joined(separator: " ")
         
+        var wRes = false
+        var oRes = false
         if let char = self.weightChar {
-            _ = peripheralManager.updateValue(packet, for: char, onSubscribedCentrals: nil)
+            wRes = peripheralManager.updateValue(packet, for: char, onSubscribedCentrals: nil)
         }
         if let char = self.okokNotifyChar {
-            _ = peripheralManager.updateValue(packet, for: char, onSubscribedCentrals: nil)
+            oRes = peripheralManager.updateValue(packet, for: char, onSubscribedCentrals: nil)
         }
         
         let statusStr = isLocked ? "🔒 [고정]" : "⏳ [측정중]"
         let clientCount = subscribedCentrals.count
         let color = isLocked ? "emerald" : "slate"
-        appendLog("📤 \(statusStr) 체중: \(String(format: "%.2f", payload.weight))kg (지방 \(String(format: "%.1f", payload.bodyFat))%, 골격근 \(String(format: "%.1f", payload.skeletalRate))%) | 패킷: [\(hexString)] (구독: \(clientCount)대)", color: color)
+        appendLog("📤 \(statusStr) 체중: \(String(format: "%.2f", payload.weight))kg (지방 \(String(format: "%.1f", payload.bodyFat))%, 골격근 \(String(format: "%.1f", payload.skeletalRate))%) | 패킷: [\(hexString)] (구독: \(clientCount)대, W=\(wRes), O=\(oRes))", color: color)
         return hexString
     }
     

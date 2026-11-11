@@ -2954,65 +2954,70 @@
         const server = await device.gatt.connect();
         bleServer = server;
 
-        // FFF0 또는 181D 서비스 연결
-        let service = null;
+        // FFF0 (OKOK) 및 181D (WSS) 서비스 탐색
+        const activeCharacteristics = [];
         const serviceUuids = [OKOK_SVC, WSS_SVC];
-        for (const uuid of serviceUuids) {
+
+        for (const sUuid of serviceUuids) {
           try {
-            service = await server.getPrimaryService(uuid);
-            if (service) break;
-          } catch (e) {}
+            const service = await server.getPrimaryService(sUuid);
+            if (!service) continue;
+
+            try {
+              const chars = await service.getCharacteristics();
+              for (const ch of chars) {
+                if (ch.properties && (ch.properties.notify || ch.properties.indicate || ch.properties.read)) {
+                  activeCharacteristics.push(ch);
+                }
+                if (ch.uuid.toLowerCase().includes("fff2")) {
+                  bleAckChar = ch;
+                }
+              }
+            } catch (eChars) {
+              const targetUuids = sUuid === OKOK_SVC ? [OKOK_NOTIFY, OKOK_ACK] : [WSS_NOTIFY];
+              for (const tu of targetUuids) {
+                try {
+                  const ch = await service.getCharacteristic(tu);
+                  if (ch) {
+                    activeCharacteristics.push(ch);
+                    if (tu === OKOK_ACK) bleAckChar = ch;
+                  }
+                } catch (eC) {}
+              }
+            }
+          } catch (eS) {}
         }
 
-        if (!service) {
-          throw new Error("체중계 서비스를 찾을 수 없습니다.");
+        if (activeCharacteristics.length === 0) {
+          throw new Error("체중계 측정 서비스를 찾을 수 없습니다.");
         }
 
-        // FFF1 (OKOK 측정값) 또는 2A9D (표준 측정값) 특성 연결
-        let notifyChar = null;
-        const notifyUuids = [OKOK_NOTIFY, WSS_NOTIFY];
-        for (const uuid of notifyUuids) {
-          try {
-            notifyChar = await service.getCharacteristic(uuid);
-            if (notifyChar) break;
-          } catch (e) {}
-        }
+        // 모든 감지된 측정 특성에 순수 표준 알림 리스너 등록 및 구독 (Standard Web Bluetooth Notification)
+        for (const ch of activeCharacteristics) {
+          if (ch.properties && (ch.properties.notify || ch.properties.indicate)) {
+            const chListener = (event) => {
+              try {
+                // event.target.value, event.value, ch.value 등 모든 Web BLE 브라우저 환경 호환
+                const raw = event?.target?.value || event?.value || ch?.value || (event instanceof DataView ? event : null);
+                if (raw) {
+                  onBleScalePacketReceived(raw);
+                }
+              } catch (err) {
+                console.error("BLE 패킷 수신 에러:", err);
+              }
+            };
 
-        if (!notifyChar) {
-          try {
-            const chars = await service.getCharacteristics();
-            notifyChar = chars.find(c => c.properties && (c.properties.notify || c.properties.indicate));
-          } catch (eChar) {}
-        }
-
-        if (!notifyChar) {
-          throw new Error("체중계 측정 특성을 찾을 수 없습니다.");
-        }
-
-        // FFF2 (수신 확인 ACK) 특성 취득 (선택 사항)
-        try {
-          bleAckChar = await service.getCharacteristic(OKOK_ACK);
-        } catch (eAck) {
-          bleAckChar = null;
-        }
-
-        // Bluefy 필수: startNotifications() 호출 전에 이벤트 리스너를 먼저 등록
-        const handlePacket = (event) => {
-          try {
-            const raw = event?.target?.value || event?.value || notifyChar?.value;
-            if (raw) onBleScalePacketReceived(raw);
-          } catch (err) {
-            console.error("BLE 패킷 파싱 에러:", err);
+            ch.addEventListener("characteristicvaluechanged", chListener);
+            ch.oncharacteristicvaluechanged = chListener;
+            try {
+              await ch.startNotifications();
+            } catch (eNotify) {
+              console.warn("알림 구독 경고:", ch.uuid, eNotify);
+            }
           }
-        };
+        }
 
-        notifyChar.addEventListener("characteristicvaluechanged", handlePacket);
-        notifyChar.oncharacteristicvaluechanged = handlePacket;
-
-        bleNotifyChar = notifyChar;
-        await notifyChar.startNotifications();
-
-        // 실제 기기 연결 완료 시점에 온전한 20초 카운트다운 새로 시작!
+        // 실제 기기 연결 및 알림 구독 완료 시점에 온전한 20초 카운트다운 가동
         scaleCountdownRemaining = 20;
         updateScaleCountdownUI();
         document.getElementById("scaleStatusText").innerText = "체중계 연결됨 (측정값 수신 대기 중...)";
@@ -3031,64 +3036,68 @@
       }
     }
 
-    // 데이터뷰 안전 변환기 (iOS Bluefy / WebKit 크로스 렐름 DataView, TypedArray 완전 대응)
-    function normalizeDataView(raw) {
+    // 바이트 추출 유틸리티 (DataView, TypedArray, ArrayBuffer, Array, Hex String, Base64 완전 대응)
+    function extractBytes(raw) {
       if (!raw) return null;
       try {
-        // 1) 덕 타이핑: getUint8 메서드가 있으면 크로스 렐름 DataView로 즉시 사용
+        // 1) DataView (getUint8 메서드)
         if (typeof raw.getUint8 === "function") {
-          return raw;
-        }
-        // 2) buffer 속성이 있는 경우 (Uint8Array, TypedArray, 크로스 렐름 ArrayBufferView)
-        if (raw.buffer && typeof raw.buffer.byteLength === "number") {
-          const offset = raw.byteOffset || 0;
-          const len = raw.byteLength !== undefined ? raw.byteLength : (raw.length || 0);
-          return new DataView(raw.buffer, offset, len);
-        }
-        if (raw.buffer) {
-          try {
-            return new DataView(raw.buffer, raw.byteOffset || 0, raw.byteLength || raw.length);
-          } catch (eBuf) {}
-        }
-        // 3) raw 자체가 ArrayBuffer인 경우 (byteLength가 있고 slice 메서드 존재)
-        if (typeof raw.byteLength === "number" && typeof raw.slice === "function") {
-          try {
-            return new DataView(raw);
-          } catch (eAb) {}
-        }
-        // 4) 숫자 배열 또는 TypedArray 유사 객체 (length와 인덱스)
-        if (typeof raw.length === "number" && raw.length > 0) {
-          const u8 = new Uint8Array(raw.length);
-          for (let i = 0; i < raw.length; i++) {
-            u8[i] = Number(raw[i]) || 0;
+          const len = typeof raw.byteLength === "number" ? raw.byteLength : (raw.length || 0);
+          const bytes = [];
+          for (let i = 0; i < len; i++) {
+            bytes.push(raw.getUint8(i));
           }
-          return new DataView(u8.buffer);
+          return bytes.length > 0 ? bytes : null;
         }
-        // 5) 16진수 문자열인 경우 (일부 Web BLE 폴리필)
+        // 2) TypedArray (Uint8Array 등) 또는 일반 숫자 배열
+        if (typeof raw.length === "number" && raw.length > 0 && typeof raw[0] === "number") {
+          return Array.from(raw);
+        }
+        // 3) buffer 속성이 있는 객체
+        if (raw.buffer && (typeof raw.buffer.byteLength === "number" || raw.buffer instanceof ArrayBuffer)) {
+          const u8 = new Uint8Array(raw.buffer, raw.byteOffset || 0, raw.byteLength !== undefined ? raw.byteLength : raw.length);
+          return Array.from(u8);
+        }
+        // 4) ArrayBuffer 자체
+        if (raw instanceof ArrayBuffer || (typeof raw.byteLength === "number" && typeof raw.slice === "function")) {
+          const u8 = new Uint8Array(raw);
+          return Array.from(u8);
+        }
+        // 5) data 프로퍼티에 배열을 담은 객체
+        if (raw.data && (Array.isArray(raw.data) || typeof raw.data.length === "number")) {
+          return Array.from(raw.data);
+        }
+        // 6) 16진수 문자열
         if (typeof raw === "string") {
-          const clean = raw.replace(/[^0-9A-Fa-f]/g, "");
-          if (clean.length >= 6) {
-            const u8 = new Uint8Array(clean.length / 2);
-            for (let i = 0; i < u8.length; i++) {
-              u8[i] = parseInt(clean.substr(i * 2, 2), 16);
+          const cleanHex = raw.replace(/[^0-9A-Fa-f]/g, "");
+          if (cleanHex.length >= 6 && cleanHex.length % 2 === 0) {
+            const bytes = [];
+            for (let i = 0; i < cleanHex.length; i += 2) {
+              bytes.push(parseInt(cleanHex.substr(i, 2), 16));
             }
-            return new DataView(u8.buffer);
+            return bytes;
           }
+          try {
+            const decoded = atob(raw.trim());
+            const bytes = [];
+            for (let i = 0; i < decoded.length; i++) {
+              bytes.push(decoded.charCodeAt(i));
+            }
+            if (bytes.length >= 3) return bytes;
+          } catch (eB64) {}
         }
       } catch (err) {
-        console.error("normalizeDataView 변환 오류:", err);
+        console.error("extractBytes 변환 오류:", err);
       }
       return null;
     }
 
     // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
     function onBleScalePacketReceived(raw) {
-      const dataView = normalizeDataView(raw);
-      if (!dataView) return;
+      const b = extractBytes(raw);
+      if (!b || b.length < 3) return;
 
-      const len = dataView.byteLength;
-      if (len < 3) return;
-
+      const len = b.length;
       let weight = 0;
       let bodyFat = 25.0;
       let skeletalRate = 38.0;
@@ -3098,17 +3107,17 @@
       let isLocked = false;
 
       // 1) OKOK v1.1 정밀 19바이트 프로토콜 프레임 (0xCA 0x11 ...)
-      if (len >= 19 && dataView.getUint8(0) === 0xCA) {
-        isLocked = (dataView.getUint8(3) === 0x01);
-        const rawWeight = (dataView.getUint8(5) << 8) | dataView.getUint8(6);
+      if (len >= 19 && b[0] === 0xCA) {
+        isLocked = (b[3] === 0x01);
+        const rawWeight = (b[5] << 8) | b[6];
         weight = rawWeight / 100.0;
-        const rawFat = (dataView.getUint8(7) << 8) | dataView.getUint8(8);
+        const rawFat = (b[7] << 8) | b[8];
         bodyFat = rawFat / 10.0;
-        const rawSkeletal = (dataView.getUint8(9) << 8) | dataView.getUint8(10);
+        const rawSkeletal = (b[9] << 8) | b[10];
         skeletalRate = rawSkeletal / 10.0;
-        visceralFat = dataView.getUint8(11);
-        bmr = (dataView.getUint8(12) << 8) | dataView.getUint8(13);
-        const rawWater = (dataView.getUint8(14) << 8) | dataView.getUint8(15);
+        visceralFat = b[11];
+        bmr = (b[12] << 8) | b[13];
+        const rawWater = (b[14] << 8) | b[15];
         waterRate = rawWater / 10.0;
 
         // 실시간 수치 표시
@@ -3119,8 +3128,8 @@
       }
       // 2) App 호환 4바이트 프레임 [0x00, status, MSB, LSB]
       else if (len === 4) {
-        isLocked = (dataView.getUint8(1) === 0x01);
-        const rawWeight = (dataView.getUint8(2) << 8) | dataView.getUint8(3);
+        isLocked = (b[1] === 0x01);
+        const rawWeight = (b[2] << 8) | b[3];
         weight = rawWeight / 100.0;
         document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
         if (!isLocked) return;
@@ -3128,7 +3137,7 @@
       // 3) 표준 SIG WSS 3바이트 프레임 [flags, LSB, MSB]
       else if (len === 3) {
         isLocked = true;
-        const raw = dataView.getUint8(1) | (dataView.getUint8(2) << 8);
+        const raw = b[1] | (b[2] << 8);
         weight = raw * 0.005;
         document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
       } else {
@@ -3161,10 +3170,13 @@
         syncedHealthKit: true
       };
 
-      // 체중계로 수신 확인(ACK) 역전송 (FFF2)
+      // 체중계로 수신 확인(ACK) 역전송 (FFF2) 및 연결 정리
       if (bleAckChar) {
         bleAckChar.writeValueWithoutResponse(new Uint8Array([0x01])).catch(() => {});
       }
+      setTimeout(() => {
+        disconnectBleScale();
+      }, 500);
 
       handleIncomingScaleData(record);
     }
