@@ -72,7 +72,7 @@
   </header>
 
   <!-- 아이폰 목업 프레임 -->
-  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[668px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
     
     <!-- 아이폰 상태바 & 다이내믹 아일랜드 -->
     <div class="h-11 w-full pt-3 px-7 hidden sm:flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
@@ -1324,26 +1324,98 @@
     // ----------------------------------------------------
     // 1. IndexedDB 로컬 데이터베이스 엔진
     // ----------------------------------------------------
-    const DB_NAME = "HealthTrackerDB_v5";
+    const DB_NAME = "HealthTrackerDB_v6";
     const DB_VERSION = 1;
     let dbInstance = null;
 
-    function openDB() {
+    async function migrateFromOlderDb() {
+      return new Promise((resolve) => {
+        try {
+          const checkReq = indexedDB.open("HealthTrackerDB_v5");
+          checkReq.onsuccess = (e) => {
+            const oldDb = e.target.result;
+            const storeNames = Array.from(oldDb.objectStoreNames);
+            if (!storeNames.includes("bodyMetrics") && !storeNames.includes("bpMetrics")) {
+              oldDb.close();
+              return resolve({ bodyList: [], bpList: [] });
+            }
+            const tx = oldDb.transaction(storeNames, "readonly");
+            let bodyList = [];
+            let bpList = [];
+            let pending = 0;
+            if (storeNames.includes("bodyMetrics")) {
+              pending++;
+              const bodyReq = tx.objectStore("bodyMetrics").getAll();
+              bodyReq.onsuccess = () => { bodyList = bodyReq.result || []; pending--; if (pending === 0) finish(); };
+              bodyReq.onerror = () => { pending--; if (pending === 0) finish(); };
+            }
+            if (storeNames.includes("bpMetrics")) {
+              pending++;
+              const bpReq = tx.objectStore("bpMetrics").getAll();
+              bpReq.onsuccess = () => { bpList = bpReq.result || []; pending--; if (pending === 0) finish(); };
+              bpReq.onerror = () => { pending--; if (pending === 0) finish(); };
+            }
+            function finish() {
+              oldDb.close();
+              resolve({ bodyList, bpList });
+            }
+            tx.onerror = () => {
+              oldDb.close();
+              resolve({ bodyList: [], bpList: [] });
+            };
+          };
+          checkReq.onerror = () => resolve({ bodyList: [], bpList: [] });
+        } catch (err) {
+          resolve({ bodyList: [], bpList: [] });
+        }
+      });
+    }
+
+    async function openDB() {
+      if (dbInstance) return dbInstance;
       return new Promise((resolve, reject) => {
-        if (dbInstance) return resolve(dbInstance);
+        let isNewDb = false;
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = (e) => {
+          isNewDb = true;
           const db = e.target.result;
           if (!db.objectStoreNames.contains("bodyMetrics")) {
-            db.createObjectStore("bodyMetrics", { keyPath: "date" });
+            const bodyStore = db.createObjectStore("bodyMetrics", { keyPath: "id" });
+            bodyStore.createIndex("date", "date", { unique: false });
           }
           if (!db.objectStoreNames.contains("bpMetrics")) {
             const bpStore = db.createObjectStore("bpMetrics", { keyPath: "id" });
             bpStore.createIndex("date", "date", { unique: false });
           }
         };
-        req.onsuccess = (e) => {
+        req.onsuccess = async (e) => {
           dbInstance = e.target.result;
+          if (isNewDb) {
+            try {
+              const oldData = await migrateFromOlderDb();
+              if (oldData.bodyList.length > 0 || oldData.bpList.length > 0) {
+                const tx = dbInstance.transaction(["bodyMetrics", "bpMetrics"], "readwrite");
+                const bodyStore = tx.objectStore("bodyMetrics");
+                const bpStore = tx.objectStore("bpMetrics");
+                oldData.bodyList.forEach(item => {
+                  if (!item.id) {
+                    const timePart = (item.time || "00:00:00").replace(/[^0-9]/g, "");
+                    item.id = `scale_${item.date}_${timePart || Date.now()}`;
+                  }
+                  bodyStore.put(item);
+                });
+                oldData.bpList.forEach(item => {
+                  if (!item.id) {
+                    const timePart = (item.time || "00:00:00").replace(/[^0-9]/g, "");
+                    item.id = `bp_${item.date}_${timePart || Date.now()}`;
+                  }
+                  bpStore.put(item);
+                });
+              }
+            } catch (mErr) {
+              console.warn("DB 마이그레이션 안내:", mErr);
+            }
+          }
           resolve(dbInstance);
         };
         req.onerror = (e) => reject(e.target.error);
@@ -1351,6 +1423,10 @@
     }
 
     async function dbSaveBodyMetric(record) {
+      if (!record.id) {
+        const timePart = (record.time || new Date().toTimeString().split(" ")[0]).replace(/[^0-9]/g, "");
+        record.id = `scale_${record.date}_${timePart || Date.now()}`;
+      }
       const db = await openDB();
       return new Promise((resolve, reject) => {
         const tx = db.transaction("bodyMetrics", "readwrite");
@@ -1373,6 +1449,10 @@
     }
 
     async function dbSaveBpMetric(record) {
+      if (!record.id) {
+        const timePart = (record.time || new Date().toTimeString().split(" ")[0]).replace(/[^0-9]/g, "");
+        record.id = `bp_${record.date}_${timePart || Date.now()}`;
+      }
       const db = await openDB();
       return new Promise((resolve, reject) => {
         const tx = db.transaction("bpMetrics", "readwrite");
@@ -1394,12 +1474,12 @@
       });
     }
 
-    async function dbDeleteBodyMetric(date) {
+    async function dbDeleteBodyMetric(id) {
       const db = await openDB();
       return new Promise((resolve, reject) => {
         const tx = db.transaction("bodyMetrics", "readwrite");
         const store = tx.objectStore("bodyMetrics");
-        store.delete(date);
+        store.delete(id);
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
@@ -1942,8 +2022,8 @@
       cachedBodyList = await dbGetAllBodyMetrics();
       cachedBpList = await dbGetAllBpMetrics();
 
-      cachedBodyList.sort((a, b) => a.date.localeCompare(b.date));
-      cachedBpList.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      cachedBodyList.sort((a, b) => (a.date + " " + (a.time || "00:00:00")).localeCompare(b.date + " " + (b.time || "00:00:00")));
+      cachedBpList.sort((a, b) => (a.date + " " + (a.time || "00:00:00")).localeCompare(b.date + " " + (b.time || "00:00:00")));
 
       renderHomeHeaderDate();
       renderHomeWeightCard();
@@ -3182,7 +3262,7 @@
       const dataset = currentDmTab === 'scale' ? cachedBodyList : cachedBpList;
       if (checked) {
         dataset.forEach(item => {
-          const key = currentDmTab === 'scale' ? item.date : (item.id || item.date);
+          const key = item.id || (item.date + "_" + (item.time || ""));
           selectedDmKeys.add(key);
         });
       } else {
@@ -3212,7 +3292,7 @@
 
     function executeDmSingleDelete(key, isBp) {
       const dataset = isBp ? cachedBpList : cachedBodyList;
-      const target = dataset.find(item => (isBp ? (item.id || item.date) === key : item.date === key));
+      const target = dataset.find(item => (item.id || item.date) === key || item.date === key);
       if (!target) return;
 
       let valueDisplay = "";
@@ -3240,7 +3320,7 @@
 
       const items = [];
       dataset.forEach(item => {
-        const key = isBp ? (item.id || item.date) : item.date;
+        const key = item.id || (item.date + "_" + (item.time || ""));
         if (selectedDmKeys.has(key)) {
           let val = "";
           if (isBp) {
@@ -3274,7 +3354,7 @@
       }
 
       const items = dataset.map(item => ({
-        key: isBp ? (item.id || item.date) : item.date,
+        key: item.id || (item.date + "_" + (item.time || "")),
         date: item.date,
         time: item.time ? item.time.slice(0, 5) : '',
         valueDisplay: isBp ? `${item.sys}/${item.dia} mmHg` : `${item.weight.toFixed(2)} kg`
@@ -3313,7 +3393,7 @@
       const days = ['일', '월', '화', '수', '목', '금', '토'];
 
       reversed.forEach(item => {
-        const key = isBp ? (item.id || item.date) : item.date;
+        const key = item.id || (item.date + "_" + (item.time || ""));
         const isChecked = selectedDmKeys.has(key);
 
         const card = document.createElement('div');
@@ -3373,7 +3453,7 @@
             </div>
           `;
         } else {
-          // 체중계: 날짜 단위 1줄 컴팩트 행 (날짜 | 체중 | 삭제버튼 - 모든 체성분 세부 항목 제거)
+          // 체중계: 날짜 단위 1줄 컴팩트 행 (날짜 | 시간 | 체중 | 삭제버튼)
           const weightDisplay = typeof item.weight === 'number' ? item.weight.toFixed(2) : item.weight;
           card.className = `py-2.5 px-3 rounded-xl border transition text-xs flex items-center justify-between ${
             isChecked
@@ -3390,6 +3470,7 @@
                 <i class="fa-solid fa-weight-scale text-blue-600 text-[11px]"></i>
                 <span class="font-bold">${item.date}</span>
                 <span class="text-[10px] text-slate-400 font-sans">${dayOfWeekStr}</span>
+                ${item.time ? `<span class="text-[10px] text-slate-400 font-mono">${item.time.slice(0, 5)}</span>` : ''}
               </div>
             </div>
 
@@ -3722,6 +3803,7 @@
       let protein = !isNaN(inProtein) ? inProtein : (prev ? (prev.protein || 18.0) : 18.0);
 
       const record = {
+        id: "scale_manual_" + Date.now(),
         date: dateVal,
         time: `${timeVal}:00`,
         weight: weightVal,
@@ -4198,6 +4280,7 @@
 
       const now = new Date();
       const record = {
+        id: "scale_" + now.getTime(),
         date: now.toISOString().split("T")[0],
         time: now.toTimeString().split(" ")[0],
         weight: +weight.toFixed(2),
@@ -5051,6 +5134,10 @@
         let bodySaved = 0;
         for (const item of bodyList) {
           if (item && item.date) {
+            if (!item.id) {
+              const timePart = (item.time || "00:00:00").replace(/[^0-9]/g, "");
+              item.id = `scale_backup_${item.date}_${timePart || Date.now()}`;
+            }
             bodyStore.put(item);
             bodySaved++;
           }
