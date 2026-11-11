@@ -529,6 +529,15 @@
             </span>
           </button>
 
+          <!-- 휴지통 / 삭제 기록 복원 진입 버튼 (10일 보관, 뱃지 없는 심플 디자인) -->
+          <button onclick="openTrashManagementModal()" class="w-full py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl transition flex items-center justify-between border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] active:scale-[0.99]">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
+              <span>휴지통 / 삭제 기록 복원</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+          </button>
+
           <div class="grid grid-cols-2 gap-2 pt-0.5 text-xs">
             <button onclick="exportDataJson()" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95">
               <i class="fa-solid fa-download text-slate-500"></i> 백업 다운로드
@@ -1305,13 +1314,13 @@
     <div id="deleteConfirmModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-4 flex flex-col justify-center items-center">
       <div class="w-full max-w-[320px] bg-white border border-slate-200 rounded-3xl p-5 text-center flex flex-col shadow-2xl">
         <!-- 경고 아이콘 -->
-        <div class="w-12 h-12 mx-auto rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-xl mb-2.5 border border-rose-100">
+        <div class="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-xl mb-2.5 border border-amber-100">
           <i class="fa-solid fa-trash-can"></i>
         </div>
         
-        <h3 id="deleteConfirmTitle" class="text-base font-bold text-slate-900">기록 삭제 확인</h3>
+        <h3 id="deleteConfirmTitle" class="text-base font-bold text-slate-900">휴지통 이동 확인</h3>
         <p id="deleteConfirmMessage" class="text-xs text-slate-600 mt-1 leading-relaxed">
-          선택한 기록을 삭제하시겠습니까?<br>삭제된 데이터는 복구할 수 없습니다.
+          선택한 기록을 휴지통으로 이동하시겠습니까?<br><span class="text-slate-400 text-[11px]">10일간 보관 후 자동 영구 삭제됩니다.</span>
         </p>
 
         <!-- 삭제 대상 상세 미리보기 박스 -->
@@ -1326,7 +1335,87 @@
           </button>
           <button type="button" id="btnExecuteDeleteConfirm" onclick="executeDeleteConfirmed()"
             class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-xl shadow-md transition">
-            삭제하기
+            휴지통으로 이동
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: 휴지통 (삭제 기록 복원) 모달 ================= -->
+    <div id="trashManagementModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-3 flex flex-col justify-center items-center">
+      <div class="w-full max-h-[92vh] max-w-[393px] bg-white border border-slate-200 rounded-3xl p-4 text-left flex flex-col shadow-2xl overflow-hidden">
+        <!-- 모달 헤더 -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">휴지통 (삭제 기록 복원)</h3>
+              <p class="text-[10px] text-slate-400">삭제 후 10일간 보관되며 언제든 복원 가능</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeTrashManagementModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 세그먼트 탭: [체중계 삭제 기록] vs [혈압계 삭제 기록] -->
+        <div class="flex bg-slate-100/90 p-1 rounded-2xl gap-1 mt-2.5 flex-shrink-0 border border-slate-200/60 select-none">
+          <button id="trashTabBtnScale" type="button" onclick="switchTrashTab('scale')"
+            class="flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-weight-scale text-[11px]"></i>
+            <span>체중계 삭제 기록</span>
+            <span id="trashTabScaleCount" class="text-[10px] px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded-full font-mono font-bold">0건</span>
+          </button>
+          <button id="trashTabBtnBp" type="button" onclick="switchTrashTab('bp')"
+            class="flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-heart-pulse text-[11px]"></i>
+            <span>혈압계 삭제 기록</span>
+            <span id="trashTabBpCount" class="text-[10px] px-1.5 py-0.2 bg-slate-200 text-slate-600 rounded-full font-mono font-bold">0건</span>
+          </button>
+        </div>
+
+        <!-- 액션 툴바: 보관 안내 + 휴지통 비우기 / 편집 모드 -->
+        <div class="flex items-center justify-between py-2 border-b border-slate-100 flex-shrink-0 text-xs">
+          <div id="trashNormalToolbar" class="flex items-center justify-between w-full">
+            <span class="text-[10px] text-slate-400 font-medium">
+              <i class="fa-solid fa-info-circle text-[9px]"></i> 10일 후 자동 영구 삭제
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="requestTrashClearAll()" class="px-2 py-1 text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition flex items-center gap-1">
+                <i class="fa-solid fa-trash-can text-[10px]"></i>
+                <span>비우기</span>
+              </button>
+              <button type="button" id="btnTrashEditMode" onclick="toggleTrashEditMode()" class="px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1">
+                <i class="fa-solid fa-check-double text-[10px]"></i>
+                <span>선택</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="trashEditToolbar" class="hidden flex items-center justify-between w-full">
+            <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 font-bold select-none text-[11px]">
+              <input type="checkbox" id="chkTrashSelectAll" onchange="toggleTrashSelectAll(this.checked)" class="rounded text-blue-600 focus:ring-0 w-3.5 h-3.5">
+              <span>전체 선택</span>
+            </label>
+            <button type="button" onclick="toggleTrashEditMode()" class="px-2.5 py-1 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+              완료
+            </button>
+          </div>
+        </div>
+
+        <!-- 리스트 영역 -->
+        <div id="trashListContainer" class="flex-1 overflow-y-auto space-y-2 pr-0.5 py-2 min-h-[220px]">
+          <!-- 동적 주입 -->
+        </div>
+
+        <!-- 편집 모드 시 바닥 선택 복원 바 -->
+        <div id="trashBatchRestoreBar" class="hidden pt-2 border-t border-slate-100 flex-shrink-0">
+          <button type="button" id="btnTrashBatchRestore" onclick="requestTrashBatchRestore()" disabled
+            class="w-full py-2.5 bg-slate-200 text-slate-400 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-not-allowed">
+            <i class="fa-solid fa-rotate-left text-xs"></i>
+            <span id="btnTrashBatchRestoreLabel">선택 항목 복원 (0개)</span>
           </button>
         </div>
       </div>
@@ -1344,7 +1433,7 @@
     // 1. IndexedDB 로컬 데이터베이스 엔진
     // ----------------------------------------------------
     const DB_NAME = "HealthTrackerDB_v6";
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     let dbInstance = null;
 
     async function migrateFromOlderDb() {
@@ -1396,7 +1485,7 @@
         let isNewDb = false;
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = (e) => {
-          isNewDb = true;
+          isNewDb = (e.oldVersion === 0);
           const db = e.target.result;
           if (!db.objectStoreNames.contains("bodyMetrics")) {
             const bodyStore = db.createObjectStore("bodyMetrics", { keyPath: "id" });
@@ -1405,6 +1494,11 @@
           if (!db.objectStoreNames.contains("bpMetrics")) {
             const bpStore = db.createObjectStore("bpMetrics", { keyPath: "id" });
             bpStore.createIndex("date", "date", { unique: false });
+          }
+          if (!db.objectStoreNames.contains("deletedMetrics")) {
+            const delStore = db.createObjectStore("deletedMetrics", { keyPath: "id" });
+            delStore.createIndex("deletedAt", "deletedAt", { unique: false });
+            delStore.createIndex("originalType", "originalType", { unique: false });
           }
         };
         req.onsuccess = async (e) => {
@@ -1513,6 +1607,89 @@
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
+    }
+
+    // --- 휴지통 (deletedMetrics) 보관 및 10일 자동 정리 엔진 ---
+    async function dbAddDeletedMetric(record) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction("deletedMetrics", "readwrite");
+        const store = tx.objectStore("deletedMetrics");
+        store.put(record);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbGetAllDeletedMetrics() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction("deletedMetrics", "readonly");
+        const store = tx.objectStore("deletedMetrics");
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbDeleteDeletedMetric(id) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction("deletedMetrics", "readwrite");
+        const store = tx.objectStore("deletedMetrics");
+        store.delete(id);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbClearDeletedMetrics(originalType = null) {
+      const db = await openDB();
+      if (!originalType) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction("deletedMetrics", "readwrite");
+          const store = tx.objectStore("deletedMetrics");
+          store.clear();
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      } else {
+        const items = await dbGetAllDeletedMetrics();
+        const toDelete = items.filter(it => it.originalType === originalType);
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction("deletedMetrics", "readwrite");
+          const store = tx.objectStore("deletedMetrics");
+          toDelete.forEach(it => store.delete(it.id));
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+    }
+
+    async function dbPurgeOldDeletedMetrics() {
+      try {
+        const items = await dbGetAllDeletedMetrics();
+        const now = Date.now();
+        const RETENTION_MS = 10 * 24 * 60 * 60 * 1000; // 10일 보관 기준
+        const expired = items.filter(it => {
+          if (!it.deletedAt) return false;
+          const delTime = new Date(it.deletedAt).getTime();
+          return !isNaN(delTime) && (now - delTime > RETENTION_MS);
+        });
+        if (expired.length > 0) {
+          const db = await openDB();
+          const tx = db.transaction("deletedMetrics", "readwrite");
+          const store = tx.objectStore("deletedMetrics");
+          expired.forEach(it => store.delete(it.id));
+          await new Promise((res, rej) => {
+            tx.oncomplete = () => res(true);
+            tx.onerror = () => rej(tx.error);
+          });
+          console.log(`[휴지통] 10일 보관 기간 만료 항목 ${expired.length}건 자동 영구 삭제 완료`);
+        }
+      } catch (err) {
+        console.warn("휴지통 자동 정리 실패:", err);
+      }
     }
 
     // ----------------------------------------------------
@@ -3608,7 +3785,7 @@
 
       if (items.length === 1) {
         titleEl.innerText = isBp ? '혈압계 기록 개별 삭제' : '체중계 기록 개별 삭제';
-        msgEl.innerHTML = '선택하신 측정 세트 기록을 영구 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>';
+        msgEl.innerHTML = '선택하신 측정 세트 기록을 휴지통으로 이동하시겠습니까?<br><span class="text-slate-500 text-xs font-normal">※ 휴지통에 보관된 기록은 <b>10일 후 자동 영구 삭제</b>됩니다.</span>';
         boxEl.innerHTML = `
           <div class="flex justify-between items-center text-slate-700">
             <span class="text-slate-400">측정 일시</span>
@@ -3621,7 +3798,7 @@
         `;
       } else {
         titleEl.innerText = `${isBp ? '혈압계' : '체중계'} 기록 일괄 삭제 (${items.length}건)`;
-        msgEl.innerHTML = `선택하신 총 <b>${items.length}개</b>의 기록을 삭제하시겠습니까?<br><span class="text-rose-500 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>`;
+        msgEl.innerHTML = `선택하신 총 <b>${items.length}개</b>의 기록을 휴지통으로 이동하시겠습니까?<br><span class="text-slate-500 text-xs font-normal">※ 휴지통에 보관된 기록은 <b>10일 후 자동 영구 삭제</b>됩니다.</span>`;
         boxEl.innerHTML = items.slice(0, 5).map(it => `
           <div class="flex justify-between items-center text-[11px] text-slate-700 border-b border-slate-100 last:border-0 py-0.5">
             <span>${it.date} ${it.time || ''}</span>
@@ -3644,15 +3821,27 @@
 
       const btn = document.getElementById('btnExecuteDeleteConfirm');
       btn.disabled = true;
-      btn.innerText = '삭제 중...';
+      btn.innerText = '이동 중...';
 
       try {
-        if (pendingDeleteIsBp) {
-          for (const key of pendingDeleteKeys) {
-            await dbDeleteBpMetric(key);
+        const dataset = pendingDeleteIsBp ? cachedBpList : cachedBodyList;
+        const nowIso = new Date().toISOString();
+
+        for (const key of pendingDeleteKeys) {
+          const target = dataset.find(item => (item.id || item.date) === key || item.date === key);
+          if (target) {
+            // 1. 휴지통 스토어에 10일간 안전 보관 (소프트 삭제)
+            await dbAddDeletedMetric({
+              id: `del_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              originalType: pendingDeleteIsBp ? 'bp' : 'scale',
+              deletedAt: nowIso,
+              recordData: JSON.parse(JSON.stringify(target))
+            });
           }
-        } else {
-          for (const key of pendingDeleteKeys) {
+          // 2. 원본 스토어에서 제거
+          if (pendingDeleteIsBp) {
+            await dbDeleteBpMetric(key);
+          } else {
             await dbDeleteBodyMetric(key);
           }
         }
@@ -3668,7 +3857,298 @@
         alert("기록 삭제 중 오류가 발생했습니다: " + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerText = '삭제하기';
+        btn.innerText = '휴지통으로 이동';
+      }
+    }
+
+    // ----------------------------------------------------
+    // 휴지통 (삭제 기록 복원) 모달 제어 엔진
+    // ----------------------------------------------------
+    let cachedDeletedList = [];
+    let currentTrashTab = 'scale'; // 'scale' | 'bp'
+    let isTrashEditMode = false;
+    let selectedTrashKeys = new Set();
+
+    async function openTrashManagementModal() {
+      await dbPurgeOldDeletedMetrics(); // 10일 경과 만료 데이터 자동 영구 삭제
+      cachedDeletedList = await dbGetAllDeletedMetrics();
+      currentTrashTab = 'scale';
+      isTrashEditMode = false;
+      selectedTrashKeys.clear();
+
+      document.getElementById('trashManagementModal').classList.remove('hidden');
+      renderTrashList();
+    }
+
+    function closeTrashManagementModal() {
+      document.getElementById('trashManagementModal').classList.add('hidden');
+      isTrashEditMode = false;
+      selectedTrashKeys.clear();
+    }
+
+    function switchTrashTab(tab) {
+      currentTrashTab = tab;
+      selectedTrashKeys.clear();
+      renderTrashList();
+    }
+
+    function toggleTrashEditMode() {
+      isTrashEditMode = !isTrashEditMode;
+      selectedTrashKeys.clear();
+      renderTrashList();
+    }
+
+    function toggleTrashItemSelection(id) {
+      if (selectedTrashKeys.has(id)) {
+        selectedTrashKeys.delete(id);
+      } else {
+        selectedTrashKeys.add(id);
+      }
+      updateTrashBatchActionBar();
+      const card = document.querySelector(`div[data-trash-id="${CSS.escape(id)}"]`);
+      if (card) {
+        const isChecked = selectedTrashKeys.has(id);
+        card.classList.toggle('bg-blue-50/80', isChecked);
+        card.classList.toggle('border-blue-300', isChecked);
+        const chk = card.querySelector('.trash-item-checkbox');
+        if (chk) chk.checked = isChecked;
+      }
+    }
+
+    function toggleTrashSelectAll(selectAll) {
+      const targetItems = cachedDeletedList.filter(it => it.originalType === currentTrashTab);
+      selectedTrashKeys.clear();
+      if (selectAll) {
+        targetItems.forEach(it => selectedTrashKeys.add(it.id));
+      }
+      renderTrashList();
+    }
+
+    function updateTrashBatchActionBar() {
+      const bar = document.getElementById('trashBatchRestoreBar');
+      const btn = document.getElementById('btnTrashBatchRestore');
+      const label = document.getElementById('btnTrashBatchRestoreLabel');
+      if (!bar || !btn) return;
+
+      if (!isTrashEditMode) {
+        bar.classList.add('hidden');
+        return;
+      }
+
+      bar.classList.remove('hidden');
+      const count = selectedTrashKeys.size;
+      if (count > 0) {
+        btn.disabled = false;
+        btn.className = "w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm";
+        label.innerText = `선택 항목 복원 (${count}개)`;
+      } else {
+        btn.disabled = true;
+        btn.className = "w-full py-2.5 bg-slate-200 text-slate-400 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-not-allowed";
+        label.innerText = "선택 항목 복원 (0개)";
+      }
+    }
+
+    function updateTrashTabStyles() {
+      const btnScale = document.getElementById('trashTabBtnScale');
+      const btnBp = document.getElementById('trashTabBtnBp');
+      const countScale = cachedDeletedList.filter(it => it.originalType === 'scale').length;
+      const countBp = cachedDeletedList.filter(it => it.originalType === 'bp').length;
+
+      const countScaleEl = document.getElementById('trashTabScaleCount');
+      const countBpEl = document.getElementById('trashTabBpCount');
+      if (countScaleEl) countScaleEl.innerText = `${countScale}건`;
+      if (countBpEl) countBpEl.innerText = `${countBp}건`;
+
+      if (currentTrashTab === 'scale') {
+        if (btnScale) btnScale.className = "flex-1 py-2 text-xs font-bold text-blue-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (btnBp) btnBp.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (countScaleEl) countScaleEl.className = "text-[10px] px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded-full font-mono font-bold";
+        if (countBpEl) countBpEl.className = "text-[10px] px-1.5 py-0.2 bg-slate-200 text-slate-600 rounded-full font-mono font-medium";
+      } else {
+        if (btnScale) btnScale.className = "flex-1 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (btnBp) btnBp.className = "flex-1 py-2 text-xs font-bold text-rose-600 bg-white rounded-xl shadow-sm border border-slate-200/80 transition flex items-center justify-center gap-1.5 active:scale-95";
+        if (countScaleEl) countScaleEl.className = "text-[10px] px-1.5 py-0.2 bg-slate-200 text-slate-600 rounded-full font-mono font-medium";
+        if (countBpEl) countBpEl.className = "text-[10px] px-1.5 py-0.2 bg-rose-50 text-rose-600 rounded-full font-mono font-bold";
+      }
+
+      // 툴바 토글
+      const normalToolbar = document.getElementById('trashNormalToolbar');
+      const editToolbar = document.getElementById('trashEditToolbar');
+      if (normalToolbar && editToolbar) {
+        if (isTrashEditMode) {
+          normalToolbar.classList.add('hidden');
+          editToolbar.classList.remove('hidden');
+        } else {
+          normalToolbar.classList.remove('hidden');
+          editToolbar.classList.add('hidden');
+        }
+      }
+    }
+
+    function renderTrashList() {
+      const container = document.getElementById('trashListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      updateTrashTabStyles();
+      updateTrashBatchActionBar();
+
+      const isBp = (currentTrashTab === 'bp');
+      const dataset = cachedDeletedList.filter(it => it.originalType === currentTrashTab)
+        .sort((a, b) => (b.deletedAt || "").localeCompare(a.deletedAt || ""));
+
+      if (dataset.length === 0) {
+        container.innerHTML = `
+          <div class="py-14 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-trash-can text-2xl text-slate-300"></i>
+            <p class="text-xs font-medium">휴지통에 보관된 ${isBp ? '혈압계' : '체중계'} 기록이 없습니다.</p>
+            <p class="text-[10px] text-slate-400">삭제 후 10일이 지난 기록은 자동 영구 삭제됩니다.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const now = Date.now();
+      const RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
+
+      dataset.forEach(item => {
+        const rec = item.recordData || {};
+        const isSelected = selectedTrashKeys.has(item.id);
+
+        const delTime = new Date(item.deletedAt).getTime();
+        const elapsed = isNaN(delTime) ? 0 : now - delTime;
+        const remainingDays = Math.max(1, Math.ceil((RETENTION_MS - elapsed) / (24 * 60 * 60 * 1000)));
+
+        const dateStr = rec.date || '';
+        const timeStr = rec.time ? rec.time.slice(0, 5) : '';
+
+        const card = document.createElement('div');
+        card.setAttribute('data-trash-id', item.id);
+        card.className = `p-2.5 rounded-2xl border transition flex items-center justify-between gap-2.5 ${
+          isSelected 
+            ? 'bg-blue-50/80 border-blue-300 shadow-sm' 
+            : 'bg-white border-slate-200/80 hover:border-slate-300'
+        } ${isTrashEditMode ? 'cursor-pointer select-none' : ''}`;
+
+        if (isTrashEditMode) {
+          card.onclick = () => toggleTrashItemSelection(item.id);
+        }
+
+        let valueDisplay = "";
+        if (isBp) {
+          valueDisplay = `${rec.sys != null ? rec.sys : '--'}/${rec.dia != null ? rec.dia : '--'} <span class="text-[10px] font-normal text-slate-500">mmHg</span>`;
+        } else {
+          const weightNum = rec.weight != null ? rec.weight.toFixed(2) : '--.-';
+          valueDisplay = `${weightNum} <span class="text-[10px] font-normal text-slate-500">kg</span>`;
+        }
+
+        const delDateShort = item.deletedAt ? item.deletedAt.slice(5, 10).replace('-', '/') : '';
+
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            ${isTrashEditMode ? `
+              <input type="checkbox" class="trash-item-checkbox rounded text-blue-600 focus:ring-0 w-4 h-4 flex-shrink-0" 
+                ${isSelected ? 'checked' : ''} 
+                onclick="event.stopPropagation(); toggleTrashItemSelection('${item.id}')" />
+            ` : ''}
+            <div class="w-8 h-8 rounded-xl ${isBp ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'} flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid ${isBp ? 'fa-heart-pulse' : 'fa-weight-scale'}"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-xs text-slate-800">
+                <span class="font-bold">${dateStr}</span>
+                ${timeStr ? `<span class="text-[10px] text-slate-400 font-mono">${timeStr}</span>` : ''}
+              </div>
+              <div class="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                <span>삭제: ${delDateShort}</span>
+                <span class="text-amber-600 font-semibold bg-amber-50 px-1 py-0.2 rounded font-sans">${remainingDays}일 후 영구삭제</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="font-black font-mono text-sm text-slate-900 tracking-tight">${valueDisplay}</span>
+            ${!isTrashEditMode ? `
+              <button type="button" onclick="event.stopPropagation(); executeTrashSingleRestore('${item.id}')"
+                class="py-1 px-2.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition text-xs font-bold flex items-center gap-1" title="복원">
+                <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                <span>복원</span>
+              </button>
+            ` : ''}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    async function executeTrashSingleRestore(id) {
+      const item = cachedDeletedList.find(it => it.id === id);
+      if (!item || !item.recordData) return;
+
+      try {
+        if (item.originalType === 'bp') {
+          await dbSaveBpMetric(item.recordData);
+        } else {
+          await dbSaveBodyMetric(item.recordData);
+        }
+        await dbDeleteDeletedMetric(id);
+
+        cachedDeletedList = await dbGetAllDeletedMetrics();
+        await refreshAllViews();
+        renderTrashList();
+      } catch (err) {
+        console.error("단건 복원 실패:", err);
+        alert("기록 복원 중 오류가 발생했습니다: " + err.message);
+      }
+    }
+
+    async function requestTrashBatchRestore() {
+      if (selectedTrashKeys.size === 0) return;
+
+      const toRestore = cachedDeletedList.filter(it => selectedTrashKeys.has(it.id));
+      if (toRestore.length === 0) return;
+
+      try {
+        for (const item of toRestore) {
+          if (item.originalType === 'bp') {
+            await dbSaveBpMetric(item.recordData);
+          } else {
+            await dbSaveBodyMetric(item.recordData);
+          }
+          await dbDeleteDeletedMetric(item.id);
+        }
+
+        selectedTrashKeys.clear();
+        isTrashEditMode = false;
+        cachedDeletedList = await dbGetAllDeletedMetrics();
+        await refreshAllViews();
+        renderTrashList();
+      } catch (err) {
+        console.error("일괄 복원 실패:", err);
+        alert("기록 일괄 복원 중 오류가 발생했습니다: " + err.message);
+      }
+    }
+
+    async function requestTrashClearAll() {
+      const currentList = cachedDeletedList.filter(it => it.originalType === currentTrashTab);
+      if (currentList.length === 0) {
+        alert("휴지통이 이미 비어 있습니다.");
+        return;
+      }
+
+      const isBp = (currentTrashTab === 'bp');
+      const ok = confirm(`현재 휴지통에 있는 ${isBp ? '혈압계' : '체중계'} 삭제 기록 ${currentList.length}건을 완전히 영구 삭제하시겠습니까?\n\n영구 삭제된 기록은 다시 복원할 수 없습니다.`);
+      if (!ok) return;
+
+      try {
+        await dbClearDeletedMetrics(currentTrashTab);
+        selectedTrashKeys.clear();
+        cachedDeletedList = await dbGetAllDeletedMetrics();
+        renderTrashList();
+      } catch (err) {
+        console.error("휴지통 비우기 실패:", err);
+        alert("휴지통 비우기 중 오류가 발생했습니다: " + err.message);
       }
     }
 
@@ -5184,20 +5664,66 @@
       document.getElementById('importModal').classList.add('hidden');
     }
 
-    function exportDataJson() {
-      const exportObj = {
-        userProfile: USER_PROFILE,
-        bodyMetrics: cachedBodyList,
-        bpMetrics: cachedBpList,
-        exportedAt: new Date().toISOString()
-      };
-      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `HealthTracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+    async function exportDataJson() {
+      try {
+        const deletedList = await dbGetAllDeletedMetrics();
+        const exportObj = {
+          userProfile: USER_PROFILE,
+          bodyMetrics: cachedBodyList,
+          bpMetrics: cachedBpList,
+          deletedMetrics: deletedList,
+          exportedAt: new Date().toISOString()
+        };
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const filename = `HealthTracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        const blob = new Blob([jsonStr], { type: "application/json" });
+
+        // 1. 모바일 환경(iOS Safari / Bluefy 등): Web Share API 지원 시 시스템 공유 창 호출
+        if (navigator.share) {
+          const file = new File([blob], filename, { type: "application/json" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: filename,
+                text: "HealthTracker 건강 데이터 백업 파일"
+              });
+              return;
+            } catch (shareErr) {
+              if (shareErr.name === 'AbortError') return; // 사용자가 공유 창에서 취소 누름
+              console.warn("Web Share API 파일 공유 실패, 다운로드로 전환:", shareErr);
+            }
+          }
+        }
+
+        // 2. 데스크톱 및 표준 브라우저 환경: DOM 부착 가상 <a> 태그 다운로드
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 10000);
+      } catch (err) {
+        console.error("백업 다운로드 실패:", err);
+        // 비상 복구: 클립보드 복사 시도
+        try {
+          const exportObj = {
+            userProfile: USER_PROFILE,
+            bodyMetrics: cachedBodyList,
+            bpMetrics: cachedBpList,
+            exportedAt: new Date().toISOString()
+          };
+          await navigator.clipboard.writeText(JSON.stringify(exportObj, null, 2));
+          alert("파일 다운로드가 제한되어 백업 JSON 데이터를 클립보드에 복사했습니다. 메모 앱 등에 붙여넣어 보관하세요.");
+        } catch (clipErr) {
+          alert("백업 파일 내보내기 실패: " + err.message);
+        }
+      }
     }
 
     function triggerImportDataJson() {
@@ -5263,6 +5789,15 @@
           tx.onerror = () => reject(tx.error);
         });
 
+        // 백업 파일에 휴지통 기록이 포함되어 있는 경우 복원
+        if (Array.isArray(data.deletedMetrics) && data.deletedMetrics.length > 0) {
+          for (const delItem of data.deletedMetrics) {
+            if (delItem && delItem.id && delItem.recordData) {
+              await dbAddDeletedMetric(delItem);
+            }
+          }
+        }
+
         // 백업 파일에 사용자 프로필이 포함되어 있는 경우 복원
         if (data.userProfile && typeof data.userProfile === 'object') {
           saveUserProfile(data.userProfile);
@@ -5292,6 +5827,7 @@
         loadUserProfile();
         renderProfileUI();
         await openDB();
+        await dbPurgeOldDeletedMetrics(); // 10일 경과 만료된 휴지통 데이터 자동 정리
         await refreshAllViews();
 
         // 새로고침 전 머물던 탭 상태 완벽 복원
