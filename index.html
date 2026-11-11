@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -41,6 +41,20 @@
       border: 1.5px solid #cbd5e1;
       font-family: 'Courier New', Courier, monospace;
     }
+    @media (max-width: 639px) {
+      html, body {
+        height: 100%;
+        height: 100dvh;
+        height: -webkit-fill-available;
+        overflow: hidden;
+      }
+      #phoneContainer {
+        height: 100% !important;
+        height: 100dvh !important;
+        height: -webkit-fill-available !important;
+        max-height: 100dvh !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start p-0 sm:p-4 sm:py-6">
@@ -58,7 +72,7 @@
   </header>
 
   <!-- 아이폰 목업 프레임 -->
-  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-[100dvh] h-[100dvh] sm:min-h-0 sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[844px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
     
     <!-- 아이폰 상태바 & 다이내믹 아일랜드 -->
     <div class="h-11 w-full pt-3 px-7 hidden sm:flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
@@ -75,7 +89,7 @@
     </div>
 
     <!-- 본문 스크롤 영역 -->
-    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-3.5 pb-16 pt-1">
+    <div id="screenContent" class="flex-1 overflow-y-auto hide-scrollbar px-3.5 pb-4 pt-1">
       
       <!-- ================= 1. [홈] 탭 (HealthTracker 메인 대시보드) ================= -->
       <section id="view-home" class="space-y-2">
@@ -279,7 +293,7 @@
             <span>지표 설명 및 기준 범위</span>
           </div>
           <p id="detailMetricDescription" class="text-xs text-slate-600 leading-relaxed font-normal">
-            체중은 건강 관리의 가장 기본이 되는 지표입니다. 사용자 키 176cm 기준 의학적 기준 범위는 낮음(&lt;57.31kg), 건강(57.31~70.94kg), 높음(70.94~77.44kg), 비만(≥77.44kg)으로 구분됩니다.
+            체수분·근육·지방의 총합으로 대사 건강의 기본 지표입니다. 단순 감량보다 근육량을 유지하며 체지방을 줄이는 것이 핵심입니다.
           </p>
 
           <!-- 기준 범위 바 게이지 (실제 앱 4단계 게이지 바: 낮음 / 건강 / 높음 / 비만) -->
@@ -456,73 +470,63 @@
         <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-slate-900">사용자 신체 정보</span>
-            <span class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-100">정상 적용</span>
+            <button onclick="openProfileEditModal()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition border border-blue-100 flex items-center gap-1 active:scale-95">
+              <i class="fa-solid fa-pen-to-square text-[10px]"></i> 수정
+            </button>
           </div>
           <div class="grid grid-cols-3 gap-2 text-center text-xs pt-0.5">
             <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 block">신장</span>
-              <span class="font-bold text-slate-800 text-sm">176 cm</span>
+              <span id="profileHeightDisplay" class="font-bold text-slate-800 text-sm">176 cm</span>
             </div>
             <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 block">성별</span>
-              <span class="font-bold text-slate-800 text-sm">남성</span>
+              <span id="profileGenderDisplay" class="font-bold text-slate-800 text-sm">남성</span>
             </div>
             <div class="py-1.5 px-2 bg-slate-50 rounded-xl border border-slate-100">
-              <span class="text-[10px] text-slate-400 block">표준 체중</span>
-              <span class="font-bold text-slate-800 text-sm">68.1 kg</span>
+              <span class="text-[10px] text-slate-400 block">나이</span>
+              <span id="profileAgeDisplay" class="font-bold text-slate-800 text-sm">47 세</span>
             </div>
           </div>
           <p class="text-[11px] text-slate-400 pt-0.5">
-            * BMI 공식: <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[10px]">체중 / (1.76 × 1.76)</code>
+            * BMI 공식: <code id="profileBmiFormula" class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[10px]">체중 / (1.76 × 1.76)</code>
           </p>
         </div>
 
-        <!-- 데이터 백업 & OKOK 히스토리 승계 -->
+        <!-- 온디바이스 데이터 관리 (IndexedDB) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
-          <span class="text-xs font-bold text-slate-900 block">데이터 관리 (IndexedDB)</span>
-          <div class="space-y-1.5 pt-0.5 text-xs">
-            <button onclick="exportDataJson()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
-              <i class="fa-solid fa-download text-slate-500"></i> 로컬 데이터 백업 파일 다운로드 (JSON)
-            </button>
-            <button onclick="openImportModal()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
-              <i class="fa-solid fa-file-import text-slate-500"></i> 과거 CSV 파일 가져오기
-            </button>
-            <button onclick="reseedDefaultData()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 text-[11px]">
-              <i class="fa-solid fa-rotate text-slate-400"></i> 기본 샘플 데이터 (317일) 다시 적재
-            </button>
-          </div>
-        </div>
-
-        <!-- Apple HealthKit 단축어 브릿지 안내 -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-1.5">
-          <div class="flex justify-between items-center">
-            <span class="text-xs font-bold text-slate-900">Apple HealthKit 단축어 브릿지</span>
-            <button onclick="openShortcutGuideModal()" class="text-[11px] text-blue-600 hover:underline font-semibold">설정 방법</button>
-          </div>
+          <span class="text-xs font-bold text-slate-900 block">온디바이스 데이터 관리 (IndexedDB)</span>
           <p class="text-[11px] text-slate-500 leading-normal font-normal">
-            측정된 체중 및 혈압 데이터는 아이폰 기본 [단축어] 앱을 통해 Apple 건강 앱으로 무료 자동 동기화할 수 있습니다.
+            기기에 안전하게 보관된 체중 및 혈압 전체 데이터를 JSON 파일로 백업하거나 복원합니다.
           </p>
-          <button onclick="triggerShortcutSync()" class="w-full py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition">
-            최신 측정값 단축어로 전송 테스트
-          </button>
+          <div class="grid grid-cols-2 gap-2 pt-0.5 text-xs">
+            <button onclick="exportDataJson()" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95">
+              <i class="fa-solid fa-download text-slate-500"></i> 백업 다운로드
+            </button>
+            <button onclick="triggerImportDataJson()" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95">
+              <i class="fa-solid fa-upload text-slate-500"></i> 백업 파일 복원
+            </button>
+            <input type="file" id="jsonBackupFileInput" accept=".json,application/json" class="hidden" onchange="handleJsonBackupFile(event)" />
+          </div>
         </div>
       </section>
 
     </div>
 
-    <!-- 하단 iOS 3탭 바: [홈] [상세] [설정] -->
-    <nav class="absolute bottom-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex justify-around items-center z-20">
-      <button id="tabBtn-home" onclick="switchMainTab('home')" class="flex flex-col items-center text-slate-900 transition flex-1">
+    <!-- 하단 iOS 3탭 바: [홈] [상세] [설정] (Safe Area 및 하단 툴바 완벽 대응) -->
+    <nav class="shrink-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex justify-around items-center z-20"
+         style="padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px); padding-top: 6px; min-height: 56px;">
+      <button id="tabBtn-home" onclick="switchMainTab('home')" class="flex flex-col items-center text-slate-900 transition flex-1 py-0.5 active:scale-95">
         <i class="fa-solid fa-house text-lg"></i>
         <span class="text-[10px] mt-0.5 font-bold">홈</span>
       </button>
 
-      <button id="tabBtn-details" onclick="switchMainTab('details')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1">
+      <button id="tabBtn-details" onclick="switchMainTab('details')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1 py-0.5 active:scale-95">
         <i class="fa-solid fa-chart-simple text-lg"></i>
         <span class="text-[10px] mt-0.5 font-medium">상세</span>
       </button>
 
-      <button id="tabBtn-settings" onclick="switchMainTab('settings')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1">
+      <button id="tabBtn-settings" onclick="switchMainTab('settings')" class="flex flex-col items-center text-slate-400 hover:text-slate-700 transition flex-1 py-0.5 active:scale-95">
         <i class="fa-solid fa-gear text-lg"></i>
         <span class="text-[10px] mt-0.5 font-medium">설정</span>
       </button>
@@ -567,7 +571,7 @@
                 <span class="text-rose-500 font-black text-[10px] bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">*필수</span>
               </label>
               <span id="weightManualBmiPreview" class="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                BMI 25.9 (176cm)
+                BMI --
               </span>
             </div>
             <div class="relative">
@@ -1099,6 +1103,81 @@
       </div>
     </div>
 
+    <!-- ================= MODAL: 사용자 신체 스펙 설정 모달 ================= -->
+    <div id="profileEditModal" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 p-5 flex flex-col justify-center items-center">
+      <div class="w-full bg-white border border-slate-200 rounded-3xl p-5 text-left space-y-4 shadow-2xl animate-fade-in">
+        <!-- 모달 헤더 -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-user-gear"></i>
+            </span>
+            <h3 class="text-sm font-bold text-slate-900">사용자 신체 스펙 설정</h3>
+          </div>
+          <button onclick="closeProfileEditModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 입력 영역 -->
+        <div class="space-y-3 text-xs">
+          <!-- 1. 신장 (cm) -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">신장 (키)</label>
+            <div class="relative flex items-center">
+              <input type="number" id="profileInputHeight" min="100" max="230" step="1"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                placeholder="176" />
+              <span class="absolute right-3 text-xs text-slate-400 font-bold">cm</span>
+            </div>
+          </div>
+
+          <!-- 2. 성별 -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">성별</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" id="profileGenderMaleBtn" onclick="setProfileEditGender('male')"
+                class="py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                <i class="fa-solid fa-mars"></i> 남성
+              </button>
+              <button type="button" id="profileGenderFemaleBtn" onclick="setProfileEditGender('female')"
+                class="py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border-slate-200">
+                <i class="fa-solid fa-venus"></i> 여성
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. 나이 (만 나이) -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">나이 (만 나이)</label>
+            <div class="relative flex items-center">
+              <input type="number" id="profileInputAge" min="10" max="120" step="1"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                placeholder="47" />
+              <span class="absolute right-3 text-xs text-slate-400 font-bold">세</span>
+            </div>
+          </div>
+
+          <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-500 leading-normal flex items-start gap-1.5">
+            <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 text-xs flex-shrink-0"></i>
+            <span>신장, 성별, 나이는 의학적 표준 판정선(BMI, 표준 골격근량, 기초대사량 등 9대 생체지표 기준)에 실시간 반영됩니다.</span>
+          </div>
+        </div>
+
+        <!-- 하단 액션 버튼 -->
+        <div class="flex gap-2 pt-1">
+          <button type="button" onclick="closeProfileEditModal()"
+            class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+            취소
+          </button>
+          <button type="button" onclick="saveProfileEditModal()"
+            class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition">
+            저장 및 적용
+          </button>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <footer class="mt-3 text-center text-xs text-slate-400 max-w-[393px]">
@@ -1180,14 +1259,150 @@
       });
     }
 
+    async function dbDeleteBodyMetric(date) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction("bodyMetrics", "readwrite");
+        const store = tx.objectStore("bodyMetrics");
+        store.delete(date);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbDeleteBpMetric(id) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction("bpMetrics", "readwrite");
+        const store = tx.objectStore("bpMetrics");
+        store.delete(id);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
     // ----------------------------------------------------
     // 2. 사용자 프로필 및 건강 지표 가변 스펙 엔진 (Dynamic Spec Engine)
     // ----------------------------------------------------
-    const USER_PROFILE = {
-      height: 176, // 신장 (cm) - 가변 기준값
-      age: 47,     // 나이 (세)
-      gender: 'male' // 성별
+    const DEFAULT_USER_PROFILE = {
+      height: 176,   // 신장 (cm) - 기본값
+      age: 47,       // 나이 (만 나이)
+      gender: 'male' // 성별 ('male' | 'female')
     };
+
+    let USER_PROFILE = { ...DEFAULT_USER_PROFILE };
+
+    function loadUserProfile() {
+      try {
+        const saved = localStorage.getItem('health_tracker_user_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            USER_PROFILE.height = Number(parsed.height) || 176;
+            USER_PROFILE.age = Number(parsed.age) || 47;
+            USER_PROFILE.gender = (parsed.gender === 'female') ? 'female' : 'male';
+          }
+        }
+      } catch (e) {
+        console.warn('사용자 프로필 로드 실패, 기본값 사용', e);
+      }
+    }
+
+    function saveUserProfile(profile) {
+      try {
+        USER_PROFILE.height = Math.max(50, Math.min(250, Number(profile.height) || 176));
+        USER_PROFILE.age = Math.max(1, Math.min(130, Number(profile.age) || 47));
+        USER_PROFILE.gender = (profile.gender === 'female') ? 'female' : 'male';
+        localStorage.setItem('health_tracker_user_profile', JSON.stringify(USER_PROFILE));
+      } catch (e) {
+        console.error('사용자 프로필 저장 실패', e);
+      }
+    }
+
+    function renderProfileUI() {
+      const hEl = document.getElementById('profileHeightDisplay');
+      const gEl = document.getElementById('profileGenderDisplay');
+      const aEl = document.getElementById('profileAgeDisplay');
+      const bmiFormulaEl = document.getElementById('profileBmiFormula');
+
+      if (hEl) hEl.innerText = `${USER_PROFILE.height} cm`;
+      if (gEl) gEl.innerText = USER_PROFILE.gender === 'female' ? '여성' : '남성';
+      if (aEl) aEl.innerText = `${USER_PROFILE.age} 세`;
+
+      if (bmiFormulaEl) {
+        const hM = (USER_PROFILE.height / 100).toFixed(2);
+        bmiFormulaEl.innerText = `체중 / (${hM} × ${hM})`;
+      }
+    }
+
+    // 신체 스펙 수정 모달 제어
+    let currentEditGender = 'male';
+
+    function openProfileEditModal() {
+      const hInput = document.getElementById('profileInputHeight');
+      const aInput = document.getElementById('profileInputAge');
+      if (hInput) hInput.value = USER_PROFILE.height;
+      if (aInput) aInput.value = USER_PROFILE.age;
+      setProfileEditGender(USER_PROFILE.gender || 'male');
+
+      const modal = document.getElementById('profileEditModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeProfileEditModal() {
+      const modal = document.getElementById('profileEditModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setProfileEditGender(gender) {
+      currentEditGender = (gender === 'female') ? 'female' : 'male';
+      const maleBtn = document.getElementById('profileGenderMaleBtn');
+      const femaleBtn = document.getElementById('profileGenderFemaleBtn');
+      if (!maleBtn || !femaleBtn) return;
+      if (currentEditGender === 'male') {
+        maleBtn.className = 'py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
+        femaleBtn.className = 'py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border-slate-200';
+      } else {
+        femaleBtn.className = 'py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-rose-50 text-rose-700 border-rose-200 shadow-sm';
+        maleBtn.className = 'py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border-slate-200';
+      }
+    }
+
+    async function saveProfileEditModal() {
+      const hInput = document.getElementById('profileInputHeight');
+      const aInput = document.getElementById('profileInputAge');
+
+      const hVal = Number(hInput ? hInput.value : 176);
+      const aVal = Number(aInput ? aInput.value : 47);
+
+      if (isNaN(hVal) || hVal < 100 || hVal > 250) {
+        alert('신장을 100cm ~ 250cm 사이로 올바르게 입력해주세요.');
+        return;
+      }
+      if (isNaN(aVal) || aVal < 10 || aVal > 120) {
+        alert('나이를 10세 ~ 120세 사이로 올바르게 입력해주세요.');
+        return;
+      }
+
+      saveUserProfile({
+        height: hVal,
+        age: aVal,
+        gender: currentEditGender
+      });
+
+      renderProfileUI();
+
+      // 전체 뷰 실시간 갱신 (지표 테이블, 홈 요약, 상세 뷰 등)
+      await refreshAllViews();
+
+      // 현재 상세 뷰가 열려있다면 해당 상세 뷰도 새 스펙으로 즉각 재렌더링
+      if (currentDetailMetricKey && !document.getElementById('view-metric-detail').classList.contains('hidden')) {
+        renderMetricDetailView(currentDetailMetricKey);
+      }
+
+      closeProfileEditModal();
+      alert('사용자 신체 스펙이 성공적으로 저장되었습니다.\n9대 생체지표 기준선이 실시간으로 재계산되었습니다.');
+    }
 
     // [지표 1: 체중] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (국민건강보험공단 2024 빅데이터 표준)
     function calculateWeightDynamicSpec(heightCm = USER_PROFILE.height) {
@@ -1227,15 +1442,21 @@
       };
     }
 
-    // [지표 4: 골격근량] 신장(height)에 연동되는 동적 가변 스펙 산출 함수 (인바디 및 스포츠의학 표준)
+    // [지표 4: 골격근량] 신장(height) 및 성별(gender)에 연동되는 동적 가변 스펙 산출 함수 (인바디 및 스포츠의학 표준)
     function calculateMuscleMassDynamicSpec(heightCm = USER_PROFILE.height) {
       const hM = heightCm / 100;
       const h2 = hM * hM;
-      // 인바디 표준: 낮음(90% 미만) < 28.5kg, 건강(90~110%) 28.5 ~ 34.5kg, 우수(110~120%) 34.5 ~ 37.5kg, 완전한(120% 이상) ≥ 37.5kg
-      const b1 = +(9.20 * h2).toFixed(1);  // 낮음 상한 (176cm: 28.5kg)
-      const b2 = +(11.14 * h2).toFixed(1); // 건강 정상 상한 (176cm: 34.5kg)
-      const b3 = +(12.10 * h2).toFixed(1); // 우수 상한 (176cm: 37.5kg)
-      const ideal = +(10.17 * h2).toFixed(1); // 표준 중심치 (176cm: 31.5kg)
+      const isFemale = USER_PROFILE.gender === 'female';
+      // 남성: 9.20 * h2 / 11.14 * h2 / 12.10 * h2 (176cm: 28.5kg / 34.5kg / 37.5kg)
+      // 여성: 7.30 * h2 / 9.20 * h2 / 10.20 * h2 (160cm: 18.7kg / 23.6kg / 26.1kg)
+      const coeff1 = isFemale ? 7.30 : 9.20;
+      const coeff2 = isFemale ? 9.20 : 11.14;
+      const coeff3 = isFemale ? 10.20 : 12.10;
+      const idealCoeff = isFemale ? 8.25 : 10.17;
+      const b1 = +(coeff1 * h2).toFixed(1);
+      const b2 = +(coeff2 * h2).toFixed(1);
+      const b3 = +(coeff3 * h2).toFixed(1);
+      const ideal = +(idealCoeff * h2).toFixed(1);
 
       return {
         title: "골격근량",
@@ -1268,59 +1489,73 @@
       get weight() {
         return calculateWeightDynamicSpec(USER_PROFILE.height);
       },
-      bodyFat: {
-        title: "체지방률",
-        english: "Body Fat Rate",
-        category: "체성분 핵심 지표",
-        unit: "%",
-        bound1: 10.0,
-        bound2: 20.0,
-        bound3: 25.0,
-        normalMin: 10.0,
-        normalMax: 20.0,
-        obeseMin: 25.0,
-        ideal: 16.0,
-        desc: "체중에서 순수 지방이 차지하는 비율로, 체중계 숫자보다 실질적인 비만도와 혈관 대사 위험을 직접 반영합니다.",
-        statusEval: (val) => {
-          if (val < 10.0) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
-          if (val <= 20.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          if (val < 25.0) return { text: "높음", color: "text-amber-600 bg-amber-50" };
-          return { text: "비만", color: "text-rose-600 bg-rose-50" };
-        },
-        calculateMarkerPos: (val) => {
-          if (val < 10.0) return Math.max(3, (val / 10.0) * 25);
-          if (val <= 20.0) return 25 + ((val - 10.0) / (20.0 - 10.0)) * 30;
-          if (val < 25.0) return 55 + ((val - 20.0) / (25.0 - 20.0)) * 25;
-          return 80 + Math.min(18, ((val - 25.0) / 10.0) * 20);
-        }
+      get bodyFat() {
+        const isFemale = USER_PROFILE.gender === 'female';
+        const b1 = isFemale ? 18.0 : 10.0;
+        const b2 = isFemale ? 28.0 : 20.0;
+        const b3 = isFemale ? 32.0 : 25.0;
+        const ideal = isFemale ? 23.0 : 16.0;
+        return {
+          title: "체지방률",
+          english: "Body Fat Rate",
+          category: "체성분 핵심 지표",
+          unit: "%",
+          bound1: b1,
+          bound2: b2,
+          bound3: b3,
+          normalMin: b1,
+          normalMax: b2,
+          obeseMin: b3,
+          ideal: ideal,
+          desc: "체중에서 순수 지방이 차지하는 비율로, 체중계 숫자보다 실질적인 비만도와 혈관 대사 위험을 직접 반영합니다.",
+          statusEval: (val) => {
+            if (val < b1) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+            if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+            if (val < b3) return { text: "높음", color: "text-amber-600 bg-amber-50" };
+            return { text: "비만", color: "text-rose-600 bg-rose-50" };
+          },
+          calculateMarkerPos: (val) => {
+            if (val < b1) return Math.max(3, (val / b1) * 25);
+            if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
+            if (val < b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
+            return 80 + Math.min(18, ((val - b3) / 10.0) * 20);
+          }
+        };
       },
       get muscleMass() {
         return calculateMuscleMassDynamicSpec(USER_PROFILE.height);
       },
-      muscleRate: {
-        title: "골격근율",
-        english: "Skeletal Muscle %",
-        category: "근골격 지표",
-        unit: "%",
-        bound1: 32.0,
-        bound2: 37.0,
-        bound3: 41.0,
-        normalMin: 32.0,
-        normalMax: 37.0,
-        ideal: 38.0,
-        desc: "체중 대비 순수 근육의 비율로, 체형의 탄탄함과 대사 효율을 보여주며 체지방 감량 시 점차 상승합니다.",
-        statusEval: (val) => {
-          if (val < 32.0) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
-          if (val <= 37.0) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          if (val < 41.0) return { text: "우수", color: "text-blue-600 bg-blue-50" };
-          return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
-        },
-        calculateMarkerPos: (val) => {
-          if (val < 32.0) return Math.max(3, (val / 32.0) * 25);
-          if (val <= 37.0) return 25 + ((val - 32.0) / (37.0 - 32.0)) * 30;
-          if (val < 41.0) return 55 + ((val - 37.0) / (41.0 - 37.0)) * 25;
-          return 80 + Math.min(18, ((val - 41.0) / 10.0) * 20);
-        }
+      get muscleRate() {
+        const isFemale = USER_PROFILE.gender === 'female';
+        const b1 = isFemale ? 26.0 : 32.0;
+        const b2 = isFemale ? 32.0 : 37.0;
+        const b3 = isFemale ? 36.0 : 41.0;
+        const ideal = isFemale ? 29.0 : 38.0;
+        return {
+          title: "골격근율",
+          english: "Skeletal Muscle %",
+          category: "근골격 지표",
+          unit: "%",
+          bound1: b1,
+          bound2: b2,
+          bound3: b3,
+          normalMin: b1,
+          normalMax: b2,
+          ideal: ideal,
+          desc: "체중 대비 순수 근육의 비율로, 체형의 탄탄함과 대사 효율을 보여주며 체지방 감량 시 점차 상승합니다.",
+          statusEval: (val) => {
+            if (val < b1) return { text: "낮음", color: "text-amber-600 bg-amber-50" };
+            if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+            if (val < b3) return { text: "우수", color: "text-blue-600 bg-blue-50" };
+            return { text: "완전한", color: "text-emerald-600 bg-emerald-50" };
+          },
+          calculateMarkerPos: (val) => {
+            if (val < b1) return Math.max(3, (val / b1) * 25);
+            if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
+            if (val < b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
+            return 80 + Math.min(18, ((val - b3) / 10.0) * 20);
+          }
+        };
       },
       bmi: {
         title: "체질량지수 (BMI)",
@@ -1396,30 +1631,37 @@
           return 80 + Math.min(18, ((val - 65.0) / 10.0) * 20);
         }
       },
-      bmr: {
-        title: "기초대사량",
-        english: "Basal Metabolic Rate",
-        category: "에너지 대사 지표",
-        unit: "kcal",
-        bound1: 1550,
-        bound2: 1700,
-        bound3: 1850,
-        normalMin: 1550,
-        normalMax: 1850,
-        ideal: 1651,
-        desc: "생명 유지에 쓰이는 24시간 최소 에너지양입니다. 근육량에 비례하여 결정되며, 체중 감량 시 요요를 막는 핵심 대사 기준선입니다.",
-        statusEval: (val) => {
-          if (val < 1550) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
-          if (val <= 1700) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
-          if (val <= 1850) return { text: "우수", color: "text-blue-600 bg-blue-50" };
-          return { text: "높음", color: "text-amber-600 bg-amber-50" };
-        },
-        calculateMarkerPos: (val) => {
-          if (val < 1550) return Math.max(3, (val / 1550) * 25);
-          if (val <= 1700) return 25 + ((val - 1550) / (1700 - 1550)) * 30;
-          if (val <= 1850) return 55 + ((val - 1700) / (1850 - 1700)) * 25;
-          return 80 + Math.min(18, ((val - 1850) / 300) * 20);
-        }
+      get bmr() {
+        const stdWeight = 22 * Math.pow(USER_PROFILE.height / 100, 2);
+        const stdBmr = Math.round(10 * stdWeight + 6.25 * USER_PROFILE.height - 5 * USER_PROFILE.age + (USER_PROFILE.gender === 'female' ? -161 : 5));
+        const b1 = Math.round(stdBmr * 0.93);
+        const b2 = Math.round(stdBmr * 1.05);
+        const b3 = Math.round(stdBmr * 1.15);
+        return {
+          title: "기초대사량",
+          english: "Basal Metabolic Rate",
+          category: "에너지 대사 지표",
+          unit: "kcal",
+          bound1: b1,
+          bound2: b2,
+          bound3: b3,
+          normalMin: b1,
+          normalMax: b3,
+          ideal: stdBmr,
+          desc: "생명 유지에 쓰이는 24시간 최소 에너지양입니다. 신체 스펙(키, 성별, 나이)과 근육량에 비례하여 결정되며, 체중 감량 시 요요를 막는 핵심 대사 기준선입니다.",
+          statusEval: (val) => {
+            if (val < b1) return { text: "낮음", color: "text-sky-600 bg-sky-50" };
+            if (val <= b2) return { text: "건강", color: "text-emerald-600 bg-emerald-50" };
+            if (val <= b3) return { text: "우수", color: "text-blue-600 bg-blue-50" };
+            return { text: "높음", color: "text-amber-600 bg-amber-50" };
+          },
+          calculateMarkerPos: (val) => {
+            if (val < b1) return Math.max(3, (val / b1) * 25);
+            if (val <= b2) return 25 + ((val - b1) / (b2 - b1)) * 30;
+            if (val <= b3) return 55 + ((val - b2) / (b3 - b2)) * 25;
+            return 80 + Math.min(18, ((val - b3) / 250) * 20);
+          }
+        };
       },
       bp: {
         title: "혈압",
@@ -2684,10 +2926,11 @@
       const bmiBadge = document.getElementById('weightManualBmiPreview');
 
       if (!isNaN(w) && w > 0) {
-        const bmi = (w / (1.76 * 1.76)).toFixed(1);
-        if (bmiBadge) bmiBadge.innerText = `BMI ${bmi} (176cm)`;
+        const hM = (USER_PROFILE.height || 176) / 100;
+        const bmi = (w / (hM * hM)).toFixed(1);
+        if (bmiBadge) bmiBadge.innerText = `BMI ${bmi} (${USER_PROFILE.height || 176}cm)`;
       } else {
-        if (bmiBadge) bmiBadge.innerText = `BMI -- (176cm)`;
+        if (bmiBadge) bmiBadge.innerText = `BMI -- (${USER_PROFILE.height || 176}cm)`;
       }
 
       // 체중이 바뀔 때, 이미 입력된 비율(%)이 있다면 kg 실시간 자동 재계산
@@ -2797,8 +3040,9 @@
         return;
       }
 
-      // 키 176cm 기준 BMI 자동 산출
-      const bmi = +(weightVal / (1.76 * 1.76)).toFixed(1);
+      // 키 기준 BMI 자동 산출
+      const hM = (USER_PROFILE.height || 176) / 100;
+      const bmi = +(weightVal / (hM * hM)).toFixed(1);
 
       // 선택 입력 항목 추출 (미입력 시 NaN)
       const inMuscleRate = parseFloat(document.getElementById('weightManualMuscleRate').value);
@@ -2827,7 +3071,8 @@
       let water = !isNaN(inWater) ? inWater : (prev ? prev.water : 52.9);
       let totalMuscle = !isNaN(inTotalMuscle) ? inTotalMuscle : (prev ? (prev.totalMuscleRate || 70.5) : 70.5);
       let visceralFat = !isNaN(inVisceral) ? inVisceral : (prev ? prev.visceralFat : 14.5);
-      let bmr = !isNaN(inBmr) ? inBmr : (prev ? prev.bmr : Math.round(10 * weightVal + 6.25 * 176 - 5 * 47 + 5));
+      const bmrDefault = Math.round(10 * weightVal + 6.25 * (USER_PROFILE.height || 176) - 5 * (USER_PROFILE.age || 47) + (USER_PROFILE.gender === 'female' ? -161 : 5));
+      let bmr = !isNaN(inBmr) ? inBmr : (prev ? prev.bmr : bmrDefault);
       let boneMass = !isNaN(inBone) ? inBone : (prev ? (prev.boneMass || 3.2) : 3.2);
       let protein = !isNaN(inProtein) ? inProtein : (prev ? (prev.protein || 18.0) : 18.0);
 
@@ -4094,6 +4339,7 @@
 
     function exportDataJson() {
       const exportObj = {
+        userProfile: USER_PROFILE,
         bodyMetrics: cachedBodyList,
         bpMetrics: cachedBpList,
         exportedAt: new Date().toISOString()
@@ -4105,6 +4351,79 @@
       a.download = `HealthTracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function triggerImportDataJson() {
+      const fileInput = document.getElementById('jsonBackupFileInput');
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    }
+
+    async function handleJsonBackupFile(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        const bodyList = Array.isArray(data.bodyMetrics) ? data.bodyMetrics : (Array.isArray(data) ? data : []);
+        const bpList = Array.isArray(data.bpMetrics) ? data.bpMetrics : [];
+
+        if (bodyList.length === 0 && bpList.length === 0) {
+          alert("유효한 백업 데이터(체중 또는 혈압 기록)가 포함되어 있지 않은 JSON 파일입니다.");
+          return;
+        }
+
+        const confirmMsg = `선택하신 백업 파일 (${file.name})을 복원하시겠습니까?\n\n` +
+          `- 체중/체성분 기록: ${bodyList.length}건\n` +
+          `- 혈압/맥박 기록: ${bpList.length}건\n\n` +
+          `현재 기기의 데이터에 누락 없이 병합 및 최신화됩니다.`;
+        if (!confirm(confirmMsg)) return;
+
+        const db = await openDB();
+        const tx = db.transaction(["bodyMetrics", "bpMetrics"], "readwrite");
+        const bodyStore = tx.objectStore("bodyMetrics");
+        const bpStore = tx.objectStore("bpMetrics");
+
+        let bodySaved = 0;
+        for (const item of bodyList) {
+          if (item && item.date) {
+            bodyStore.put(item);
+            bodySaved++;
+          }
+        }
+
+        let bpSaved = 0;
+        for (const item of bpList) {
+          if (item && (item.id || item.date)) {
+            if (!item.id) {
+              item.id = `${item.date}_${item.time || '00:00:00'}`;
+            }
+            bpStore.put(item);
+            bpSaved++;
+          }
+        }
+
+        await new Promise((resolve, reject) => {
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+
+        // 백업 파일에 사용자 프로필이 포함되어 있는 경우 복원
+        if (data.userProfile && typeof data.userProfile === 'object') {
+          saveUserProfile(data.userProfile);
+          renderProfileUI();
+        }
+
+        await refreshAllViews();
+        alert(`✅ 백업 데이터 복원 완료!\n체중 ${bodySaved}건, 혈압 ${bpSaved}건이 정상 복원되었습니다.`);
+      } catch (err) {
+        console.error("백업 복원 오류:", err);
+        alert("백업 파일 처리 중 오류가 발생했습니다:\n" + err.message);
+      }
     }
 
     function handleFileSelect(e) {
@@ -4242,6 +4561,8 @@
     // ----------------------------------------------------
     window.addEventListener('DOMContentLoaded', async () => {
       try {
+        loadUserProfile();
+        renderProfileUI();
         await openDB();
         const records = await dbGetAllBodyMetrics();
         const ver = localStorage.getItem('health_tracker_sample_ver');
