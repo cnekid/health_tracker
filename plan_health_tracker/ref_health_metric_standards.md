@@ -9,7 +9,7 @@
 > **연계 문서:**  
 > - [메인 기획안 (plan_health_tracker/plan_health_tracker.md)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/plan_health_tracker.md)  
 > - [웹앱 화면 구현체 (plan_health_tracker/ui_health_tracker.html)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html)  
-> - [가상 장치 어드민 (plan_health_tracker/ui_balanslab_virtual_device.html)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_balanslab_virtual_device.html)  
+> - [가상 체중계 조종 패널 (tests/ble_simulator/controller.html)](file:///Users/moses/myfolder/Project/health_tracker/tests/ble_simulator/controller.html)  
 
 ---
 

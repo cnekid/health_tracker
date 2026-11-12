@@ -6,7 +6,7 @@
 > **참조 플레이북:** [03_dev_plan.md (Obsidian ai_playbooks)](file:///Users/moses/Documents/Obsidian%20Vault/ai_playbooks/03_dev_plan.md)  
 > **연계 산출물:**
 > - [앱 화면 구성안 (plan_health_tracker/ui_health_tracker.html)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_health_tracker.html) : 온디바이스 단일 파일 실행 웹앱
-> - [가상장치 화면 구성안 (plan_health_tracker/ui_balanslab_virtual_device.html)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_balanslab_virtual_device.html) : 맥북 가상 체중계 테스트 어드민
+> - [가상 체중계 조종 패널 (tests/ble_simulator/controller.html)](file:///Users/moses/myfolder/Project/health_tracker/tests/ble_simulator/controller.html) : 맥북 가상 체중계 테스트 어드민
 > - [건강 지표 임상 표준 및 판정 기준서 (plan_health_tracker/ref_health_metric_standards.md)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ref_health_metric_standards.md) : 지표별 정의, 상태별 기준선(임계값), 상태 배지 연동 규격의 단일 진실 공급원(SSOT)
 > - [개발 로그 (plan_health_tracker/devlog_health_tracker.md)](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/devlog_health_tracker.md) : 프로젝트 의사결정 및 진행 이력 기록
 
@@ -201,7 +201,7 @@ flowchart TD
     * 개발자용 덤프 로그창 제거, 3단계 직관적 상태 카드(대기 중 / 블루투스 신호 발송 중 / 핸드폰 수신 완료)로 간결화.
     * 핸드폰(Bluefy/HealthTracker)에서 수신 확인(ACK) 감지 시 자동으로 `🎉 핸드폰에서 수신을 완료했습니다!` 축하 배너 노출 및 송출 자동 종료.
 * **4) 화면 구성안:**
-  * 순수 테스트 어드민 콘솔 [`ui_balanslab_virtual_device.html`](file:///Users/moses/myfolder/Project/health_tracker/plan_health_tracker/ui_balanslab_virtual_device.html) 연계.
+  * 순수 테스트 어드민 콘솔 [`controller.html`](file:///Users/moses/myfolder/Project/health_tracker/tests/ble_simulator/controller.html) 연계.
 
 ---
 
@@ -230,5 +230,5 @@ flowchart TD
 | **Phase 2** | 데이터 구조 & 로컬 DB 엔진 구축 | 8대 생체지표 IndexedDB 스키마, OKOK 317일 파서/시드, 캘린더/차트 동적 렌더러 | **완료** |
 | **Phase 3** | Apple HealthKit 단축어 규격 구축 | Shortcuts JSON 스펙 정의, 원터치 URL Scheme 연동 브릿지 | **완료** |
 | **Phase 4** | Web BLE 체중계 & 카메라 OCR 모듈 결합 | Bluefy Web Bluetooth 통신 스크립트, 온디바이스 카메라 실시간 뷰파인더 & OCR 엔진 | **완료** |
-| **Phase 5** | 밸런스랩 가상 장치 구축 및 실기기 검증 | `ui_balanslab_virtual_device.html`, `scale_sim` (BLE Peripheral) | **진행 중** |
+| **Phase 5** | 밸런스랩 가상 장치 구축 및 실기기 검증 | `tests/ble_simulator/controller.html`, `scale_sim` (BLE Peripheral) | **진행 중** |
 | **Phase 6** | 온디바이스 데이터 관리 센터 구축 | 설정 탭 내 기기별 묶음 데이터 관리 모달, 신체 프로필 수정, 순수 조회 테이블 복원 | **완료** |

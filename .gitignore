@@ -12,3 +12,6 @@ tests/ble_simulator/balanslab_device
 record/
 *.json
 
+# 과제 제출용 로컬 폴더
+과제 제출(1112)/
+

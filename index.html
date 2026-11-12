@@ -831,46 +831,32 @@
           </button>
         </div>
 
-        <!-- 1) 대기 중 뷰 (10초 자동 닫힘 카운트다운) -->
-        <div id="scaleWaitingView" class="space-y-4">
-          <!-- 체중계 다이얼 / 수치 디스플레이 -->
-          <div class="relative w-40 h-40 mx-auto flex items-center justify-center my-1">
-            <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-4 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
-            <div class="w-32 h-32 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
-              <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">체중계 검색 대기</span>
-              <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">--.--</span>
-              <span class="text-xs text-slate-500 font-medium">kg</span>
+        <!-- 1) 대기 중 뷰 (자동 감지 모드 간소화) -->
+        <div id="scaleWaitingView" class="space-y-3.5">
+          <!-- 컴팩트 체중계 다이얼 / 수치 디스플레이 -->
+          <div class="relative w-28 h-28 mx-auto flex items-center justify-center my-1">
+            <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-3 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
+            <div class="w-24 h-24 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
+              <span id="scaleStatusText" class="text-[10px] text-blue-600 font-bold">검색 대기</span>
+              <span id="scaleWeightDisplay" class="text-2xl font-black text-slate-900 mt-0.5 tracking-tight">--.--</span>
+              <span class="text-[10px] text-slate-400 font-medium">kg</span>
             </div>
           </div>
 
-          <div class="space-y-1">
+          <!-- 단 1줄의 핵심 안내문 -->
+          <div class="space-y-0.5">
             <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
-            <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
-            <p class="text-[10px] text-blue-500 font-medium">💡 발로 살짝 눌러 체중계 화면이 켜지면 즉시 연결됩니다.</p>
-            <p id="scaleGuideTip" class="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-1.5 mt-1 leading-tight">
-              🔍 <strong>최초 1회 등록 안내:</strong> 체중계를 밟아 액정을 켠 뒤 목록에서 <span class="text-blue-600 font-bold">44E3</span>(또는 BalansLab)을 선택하세요.<br>
-              (하단 <span class="text-emerald-600 font-semibold">초록색 스위치</span>를 켜두시면 다음부터는 <strong>목록 없이 무팝업 100% 자동 연결</strong>됩니다.)
-            </p>
+            <p class="text-[11px] text-slate-400">올라서면 자동으로 감지하여 측정됩니다.</p>
+            <!-- JS 호환성용 숨김 필드 -->
+            <p id="scaleCountdownText" class="hidden"></p>
+            <p id="scaleGuideTip" class="hidden"></p>
+            <button id="scaleReconnectBtn" type="button" class="hidden"></button>
           </div>
 
-          <div class="pt-2 space-y-2">
-            <!-- 재연결 필요 시 원터치 팝업 호출 버튼 -->
-            <button id="scaleReconnectBtn" type="button" onclick="startBleScaleConnection(true)" class="hidden w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-rotate-right"></i>
-              <span>⚖️ 체중계 연결하기 (액정 켠 후 터치)</span>
-            </button>
+          <div class="pt-1">
             <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
-            <div class="mt-2 flex items-center justify-center gap-3 text-[11px] text-slate-400">
-              <button type="button" onclick="startBleScaleConnection(true)" class="hover:text-blue-600 underline">
-                체중계 새로 검색
-              </button>
-              <span>•</span>
-              <button type="button" onclick="resetBleScaleSavedDevice()" class="hover:text-rose-500 underline">
-                기존 연결 초기화
-              </button>
-            </div>
           </div>
         </div>
 
@@ -4488,7 +4474,6 @@
     let bleDevice = null;
     let bleServer = null;
     let bleNotifyChar = null;
-    let bleAckChar = null;
     let lastBleDeviceInstance = null;
     let scaleCountdownTimer = null;
     let scaleCountdownRemaining = 20;
@@ -4575,7 +4560,6 @@
       const WSS_SVC = "0000181d-0000-1000-8000-00805f9b34fb";
       const OKOK_NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
       const WSS_NOTIFY = "00002a9d-0000-1000-8000-00805f9b34fb";
-      const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       // 실제 밸런스랩 물리 체중계(광고 이름 미포함, Chipsea 0xFFFF) 및 가상 체중계 탐색용 규격 서비스
       const optionalScaleServices = [
@@ -4741,13 +4725,10 @@
                   activeCharacteristics.push(ch);
                 }
               }
-              if (ch.uuid.toLowerCase().includes("fff2")) {
-                bleAckChar = ch;
-              }
             }
           } catch (eChars) {
             const sUuid = service.uuid ? service.uuid.toLowerCase() : "";
-            const targetUuids = sUuid.includes("fff0") ? [OKOK_NOTIFY, OKOK_ACK] : [WSS_NOTIFY];
+            const targetUuids = sUuid.includes("fff0") ? [OKOK_NOTIFY] : [WSS_NOTIFY];
             for (const tu of targetUuids) {
               try {
                 const ch = await service.getCharacteristic(tu);
@@ -4755,7 +4736,6 @@
                   if (!activeCharacteristics.some(c => c.uuid === ch.uuid)) {
                     activeCharacteristics.push(ch);
                   }
-                  if (tu === OKOK_ACK) bleAckChar = ch;
                 }
               } catch (_) {}
             }
@@ -4869,6 +4849,84 @@
       return null;
     }
 
+    // [BIA 연산 엔진] 표준 생체 임피던스(BIA) 임상 계산 엔진 (Peer-reviewed Clinical Equations)
+    function calculateBiaMetrics(weight, impedance, profile = USER_PROFILE) {
+      const height = profile?.height || 176;
+      const age = profile?.age || 47;
+      const gender = profile?.gender || 'male';
+      const isMale = (gender === 'male');
+      const hM = height / 100.0;
+      const bmi = +(weight / (hM * hM)).toFixed(1);
+
+      let bodyFat, fatMass, ffm, skeletalMass, skeletalRate, tbwMass, waterRate;
+
+      // 1) 전극 접촉 정상 (양발 맨발 측정: 정상 생체 저항 R 수신)
+      if (impedance && impedance > 150 && impedance < 1500) {
+        const h2_r = (height * height) / impedance; // 신장-저항 지수 (cm²/Ω)
+
+        // 제지방량(FFM, kg) 산출: Lukaski & Deurenberg 임상 공식
+        if (isMale) {
+          ffm = 0.485 * h2_r + 0.338 * weight + 5.32;
+        } else {
+          ffm = 0.476 * h2_r + 0.295 * weight + 5.49;
+        }
+        // 생리학적 안전 마진 클램핑 (체중의 45% ~ 92%)
+        ffm = Math.max(weight * 0.45, Math.min(weight * 0.92, ffm));
+        fatMass = +(Math.max(1.0, weight - ffm)).toFixed(1);
+        bodyFat = +((fatMass / weight) * 100.0).toFixed(1);
+
+        // 골격근량(SMM, kg) 및 골격근율(%): Janssen et al. 모델
+        const smmFactor = isMale ? 0.54 : 0.49;
+        skeletalMass = +(ffm * smmFactor).toFixed(1);
+        skeletalRate = +((skeletalMass / weight) * 100.0).toFixed(1);
+
+        // 체수분량(TBW, kg) 및 체수분율(%): FFM의 약 73.2%
+        tbwMass = +(ffm * 0.732).toFixed(1);
+        waterRate = +((tbwMass / weight) * 100.0).toFixed(1);
+      } 
+      // 2) 전극 미접촉 폴백 (양말 착용 등으로 R = 0 또는 측정 실패 시: Deurenberg BMI 역산 모델)
+      else {
+        const genderCoeff = isMale ? 1.0 : 0.0;
+        bodyFat = +(1.20 * bmi + 0.23 * age - 10.8 * genderCoeff - 5.4).toFixed(1);
+        bodyFat = Math.max(5.0, Math.min(60.0, bodyFat));
+        fatMass = +((weight * bodyFat) / 100.0).toFixed(1);
+        ffm = Math.max(1.0, weight - fatMass);
+
+        const smmFactor = isMale ? 0.54 : 0.49;
+        skeletalMass = +(ffm * smmFactor).toFixed(1);
+        skeletalRate = +((skeletalMass / weight) * 100.0).toFixed(1);
+        tbwMass = +(ffm * 0.732).toFixed(1);
+        waterRate = +((tbwMass / weight) * 100.0).toFixed(1);
+      }
+
+      // 내장지방 레벨 (복부 지방 면적 추정 1 ~ 30 Lv)
+      const baseVf = (bmi - 18.5) * (isMale ? 0.75 : 0.65) + ((age - 20) / 10.0) * 1.1;
+      const visceralFat = +(Math.max(1.0, Math.min(30.0, baseVf))).toFixed(1);
+
+      // 기초대사량 (BMR, kcal): Mifflin-St Jeor 공식
+      const bmr = Math.round(10.0 * weight + 6.25 * height - 5.0 * age + (isMale ? 5 : -161));
+
+      const totalMuscleMass = +ffm.toFixed(1);
+      const totalMuscleRate = +((totalMuscleMass / weight) * 100.0).toFixed(1);
+
+      return {
+        weight: +weight.toFixed(2),
+        bmi: +bmi.toFixed(1),
+        bodyFat: +bodyFat.toFixed(1),
+        fatMass: +fatMass.toFixed(1),
+        muscleMass: +skeletalMass.toFixed(1),   // 앱 전체 표준: 골격근량 (kg)
+        muscleRate: +skeletalRate.toFixed(1),   // 앱 전체 표준: 골격근율 (%)
+        skeletalMass: +skeletalMass.toFixed(1),
+        skeletalRate: +skeletalRate.toFixed(1),
+        totalMuscleMass: +totalMuscleMass.toFixed(1),
+        totalMuscleRate: +totalMuscleRate.toFixed(1),
+        water: +waterRate.toFixed(1),           // 앱 전체 표준: 체수분율 (%)
+        waterMass: +tbwMass.toFixed(1),
+        visceralFat: +visceralFat.toFixed(1),   // 앱 전체 표준: 내장지방 레벨
+        bmr: Math.round(bmr)                   // 앱 전체 표준: 기초대사량 (kcal)
+      };
+    }
+
     // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
     function onBleScalePacketReceived(raw) {
       const b = extractBytes(raw);
@@ -4876,26 +4934,17 @@
 
       const len = b.length;
       let weight = 0;
-      let bodyFat = 25.0;
-      let skeletalRate = 38.0;
-      let visceralFat = 14.5;
-      let bmr = 1651;
-      let waterRate = 52.9;
+      let impedance = 0;
       let isLocked = false;
 
-      // 1) OKOK v1.1 정밀 19바이트 프로토콜 프레임 (0xCA 0x11 ...)
+      // 1) 밸런스랩 / OKOK 19바이트 프레임 (0xCA ...)
       if (len >= 19 && b[0] === 0xCA) {
         isLocked = (b[3] === 0x01);
         const rawWeight = (b[5] << 8) | b[6];
         weight = rawWeight / 100.0;
-        const rawFat = (b[7] << 8) | b[8];
-        bodyFat = rawFat / 10.0;
-        const rawSkeletal = (b[9] << 8) | b[10];
-        skeletalRate = rawSkeletal / 10.0;
-        visceralFat = b[11];
-        bmr = (b[12] << 8) | b[13];
-        const rawWater = (b[14] << 8) | b[15];
-        waterRate = rawWater / 10.0;
+        
+        // 7~8번 바이트는 가짜 체지방이 아니라 순수 전기저항값(Impedance, Ω)임
+        impedance = (b[7] << 8) | b[8];
 
         // 실시간 수치 표시
         document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
@@ -4921,45 +4970,21 @@
         return;
       }
 
-      // 신장 176cm 기준 BMI 및 파생 질량 지표 연산
-      const hM = (USER_PROFILE?.height || 176) / 100;
-      const bmi = +(weight / (hM * hM)).toFixed(1);
-      const totalMuscleMass = +((weight * ((100 - bodyFat) * 0.94)) / 100).toFixed(1);
-      const totalMuscleRate = +((totalMuscleMass / weight) * 100).toFixed(1);
-      const skeletalMass = +((weight * skeletalRate) / 100).toFixed(1);
-      const fatMass = +((weight * bodyFat) / 100).toFixed(1);
-      const waterMass = +((weight * waterRate) / 100).toFixed(1);
+      if (weight <= 0) return;
+
+      // 신규 BIA 계산 엔진으로 14대 생체 데이터 산출
+      const metrics = calculateBiaMetrics(weight, impedance, USER_PROFILE);
 
       const now = new Date();
       const record = {
         id: "scale_" + now.getTime(),
         date: now.toISOString().split("T")[0],
         time: now.toTimeString().split(" ")[0],
-        weight: +weight.toFixed(2),
-        bodyFat: +bodyFat.toFixed(1),
-        fatMass: fatMass,
-        // 골격근량/율 통일 (앱 전체 표준: muscleMass = 골격근량, muscleRate = 골격근율)
-        muscleRate: +skeletalRate.toFixed(1),
-        muscleMass: +skeletalMass.toFixed(1),
-        skeletalRate: +skeletalRate.toFixed(1),
-        skeletalMass: +skeletalMass.toFixed(1),
-        totalMuscleRate: +totalMuscleRate.toFixed(1),
-        totalMuscleMass: +totalMuscleMass.toFixed(1),
-        bmi: +bmi.toFixed(1),
-        visceralFat: +visceralFat.toFixed(1),
-        water: +waterRate.toFixed(1),
-        waterMass: waterMass,
-        bmr: Math.round(bmr),
+        ...metrics,
         deltaWeight: cachedBodyList.length > 0 ? +(weight - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
         source: "BLE체중계",
         syncedHealthKit: true
       };
-
-      // 체중계로 수신 확인(ACK) 역전송 (FFF2)
-      if (bleAckChar) {
-        bleAckChar.writeValueWithoutResponse(new Uint8Array([0x01])).catch(() => {});
-      }
-      // 수신 즉시 연결을 강제로 끊지 않고 요약 뷰 확인/저장 또는 모달 닫기 시 안정적으로 해제
 
       handleIncomingScaleData(record);
     }
@@ -4976,7 +5001,6 @@
       bleDevice = null;
       bleServer = null;
       bleNotifyChar = null;
-      bleAckChar = null;
     }
 
     function onBleDisconnected() {

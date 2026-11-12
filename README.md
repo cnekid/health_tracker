@@ -11,10 +11,13 @@ health_tracker/
 ├── plan_health_tracker/               # 기획, UI 화면 및 개발 로그 전용 워크스페이스
 │   ├── plan_health_tracker.md         # 메인 기획안 (단일 원본)
 │   ├── ui_health_tracker.html         # 메인 앱 화면 구성안 (인터랙티브 웹앱)
-│   ├── ui_balanslab_virtual_device.html # 밸런스랩 가상 장치 테스트 어드민
 │   └── devlog_health_tracker.md       # 프로젝트 개발 로그
 ├── tests/                             # 단위 및 통합 테스트 / 시뮬레이터
-│   └── ble_simulator/                 # macOS Swift 기반 가상 체중계 BLE 엔진
+│   └── ble_simulator/                 # macOS Swift 기반 가상 체중계 독립 패키지 (엔진 + 웹 패널)
+│       ├── main.swift                 # 가상 체중계 BLE Peripheral & HTTP 서버
+│       ├── scale_sim                  # 네이티브 실행 바이너리
+│       ├── controller.html            # 가상 체중계 웹 조종 패널 & BLE 레이더
+│       └── README.md                  # 시뮬레이터 구동 가이드
 ├── 샘플 사진/                          # 실물 측정기기 LCD 및 화면 참조 사진
 ├── src/                               # 추후 본개발 소스코드
 └── README.md

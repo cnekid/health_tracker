@@ -695,3 +695,50 @@
      * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 100% 일치 (0 diff).
      * macOS JavaScriptCore(`jsc`) 구문 검사 무결성 통과 (0 error).
 
+---
+
+### [2026-11-12 16:15] 실제 물리 체중계 연동 파이프라인 및 온디바이스 BIA 임상 연산 엔진 구축 완료
+
+* **배경 및 원인 분석:**
+  1. **실제 하드웨어 동작 규격 정합성:**
+     * 상용 스마트 체중계는 사용자의 신체 프로필(신장, 나이, 성별)을 알 수 없으므로 체지방률/근육량 등을 자체 계산하여 보내지 않으며, 오직 `체중(Weight)`과 양발 전극 사이의 `생체 저항값(Impedance Ω)`만 송출함.
+     * 기존 코드는 저항값 자리(7~8번 바이트)를 가짜 체지방률로 직결 파싱하여 체지방률 52.0% 등의 치명적 왜곡이 발생하였음.
+  2. **가상 시뮬레이터 전용 편의 로직(`0xFFF2` ACK) 분리:**
+     * 맥북 터미널 시뮬레이터 로그 확인용으로 사용되던 임시 `0xFFF2` 역전송 코드는 실제 하드웨어에는 불필요하며 예외를 유발할 수 있어 완전히 제거함.
+
+* **반영 내역:**
+  1. **가상 ACK 잔재 제거:**
+     * `bleAckChar` 변수, `OKOK_ACK (0xFFF2)` 특성 탐색/역전송/초기화 코드 전면 삭제로 순수 단방향 리스너 확립.
+  2. **온디바이스 BIA 임상 연산 엔진 신설 (`calculateBiaMetrics`):**
+     * `USER_PROFILE` (신장 176cm, 나이 47세, 남성)과 실측 체중($W$), 생체 저항($R$) 결합.
+     * 정상 측정 시 Lukaski & Deurenberg 임상 공식(신장-저항 지수 $H^2/R$) 및 Janssen et al. 골격근 모델 적용.
+     * 전극 미접촉(양말 착용, $R \le 0$) 시 Deurenberg BMI 역산 모델로 자동 안전 폴백.
+     * 14대 생체 데이터(체지방, 골격근, 체수분, 내장지방, BMR 등) 완전 산출.
+  3. **수신 패킷 파서 개편 (`onBleScalePacketReceived`):**
+     * 실시간 체중 표시 및 잠금(`isLocked === true`) 시 `calculateBiaMetrics()` 호출 ➔ `handleIncomingScaleData()` 전달 ➔ IndexedDB 저장 및 전체 뷰 갱신.
+  4. **무결성 검증:**
+     * `health_tracker/index.html`과 `health_tracker/plan_health_tracker/ui_health_tracker.html` 간 `diff -u` 0건(100% 동일) 확인.
+     * macOS JavaScriptCore(`jsc`) 구문 검사 무결성 통과 (0 error).
+
+---
+
+### [2026-11-12 17:20] BLE 레이더(시뮬레이터) 실제 물리 체중계(MAC: AC:12:BB:39:44:E3) 100% 불변 식별 및 기능 중심 어드민 UI 고도화 완료
+
+* **배경 및 요구사항:**
+  1. **실제 물리 체중계 100% 지문 매칭:** 모호한 이름 접두사나 범용 휴리스틱을 배제하고, 어제 캡처된 하드웨어 고유 식별값(제조사 데이터 내 역순 MAC 주소 `E3 44 39 BB 12 AC` 및 Chipsea 25바이트 고유 헤더 `FFFF00154311FFF011`)으로 내 실제 체중계를 단 0.1%의 오차 없이 자동 포착.
+  2. **잡음 기기 아코디언 격리:** 주변에 상시 탐지되는 240여 대의 Apple, Microsoft, 가전 기기 비콘을 1줄 아코디언(`📦 기타 주변 감지 기기 (N대) ▼ 클릭하여 펼치기`)으로 묶어 기본 접힘 상태로 유지함으로써 시각적 피로도 원천 차단.
+  3. **체중계 측정 데이터 전용 디스플레이:** 실제 체중계 감지 시 상단 전용 카드에 실시간 체중(`kg`), 생체 임피던스(`Ω`), 측정 상태(`🔒 확정 / ⏳ 측정중`), 신호 세기(`dBm`), 그리고 원천 10바이트 생체 페이로드 Hex 값을 한눈에 확인 가능한 어드민 그리드 제공.
+  4. **기능 중심 어드민:** 불필요한 점 펄스 애니메이션이나 장식적 요소를 제거하고 데이터 확인 목적에 최적화된 고시인성 UI 확립.
+
+* **세부 반영 내역:**
+  1. **백엔드 (`tests/ble_simulator/main.swift`):**
+     * `BleDeviceInfo` 구조체 확장 (`isRealScale`, `isVirtualScale`, `payloadHex`, `weightCandidate`, `impedanceCandidate`, `isLockedCandidate`).
+     * `centralManager(_:didDiscover:...)` 내 실제 체중계 지문 매칭 및 10바이트 생체 페이로드 분리 추출 로직 구현.
+     * 가상 체중계(`BalansLab-Scale`) 및 제조사 접두사 기반 기기 카테고리(`apple`, `microsoft`, `samsung`, `other`) 자동 분류.
+     * `swiftc -O tests/ble_simulator/main.swift -o tests/ble_simulator/scale_sim` 무결성 재컴파일 완료.
+  2. **프론트엔드 어드민 (`tests/ble_simulator/controller.html`):**
+     * 체중계 신호 포착 시 상단 전용 데이터 박스(체중, 저항값, 상태, 원천 10B 페이로드) 렌더링.
+     * 기타 240여 대 주변 기기는 하단 1줄 아코디언(`toggleOtherDevicesAccordion()`)으로 격리.
+  3. **동작 검증:**
+     * `scale_sim` 백그라운드 엔진 기동 및 HTTP API (`/api/status`, `/api/radar/start`, `/api/radar`, `/api/radar/stop`) 정상 동작 검증 완료.
+

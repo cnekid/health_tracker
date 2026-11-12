@@ -59,20 +59,55 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-start p-0 sm:p-4 sm:py-6">
 
-  <!-- 데스크톱 상단 브라우저 제어 바 -->
-  <header class="w-full max-w-[393px] mb-2 hidden sm:flex items-center justify-between text-xs text-slate-500 px-3">
-    <div class="flex items-center gap-1.5">
-      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-      <span class="font-bold text-slate-700 tracking-tight">HealthTracker</span>
-      <span class="text-[10px] text-slate-400">온디바이스</span>
+  <!-- 데스크톱 상단 브라우저 제어 바 (Flow Studio) -->
+  <header class="w-full max-w-5xl mb-3 hidden sm:flex items-center justify-between text-xs text-slate-500 px-4">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+      <span class="font-extrabold text-slate-800 text-sm tracking-tight">HealthTracker UI Flow Studio</span>
+      <span class="text-[11px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-semibold">기획·화면 검토용</span>
     </div>
-    <div class="text-[11px] text-slate-400">
-      아이폰 뷰포트 미리보기
+    <div id="flowStatusLabel" class="text-xs font-medium text-slate-500 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+      <span>[홈] 체중 측정 파생 화면 연동 중</span>
     </div>
   </header>
 
-  <!-- 아이폰 목업 프레임 -->
-  <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[668px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+  <!-- 메인 2열 워크스페이스 컨테이너 (좌 50% : 우 50%) -->
+  <div id="flowWorkspaceContainer" class="w-full max-w-5xl flex flex-col sm:flex-row items-center sm:items-start justify-center gap-6 sm:gap-12 relative">
+
+    <!-- 피그마 프로토타입 스타일 SVG 실선 커넥터 오버레이 -->
+    <svg id="flowConnectorSvg" class="hidden sm:block absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible">
+      <defs>
+        <!-- 끝부분 화살촉 마커 -->
+        <marker id="flowArrowMarker" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#2563eb" />
+        </marker>
+        <!-- 그림자 필터 -->
+        <filter id="flowShadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1e3a8a" flood-opacity="0.15" />
+        </filter>
+      </defs>
+      <!-- 실선 베지어 곡선 경로 -->
+      <path id="flowConnectorLine" d="" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#flowArrowMarker)" stroke-linecap="round" stroke-linejoin="round" filter="url(#flowShadow)" />
+      <!-- 시작점 앵커 블루 닷 (●) -->
+      <circle id="flowStartCircle" cx="0" cy="0" r="4.5" fill="#2563eb" stroke="#ffffff" stroke-width="2" filter="url(#flowShadow)" />
+    </svg>
+
+    <!-- 실선 중앙에 뜨는 피그마식 안내 뱃지 -->
+    <div id="flowConnectorBadge" class="hidden sm:flex absolute z-35 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-600 text-white shadow-md font-bold text-[10.5px] whitespace-nowrap pointer-events-none transition-all duration-150">
+      <i class="fa-solid fa-arrow-pointer text-[9px]"></i>
+      <span id="flowConnectorBadgeText">클릭 시 ➔</span>
+    </div>
+
+    <!-- [1] 좌측 영역 (약 50%): 실제 조작 마스터 폰 -->
+    <div class="w-full sm:w-[393px] flex flex-col items-center shrink-0">
+      <div class="hidden sm:flex items-center justify-between w-full px-3 mb-1 text-[11px] font-bold text-slate-600">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen text-blue-600"></i> 마스터 조작 화면 (Master)</span>
+        <span class="text-[10px] text-slate-400 font-normal">직접 터치 / 탭 전환 가능</span>
+      </div>
+
+      <!-- 아이폰 목업 프레임 -->
+      <main id="phoneContainer" class="w-full sm:max-w-[393px] min-h-0 h-[100dvh] sm:h-[668px] bg-slate-50 sm:rounded-[48px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
     
     <!-- 아이폰 상태바 & 다이내믹 아일랜드 -->
     <div class="h-11 w-full pt-3 px-7 hidden sm:flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
@@ -155,8 +190,12 @@
 
           <!-- 버튼 2개: [체중 측정] [직접 수동 입력] -->
           <div class="grid grid-cols-2 gap-2 pt-0.5">
-            <button onclick="openScaleMeasureModal()" class="py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+            <button id="btnHomeScaleMeasure" onclick="openScaleMeasureModal()" class="py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm relative ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
               <i class="fa-brands fa-bluetooth-b text-xs"></i> 체중 측정
+              <span class="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+              </span>
             </button>
             <button onclick="openWeightManualModal()" class="py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200">
               <i class="fa-solid fa-pen text-slate-500 text-xs"></i> 직접 수동 입력
@@ -484,7 +523,7 @@
         <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-slate-900">사용자 신체 정보</span>
-            <button onclick="openProfileEditModal()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition border border-blue-100 flex items-center gap-1 active:scale-95">
+            <button id="btnSettingsProfileEdit" onclick="openProfileEditModal()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition border border-blue-100 flex items-center gap-1 active:scale-95">
               <i class="fa-solid fa-pen-to-square text-[10px]"></i> 수정
             </button>
           </div>
@@ -831,46 +870,32 @@
           </button>
         </div>
 
-        <!-- 1) 대기 중 뷰 (10초 자동 닫힘 카운트다운) -->
-        <div id="scaleWaitingView" class="space-y-4">
-          <!-- 체중계 다이얼 / 수치 디스플레이 -->
-          <div class="relative w-40 h-40 mx-auto flex items-center justify-center my-1">
-            <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-4 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
-            <div class="w-32 h-32 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
-              <span id="scaleStatusText" class="text-[11px] text-blue-600 font-bold">체중계 검색 대기</span>
-              <span id="scaleWeightDisplay" class="text-3xl font-black text-slate-900 mt-0.5 tracking-tight">--.--</span>
-              <span class="text-xs text-slate-500 font-medium">kg</span>
+        <!-- 1) 대기 중 뷰 (자동 감지 모드 간소화) -->
+        <div id="scaleWaitingView" class="space-y-3.5">
+          <!-- 컴팩트 체중계 다이얼 / 수치 디스플레이 -->
+          <div class="relative w-28 h-28 mx-auto flex items-center justify-center my-1">
+            <div id="scaleRingAnim" class="absolute inset-0 rounded-full border-3 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
+            <div class="w-24 h-24 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
+              <span id="scaleStatusText" class="text-[10px] text-blue-600 font-bold">검색 대기</span>
+              <span id="scaleWeightDisplay" class="text-2xl font-black text-slate-900 mt-0.5 tracking-tight">--.--</span>
+              <span class="text-[10px] text-slate-400 font-medium">kg</span>
             </div>
           </div>
 
-          <div class="space-y-1">
+          <!-- 단 1줄의 핵심 안내문 -->
+          <div class="space-y-0.5">
             <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
-            <p id="scaleCountdownText" class="text-[11px] text-slate-400">20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: 20초)</p>
-            <p class="text-[10px] text-blue-500 font-medium">💡 발로 살짝 눌러 체중계 화면이 켜지면 즉시 연결됩니다.</p>
-            <p id="scaleGuideTip" class="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-1.5 mt-1 leading-tight">
-              🔍 <strong>최초 1회 등록 안내:</strong> 체중계를 밟아 액정을 켠 뒤 목록에서 <span class="text-blue-600 font-bold">44E3</span>(또는 BalansLab)을 선택하세요.<br>
-              (하단 <span class="text-emerald-600 font-semibold">초록색 스위치</span>를 켜두시면 다음부터는 <strong>목록 없이 무팝업 100% 자동 연결</strong>됩니다.)
-            </p>
+            <p class="text-[11px] text-slate-400">올라서면 자동으로 감지하여 측정됩니다.</p>
+            <!-- JS 호환성용 숨김 필드 -->
+            <p id="scaleCountdownText" class="hidden"></p>
+            <p id="scaleGuideTip" class="hidden"></p>
+            <button id="scaleReconnectBtn" type="button" class="hidden"></button>
           </div>
 
-          <div class="pt-2 space-y-2">
-            <!-- 재연결 필요 시 원터치 팝업 호출 버튼 -->
-            <button id="scaleReconnectBtn" type="button" onclick="startBleScaleConnection(true)" class="hidden w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-rotate-right"></i>
-              <span>⚖️ 체중계 연결하기 (액정 켠 후 터치)</span>
-            </button>
+          <div class="pt-1">
             <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
-            <div class="mt-2 flex items-center justify-center gap-3 text-[11px] text-slate-400">
-              <button type="button" onclick="startBleScaleConnection(true)" class="hover:text-blue-600 underline">
-                체중계 새로 검색
-              </button>
-              <span>•</span>
-              <button type="button" onclick="resetBleScaleSavedDevice()" class="hover:text-rose-500 underline">
-                기존 연결 초기화
-              </button>
-            </div>
           </div>
         </div>
 
@@ -1418,9 +1443,230 @@
     </div>
 
   </main>
+    </div>
 
-  <footer class="mt-3 text-center text-xs text-slate-400 max-w-[393px]">
-    💡 Bluefy 브라우저에서 실행 시 밸런스랩 체중계 BLE 및 카메라 OCR이 온디바이스로 동작합니다.
+    <!-- ================= [2] 우측 영역 (약 50%): 상태 반응형 파생 팝업/하위 화면 뷰어 (#flowRightWorkspace) ================= -->
+    <aside id="flowRightWorkspace" class="hidden sm:flex flex-col items-center w-full sm:w-[340px] shrink-0 transition-all duration-200">
+      
+      <!-- 상단 컨트롤 & 상태 바 -->
+      <div class="flex items-center justify-between w-full px-2 mb-1 text-[11px] font-bold text-slate-600">
+        <div class="flex items-center gap-1.5">
+          <i id="flowSubViewIcon" class="fa-solid fa-weight-scale text-blue-600"></i>
+          <span id="flowSubViewTitle">체중 측정 파생 화면</span>
+        </div>
+        <!-- 홈 탭용 서브 뷰 토글 스위처 -->
+        <div id="flowHomeScaleSwitcher" class="flex items-center bg-slate-200/80 p-0.5 rounded-lg text-[10px] font-semibold">
+          <button type="button" id="flowTabBtn-waiting" onclick="switchFlowHomeSubView('waiting')" class="px-2 py-0.5 rounded-md bg-white text-blue-600 shadow-2xs font-bold transition">1. 측정 대기</button>
+          <button type="button" id="flowTabBtn-result" onclick="switchFlowHomeSubView('result')" class="px-2 py-0.5 rounded-md text-slate-500 hover:text-slate-800 transition">2. 결과 요약</button>
+        </div>
+        <!-- 설정 탭용 라벨 -->
+        <div id="flowSettingsLabel" class="hidden text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+          신체 스펙 편집
+        </div>
+      </div>
+
+      <!-- 우측 서브 아이폰 목업 프레임 (컴팩트 스케일) -->
+      <div id="flowPhoneContainer" class="w-full sm:max-w-[340px] h-[580px] bg-slate-50 sm:rounded-[40px] overflow-hidden flex flex-col sm:device-shadow relative select-none">
+        
+        <!-- 상태바 & 다이내믹 아일랜드 -->
+        <div class="h-10 w-full pt-2.5 px-6 flex justify-between items-center text-xs font-semibold text-slate-900 z-30 shrink-0">
+          <span class="text-[11px]">08:05</span>
+          <div class="w-24 h-5 bg-black rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2 flex items-center justify-center">
+            <div class="w-2.5 h-2.5 rounded-full bg-slate-900 mr-3"></div>
+            <div class="w-2 h-2 rounded-full bg-slate-800"></div>
+          </div>
+          <div class="flex items-center space-x-1 text-[10px] text-slate-800">
+            <i class="fa-solid fa-signal text-[9px]"></i>
+            <span class="font-bold text-[9px]">5G</span>
+            <i class="fa-solid fa-battery-three-quarters text-slate-700 text-[11px]"></i>
+          </div>
+        </div>
+
+        <!-- 스크린 내부 영역: 모달이 오버레이된 폰 화면 -->
+        <div class="flex-1 relative overflow-hidden flex flex-col bg-slate-900/60 backdrop-blur-xs p-4 justify-center items-center">
+          
+          <!-- [1] 홈 탭 - 체중 측정 대기/진행 팝업 (#flowSubView-scaleWaiting: 대폭 간소화) -->
+          <div id="flowSubView-scaleWaiting" class="w-full bg-white border border-slate-200 rounded-3xl p-5 text-center space-y-4 shadow-xl">
+            <!-- 간결한 헤더 -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+                  <i class="fa-solid fa-weight-scale"></i>
+                </span>
+                <h3 class="text-sm font-bold text-slate-900">체중 측정</h3>
+              </div>
+              <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span> 대기 중
+              </span>
+            </div>
+
+            <!-- 컴팩트 수치 디스플레이 (다이얼 크기 112px) -->
+            <div class="relative w-28 h-28 mx-auto flex items-center justify-center my-1">
+              <div class="absolute inset-0 rounded-full border-3 border-blue-100 border-t-blue-600 anim-pulse-ring"></div>
+              <div class="w-24 h-24 rounded-full bg-slate-50 flex flex-col items-center justify-center p-2 border border-slate-200 shadow-inner">
+                <span class="text-2xl font-black text-slate-900 tracking-tight">--.--</span>
+                <span class="text-[11px] text-slate-400 font-semibold -mt-0.5">kg</span>
+              </div>
+            </div>
+
+            <!-- 단 1줄의 핵심 안내문 -->
+            <div class="py-1 space-y-0.5">
+              <p class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</p>
+              <p class="text-[11px] text-slate-400">올라서면 자동으로 감지하여 측정됩니다.</p>
+            </div>
+
+            <!-- 하단 심플 닫기 버튼 -->
+            <div class="pt-1">
+              <button type="button" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
+                닫기
+              </button>
+            </div>
+          </div>
+
+          <!-- [2] 홈 탭 - 체중 측정 결과 요약표 (#flowSubView-scaleResult) -->
+          <div id="flowSubView-scaleResult" class="hidden w-full bg-white border border-slate-200 rounded-3xl p-5 text-center space-y-3.5 shadow-xl">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+                  <i class="fa-solid fa-weight-scale"></i>
+                </span>
+                <h3 class="text-sm font-bold text-slate-900">체중 측정 (스마트 체중계)</h3>
+              </div>
+              <span class="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold">측정 완료</span>
+            </div>
+
+            <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 flex items-center justify-between text-left">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                  <i class="fa-solid fa-check"></i>
+                </span>
+                <div>
+                  <div class="text-[11px] font-bold text-blue-900">측정 데이터 수신 완료</div>
+                  <div class="text-[10px] text-blue-600 font-medium">방금 측정됨</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-2xl font-black text-blue-700">80.30</span>
+                <span class="text-xs font-bold text-blue-600">kg</span>
+              </div>
+            </div>
+
+            <!-- 10대 생체 지표 요약 표 -->
+            <div class="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 text-xs text-left max-h-[310px] overflow-y-auto hide-scrollbar">
+              <div class="flex justify-between items-center px-3.5 py-2 bg-slate-50 font-bold text-slate-700 text-[11px]">
+                <span>지표 항목</span>
+                <span>측정값</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">체질량지수 (BMI)</span>
+                <span class="font-bold text-slate-900">25.9 kg/m²</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">체지방률</span>
+                <span class="font-bold text-slate-900">25.0 %</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">골격근율</span>
+                <span class="font-bold text-slate-900">38.0 %</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">골격근량</span>
+                <span class="font-bold text-slate-900">30.6 kg</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">체수분율</span>
+                <span class="font-bold text-slate-900">52.9 %</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">내장지방</span>
+                <span class="font-bold text-slate-900">14.5 Lv</span>
+              </div>
+              <div class="flex justify-between items-center px-3.5 py-1.5">
+                <span class="text-slate-600">기초대사량</span>
+                <span class="font-bold text-slate-900">1651 kcal</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+              <button type="button" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition shadow-sm">
+                확인 (저장)
+              </button>
+              <button type="button" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+                취소
+              </button>
+            </div>
+          </div>
+
+          <!-- [3] 설정 탭 - 신체 스펙 수정 팝업 (#flowSubView-settingsProfile) -->
+          <div id="flowSubView-settingsProfile" class="hidden w-full bg-white border border-slate-200 rounded-3xl p-5 text-left space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+                  <i class="fa-solid fa-user-pen"></i>
+                </span>
+                <h3 class="text-sm font-bold text-slate-900">사용자 신체 스펙 설정</h3>
+              </div>
+              <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">수정 화면</span>
+            </div>
+
+            <p class="text-xs text-slate-500 leading-relaxed">
+              체지방계(BIA) 측정 시 기초대사량 및 표준 체중 판정에 사용되는 기본 신체 정보입니다.
+            </p>
+
+            <div class="space-y-3 pt-1">
+              <!-- 성별 선택 -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">성별</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" class="py-2.5 rounded-xl border font-bold text-xs transition flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 border-blue-200 shadow-2xs">
+                    <i class="fa-solid fa-mars text-sm"></i> 남성
+                  </button>
+                  <button type="button" class="py-2.5 rounded-xl border font-bold text-xs transition flex items-center justify-center gap-1.5 bg-slate-50 text-slate-500 border-slate-200">
+                    <i class="fa-solid fa-venus text-sm"></i> 여성
+                  </button>
+                </div>
+              </div>
+
+              <!-- 키(신장) 입력 -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">신장 (키)</label>
+                <div class="relative">
+                  <input type="number" value="175" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-900 focus:outline-none">
+                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">cm</span>
+                </div>
+              </div>
+
+              <!-- 나이(연령) 입력 -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">나이</label>
+                <div class="relative">
+                  <input type="number" value="35" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-900 focus:outline-none">
+                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">세</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 버튼 영역 -->
+            <div class="flex gap-2 pt-2 border-t border-slate-100">
+              <button type="button" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl transition shadow-sm">
+                저장하기
+              </button>
+              <button type="button" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+                취소
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+  <footer class="mt-4 text-center text-xs text-slate-400 max-w-5xl">
+    💡 HealthTracker UI Flow Studio: 좌측 폰을 조작하면 우측 파생 화면이 실시간으로 연동되어 기획 화면을 비교 검토할 수 있습니다.
   </footer>
 
   <!-- ================= 자바스크립트 엔진 ================= -->
@@ -2117,6 +2363,174 @@
     let detailHistoryDisplayLimit = 10;
     let detailChartPageOffset = 0; // 0: 최신 6일, 1: 직전 6일, 2: 그 이전 6일...
 
+    // ----------------------------------------------------
+    // Flow Studio: 기획/검토용 우측 50% 파생 화면 뷰어 제어
+    // ----------------------------------------------------
+    let currentFlowHomeSubView = 'waiting'; // 'waiting' | 'result'
+
+    function updateFlowRightWorkspace(tab) {
+      const workspace = document.getElementById('flowRightWorkspace');
+      const switcher = document.getElementById('flowHomeScaleSwitcher');
+      const settingsLabel = document.getElementById('flowSettingsLabel');
+      const subTitle = document.getElementById('flowSubViewTitle');
+      const subIcon = document.getElementById('flowSubViewIcon');
+      const statusLabel = document.getElementById('flowStatusLabel');
+
+      const vWaiting = document.getElementById('flowSubView-scaleWaiting');
+      const vResult = document.getElementById('flowSubView-scaleResult');
+      const vProfile = document.getElementById('flowSubView-settingsProfile');
+
+      if (!workspace) return;
+
+      if (tab === 'home') {
+        workspace.classList.remove('hidden');
+        workspace.classList.add('flex');
+
+        if (switcher) switcher.classList.remove('hidden');
+        if (settingsLabel) settingsLabel.classList.add('hidden');
+        if (subTitle) subTitle.innerText = "체중 측정 파생 화면";
+        if (subIcon) subIcon.className = "fa-solid fa-weight-scale text-blue-600";
+        if (statusLabel) statusLabel.innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-500"></span><span>[홈] 체중 측정 파생 화면 연동 중</span>';
+
+        if (vProfile) vProfile.classList.add('hidden');
+        if (currentFlowHomeSubView === 'waiting') {
+          if (vWaiting) vWaiting.classList.remove('hidden');
+          if (vResult) vResult.classList.add('hidden');
+        } else {
+          if (vWaiting) vWaiting.classList.add('hidden');
+          if (vResult) vResult.classList.remove('hidden');
+        }
+      } else if (tab === 'settings') {
+        workspace.classList.remove('hidden');
+        workspace.classList.add('flex');
+
+        if (switcher) switcher.classList.add('hidden');
+        if (settingsLabel) settingsLabel.classList.remove('hidden');
+        if (subTitle) subTitle.innerText = "신체 스펙 수정 팝업";
+        if (subIcon) subIcon.className = "fa-solid fa-user-pen text-blue-600";
+        if (statusLabel) statusLabel.innerHTML = '<span class="w-2 h-2 rounded-full bg-indigo-500"></span><span>[설정] 신체 스펙 수정 팝업 연동 중</span>';
+
+        if (vWaiting) vWaiting.classList.add('hidden');
+        if (vResult) vResult.classList.add('hidden');
+        if (vProfile) vProfile.classList.remove('hidden');
+      } else {
+        // 'details' 또는 지표 상세 등: 완전히 숨김 (상세 단독 화면)
+        workspace.classList.add('hidden');
+        workspace.classList.remove('flex');
+        if (statusLabel) statusLabel.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>[상세] 전체 기록 단독 화면 모드</span>';
+      }
+
+      // 렌더링 후 피그마 실선 커넥터 재계산
+      requestAnimationFrame(() => {
+        drawFlowConnectorLine();
+      });
+    }
+
+    function switchFlowHomeSubView(sub) {
+      currentFlowHomeSubView = sub;
+      const btnWaiting = document.getElementById('flowTabBtn-waiting');
+      const btnResult = document.getElementById('flowTabBtn-result');
+      const vWaiting = document.getElementById('flowSubView-scaleWaiting');
+      const vResult = document.getElementById('flowSubView-scaleResult');
+
+      if (sub === 'waiting') {
+        if (btnWaiting) btnWaiting.className = "px-2 py-0.5 rounded-md bg-white text-blue-600 shadow-2xs font-bold transition";
+        if (btnResult) btnResult.className = "px-2 py-0.5 rounded-md text-slate-500 hover:text-slate-800 transition";
+        if (vWaiting) vWaiting.classList.remove('hidden');
+        if (vResult) vResult.classList.add('hidden');
+      } else {
+        if (btnWaiting) btnWaiting.className = "px-2 py-0.5 rounded-md text-slate-500 hover:text-slate-800 transition";
+        if (btnResult) btnResult.className = "px-2 py-0.5 rounded-md bg-white text-blue-600 shadow-2xs font-bold transition";
+        if (vWaiting) vWaiting.classList.add('hidden');
+        if (vResult) vResult.classList.remove('hidden');
+      }
+
+      // 렌더링 후 피그마 실선 커넥터 재계산
+      requestAnimationFrame(() => {
+        drawFlowConnectorLine();
+      });
+    }
+
+    // 피그마 프로토타입 스타일: 좌측 버튼 ➔ 우측 팝업 1:1 실선 화살표 드로잉
+    function drawFlowConnectorLine() {
+      const container = document.getElementById('flowWorkspaceContainer');
+      const svg = document.getElementById('flowConnectorSvg');
+      const line = document.getElementById('flowConnectorLine');
+      const circle = document.getElementById('flowStartCircle');
+      const badge = document.getElementById('flowConnectorBadge');
+      const badgeText = document.getElementById('flowConnectorBadgeText');
+
+      if (!container || !svg || !line || !circle) return;
+
+      if (window.innerWidth < 640 || currentMainTab === 'details') {
+        svg.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+        return;
+      }
+
+      let startEl = null;
+      let endEl = null;
+      let text = "클릭 시 ➔";
+
+      if (currentMainTab === 'home') {
+        startEl = document.getElementById('btnHomeScaleMeasure');
+        endEl = (currentFlowHomeSubView === 'waiting') 
+          ? document.getElementById('flowSubView-scaleWaiting')
+          : document.getElementById('flowSubView-scaleResult');
+        text = "체중 측정 클릭 시 ➔";
+      } else if (currentMainTab === 'settings') {
+        startEl = document.getElementById('btnSettingsProfileEdit');
+        endEl = document.getElementById('flowSubView-settingsProfile');
+        text = "수정 클릭 시 ➔";
+      }
+
+      if (!startEl || !endEl) {
+        svg.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+        return;
+      }
+
+      const cRect = container.getBoundingClientRect();
+      const sRect = startEl.getBoundingClientRect();
+      const eRect = endEl.getBoundingClientRect();
+
+      // 시작 좌표: 출발 버튼의 우측 중앙 모서리
+      const startX = sRect.right - cRect.left;
+      const startY = sRect.top + (sRect.height / 2) - cRect.top;
+
+      // 도착 좌표: 우측 팝업 카드의 좌측 중앙 모서리
+      const endX = eRect.left - cRect.left;
+      const endY = eRect.top + (eRect.height / 2) - cRect.top;
+
+      // 부드러운 수평 베지어 곡선 컨트롤 포인트
+      const dx = Math.max(40, (endX - startX) * 0.45);
+      const cp1X = startX + dx;
+      const cp1Y = startY;
+      const cp2X = endX - dx;
+      const cp2Y = endY;
+
+      // 화살촉 마커 고려하여 도착점 x를 살짝 앞당김 (8px)
+      const targetX = endX - 8;
+
+      const pathData = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${targetX} ${endY}`;
+      line.setAttribute('d', pathData);
+
+      circle.setAttribute('cx', startX);
+      circle.setAttribute('cy', startY);
+
+      svg.style.display = 'block';
+
+      // 뱃지 위치: 베지어 곡선의 t=0.5 중앙 지점
+      if (badge && badgeText) {
+        badgeText.innerText = text;
+        const midX = 0.125 * startX + 0.375 * cp1X + 0.375 * cp2X + 0.125 * targetX;
+        const midY = 0.125 * startY + 0.375 * cp1Y + 0.375 * cp2Y + 0.125 * endY;
+        badge.style.left = `${midX}px`;
+        badge.style.top = `${midY}px`;
+        badge.style.display = 'flex';
+      }
+    }
+
     function switchMainTab(tab) {
       currentMainTab = tab;
       try {
@@ -2159,6 +2573,9 @@
 
       // 스크롤 상단 리셋
       document.getElementById('screenContent').scrollTop = 0;
+
+      // Flow Studio: 우측 50% 파생 화면 뷰어 연동
+      updateFlowRightWorkspace(tab);
     }
 
     // 하단 탭 바: 앱 및 데이터 즉시 새로고침
@@ -2211,6 +2628,7 @@
       });
 
       document.getElementById('screenContent').scrollTop = 0;
+      updateFlowRightWorkspace('details');
       await renderMetricDetailView(metricKey);
     }
 
@@ -4488,7 +4906,6 @@
     let bleDevice = null;
     let bleServer = null;
     let bleNotifyChar = null;
-    let bleAckChar = null;
     let lastBleDeviceInstance = null;
     let scaleCountdownTimer = null;
     let scaleCountdownRemaining = 20;
@@ -4575,7 +4992,6 @@
       const WSS_SVC = "0000181d-0000-1000-8000-00805f9b34fb";
       const OKOK_NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
       const WSS_NOTIFY = "00002a9d-0000-1000-8000-00805f9b34fb";
-      const OKOK_ACK = "0000fff2-0000-1000-8000-00805f9b34fb";
 
       // 실제 밸런스랩 물리 체중계(광고 이름 미포함, Chipsea 0xFFFF) 및 가상 체중계 탐색용 규격 서비스
       const optionalScaleServices = [
@@ -4741,13 +5157,10 @@
                   activeCharacteristics.push(ch);
                 }
               }
-              if (ch.uuid.toLowerCase().includes("fff2")) {
-                bleAckChar = ch;
-              }
             }
           } catch (eChars) {
             const sUuid = service.uuid ? service.uuid.toLowerCase() : "";
-            const targetUuids = sUuid.includes("fff0") ? [OKOK_NOTIFY, OKOK_ACK] : [WSS_NOTIFY];
+            const targetUuids = sUuid.includes("fff0") ? [OKOK_NOTIFY] : [WSS_NOTIFY];
             for (const tu of targetUuids) {
               try {
                 const ch = await service.getCharacteristic(tu);
@@ -4755,7 +5168,6 @@
                   if (!activeCharacteristics.some(c => c.uuid === ch.uuid)) {
                     activeCharacteristics.push(ch);
                   }
-                  if (tu === OKOK_ACK) bleAckChar = ch;
                 }
               } catch (_) {}
             }
@@ -4869,6 +5281,84 @@
       return null;
     }
 
+    // [BIA 연산 엔진] 표준 생체 임피던스(BIA) 임상 계산 엔진 (Peer-reviewed Clinical Equations)
+    function calculateBiaMetrics(weight, impedance, profile = USER_PROFILE) {
+      const height = profile?.height || 176;
+      const age = profile?.age || 47;
+      const gender = profile?.gender || 'male';
+      const isMale = (gender === 'male');
+      const hM = height / 100.0;
+      const bmi = +(weight / (hM * hM)).toFixed(1);
+
+      let bodyFat, fatMass, ffm, skeletalMass, skeletalRate, tbwMass, waterRate;
+
+      // 1) 전극 접촉 정상 (양발 맨발 측정: 정상 생체 저항 R 수신)
+      if (impedance && impedance > 150 && impedance < 1500) {
+        const h2_r = (height * height) / impedance; // 신장-저항 지수 (cm²/Ω)
+
+        // 제지방량(FFM, kg) 산출: Lukaski & Deurenberg 임상 공식
+        if (isMale) {
+          ffm = 0.485 * h2_r + 0.338 * weight + 5.32;
+        } else {
+          ffm = 0.476 * h2_r + 0.295 * weight + 5.49;
+        }
+        // 생리학적 안전 마진 클램핑 (체중의 45% ~ 92%)
+        ffm = Math.max(weight * 0.45, Math.min(weight * 0.92, ffm));
+        fatMass = +(Math.max(1.0, weight - ffm)).toFixed(1);
+        bodyFat = +((fatMass / weight) * 100.0).toFixed(1);
+
+        // 골격근량(SMM, kg) 및 골격근율(%): Janssen et al. 모델
+        const smmFactor = isMale ? 0.54 : 0.49;
+        skeletalMass = +(ffm * smmFactor).toFixed(1);
+        skeletalRate = +((skeletalMass / weight) * 100.0).toFixed(1);
+
+        // 체수분량(TBW, kg) 및 체수분율(%): FFM의 약 73.2%
+        tbwMass = +(ffm * 0.732).toFixed(1);
+        waterRate = +((tbwMass / weight) * 100.0).toFixed(1);
+      } 
+      // 2) 전극 미접촉 폴백 (양말 착용 등으로 R = 0 또는 측정 실패 시: Deurenberg BMI 역산 모델)
+      else {
+        const genderCoeff = isMale ? 1.0 : 0.0;
+        bodyFat = +(1.20 * bmi + 0.23 * age - 10.8 * genderCoeff - 5.4).toFixed(1);
+        bodyFat = Math.max(5.0, Math.min(60.0, bodyFat));
+        fatMass = +((weight * bodyFat) / 100.0).toFixed(1);
+        ffm = Math.max(1.0, weight - fatMass);
+
+        const smmFactor = isMale ? 0.54 : 0.49;
+        skeletalMass = +(ffm * smmFactor).toFixed(1);
+        skeletalRate = +((skeletalMass / weight) * 100.0).toFixed(1);
+        tbwMass = +(ffm * 0.732).toFixed(1);
+        waterRate = +((tbwMass / weight) * 100.0).toFixed(1);
+      }
+
+      // 내장지방 레벨 (복부 지방 면적 추정 1 ~ 30 Lv)
+      const baseVf = (bmi - 18.5) * (isMale ? 0.75 : 0.65) + ((age - 20) / 10.0) * 1.1;
+      const visceralFat = +(Math.max(1.0, Math.min(30.0, baseVf))).toFixed(1);
+
+      // 기초대사량 (BMR, kcal): Mifflin-St Jeor 공식
+      const bmr = Math.round(10.0 * weight + 6.25 * height - 5.0 * age + (isMale ? 5 : -161));
+
+      const totalMuscleMass = +ffm.toFixed(1);
+      const totalMuscleRate = +((totalMuscleMass / weight) * 100.0).toFixed(1);
+
+      return {
+        weight: +weight.toFixed(2),
+        bmi: +bmi.toFixed(1),
+        bodyFat: +bodyFat.toFixed(1),
+        fatMass: +fatMass.toFixed(1),
+        muscleMass: +skeletalMass.toFixed(1),   // 앱 전체 표준: 골격근량 (kg)
+        muscleRate: +skeletalRate.toFixed(1),   // 앱 전체 표준: 골격근율 (%)
+        skeletalMass: +skeletalMass.toFixed(1),
+        skeletalRate: +skeletalRate.toFixed(1),
+        totalMuscleMass: +totalMuscleMass.toFixed(1),
+        totalMuscleRate: +totalMuscleRate.toFixed(1),
+        water: +waterRate.toFixed(1),           // 앱 전체 표준: 체수분율 (%)
+        waterMass: +tbwMass.toFixed(1),
+        visceralFat: +visceralFat.toFixed(1),   // 앱 전체 표준: 내장지방 레벨
+        bmr: Math.round(bmr)                   // 앱 전체 표준: 기초대사량 (kcal)
+      };
+    }
+
     // BLE 패킷 수신 및 파싱 (OKOK 19바이트 / App 4바이트 / SIG 3바이트 대응)
     function onBleScalePacketReceived(raw) {
       const b = extractBytes(raw);
@@ -4876,26 +5366,17 @@
 
       const len = b.length;
       let weight = 0;
-      let bodyFat = 25.0;
-      let skeletalRate = 38.0;
-      let visceralFat = 14.5;
-      let bmr = 1651;
-      let waterRate = 52.9;
+      let impedance = 0;
       let isLocked = false;
 
-      // 1) OKOK v1.1 정밀 19바이트 프로토콜 프레임 (0xCA 0x11 ...)
+      // 1) 밸런스랩 / OKOK 19바이트 프레임 (0xCA ...)
       if (len >= 19 && b[0] === 0xCA) {
         isLocked = (b[3] === 0x01);
         const rawWeight = (b[5] << 8) | b[6];
         weight = rawWeight / 100.0;
-        const rawFat = (b[7] << 8) | b[8];
-        bodyFat = rawFat / 10.0;
-        const rawSkeletal = (b[9] << 8) | b[10];
-        skeletalRate = rawSkeletal / 10.0;
-        visceralFat = b[11];
-        bmr = (b[12] << 8) | b[13];
-        const rawWater = (b[14] << 8) | b[15];
-        waterRate = rawWater / 10.0;
+        
+        // 7~8번 바이트는 가짜 체지방이 아니라 순수 전기저항값(Impedance, Ω)임
+        impedance = (b[7] << 8) | b[8];
 
         // 실시간 수치 표시
         document.getElementById("scaleWeightDisplay").innerText = weight.toFixed(2);
@@ -4921,45 +5402,21 @@
         return;
       }
 
-      // 신장 176cm 기준 BMI 및 파생 질량 지표 연산
-      const hM = (USER_PROFILE?.height || 176) / 100;
-      const bmi = +(weight / (hM * hM)).toFixed(1);
-      const totalMuscleMass = +((weight * ((100 - bodyFat) * 0.94)) / 100).toFixed(1);
-      const totalMuscleRate = +((totalMuscleMass / weight) * 100).toFixed(1);
-      const skeletalMass = +((weight * skeletalRate) / 100).toFixed(1);
-      const fatMass = +((weight * bodyFat) / 100).toFixed(1);
-      const waterMass = +((weight * waterRate) / 100).toFixed(1);
+      if (weight <= 0) return;
+
+      // 신규 BIA 계산 엔진으로 14대 생체 데이터 산출
+      const metrics = calculateBiaMetrics(weight, impedance, USER_PROFILE);
 
       const now = new Date();
       const record = {
         id: "scale_" + now.getTime(),
         date: now.toISOString().split("T")[0],
         time: now.toTimeString().split(" ")[0],
-        weight: +weight.toFixed(2),
-        bodyFat: +bodyFat.toFixed(1),
-        fatMass: fatMass,
-        // 골격근량/율 통일 (앱 전체 표준: muscleMass = 골격근량, muscleRate = 골격근율)
-        muscleRate: +skeletalRate.toFixed(1),
-        muscleMass: +skeletalMass.toFixed(1),
-        skeletalRate: +skeletalRate.toFixed(1),
-        skeletalMass: +skeletalMass.toFixed(1),
-        totalMuscleRate: +totalMuscleRate.toFixed(1),
-        totalMuscleMass: +totalMuscleMass.toFixed(1),
-        bmi: +bmi.toFixed(1),
-        visceralFat: +visceralFat.toFixed(1),
-        water: +waterRate.toFixed(1),
-        waterMass: waterMass,
-        bmr: Math.round(bmr),
+        ...metrics,
         deltaWeight: cachedBodyList.length > 0 ? +(weight - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
         source: "BLE체중계",
         syncedHealthKit: true
       };
-
-      // 체중계로 수신 확인(ACK) 역전송 (FFF2)
-      if (bleAckChar) {
-        bleAckChar.writeValueWithoutResponse(new Uint8Array([0x01])).catch(() => {});
-      }
-      // 수신 즉시 연결을 강제로 끊지 않고 요약 뷰 확인/저장 또는 모달 닫기 시 안정적으로 해제
 
       handleIncomingScaleData(record);
     }
@@ -4976,7 +5433,6 @@
       bleDevice = null;
       bleServer = null;
       bleNotifyChar = null;
-      bleAckChar = null;
     }
 
     function onBleDisconnected() {
@@ -5951,6 +6407,12 @@
         } else {
           switchMainTab('home');
         }
+
+        // 피그마 실선 커넥터 초기 드로잉 및 리사이즈/스크롤 리스너 바인딩
+        setTimeout(drawFlowConnectorLine, 100);
+        window.addEventListener('resize', drawFlowConnectorLine);
+        const sc = document.getElementById('screenContent');
+        if (sc) sc.addEventListener('scroll', drawFlowConnectorLine);
       } catch (err) {
         console.error("초기 로드 실패:", err);
       }

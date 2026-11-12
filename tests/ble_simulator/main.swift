@@ -366,7 +366,13 @@ struct BleDeviceInfo {
     var rssi: Int
     var services: [String]
     var manufacturerHex: String
-    var category: String // "scale", "apple", "samsung", "home_appliance", "other"
+    var category: String // "scale", "apple", "samsung", "microsoft", "other"
+    var isRealScale: Bool
+    var isVirtualScale: Bool
+    var payloadHex: String
+    var weightCandidate: Double?
+    var impedanceCandidate: Int?
+    var isLockedCandidate: Bool?
     var lastSeen: Date
     
     var isLive: Bool {
@@ -418,7 +424,6 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
         let id = peripheral.identifier.uuidString
         let advName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         let rawName = advName ?? peripheral.name ?? ""
-        var displayName = rawName.isEmpty ? "이름 없음 (\(id.prefix(8)))" : rawName
         
         var services: [String] = []
         if let uuids = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
@@ -434,30 +439,68 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
         let upperName = rawName.uppercased()
         let upperMfg = mfgHex.uppercased()
         
-        let hasScaleUUID = services.contains { s in
-            let u = s.uppercased()
-            return u.contains("FFF0") || u.contains("181D") || u.contains("181B") || u.contains("FFF1")
-        }
-        let hasScaleName = upperName.contains("SCALE") || upperName.contains("OKOK") || upperName.contains("CHIPSEA") ||
-                           upperName.contains("BALANS") || upperName.contains("WEIGHT") || upperName.contains("BODY") ||
-                           upperName.starts(with: "SF") || upperName.starts(with: "S88")
+        // 1. 사용자 실제 체중계 (AC:12:BB:39:44:E3) 100% 불변 지문 매칭
+        // - 제조사 데이터 내 실제 MAC 주소 역순 바이트 시퀀스 (E34439BB12AC) 포함
+        // - 또는 Chipsea 25바이트 고유 헤더 (FFFF00154311FFF011)
+        // - 또는 UUID 접미사 44E3 + FFFF 제조사 ID
+        let isRealScale = upperMfg.contains("E34439BB12AC") ||
+                          upperMfg.starts(with: "FFFF00154311FFF011") ||
+                          (id.uppercased().contains("44E3") && upperMfg.starts(with: "FFFF"))
         
-        // 밸런스랩 실제 체중계 칩셋 패킷 식별 (0xFFFF 제조사 ID + 4311 Chipsea + FFF0 OKOK 서비스)
-        let isBalansLabScale = (upperMfg.contains("4311") && upperMfg.contains("FFF0")) ||
-                               (upperMfg.starts(with: "FFFF") && upperMfg.contains("FFF0"))
+        // 2. 맥북 가상 체중계
+        let isVirtualScale = upperName.contains("BALANSLAB-SCALE") || (upperName.contains("BALANSLAB") && !isRealScale)
         
         var category = "other"
-        if isBalansLabScale {
+        var displayName = rawName.isEmpty ? "이름 없음 (\(id.prefix(8)))" : rawName
+        var payloadHex = ""
+        var weightCandidate: Double? = nil
+        var impedanceCandidate: Int? = nil
+        var isLockedCandidate: Bool? = nil
+        
+        if isRealScale {
             category = "scale"
-            if rawName.isEmpty {
-                displayName = "⚖️ 밸런스랩 체중계 (\(id.prefix(8)))"
+            displayName = "⭐ 내 실제 체중계 (AC:12:BB:39:44:E3)"
+            
+            if let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data, mfgData.count >= 15 {
+                let tail = mfgData.subdata(in: 15..<mfgData.count)
+                payloadHex = tail.map { String(format: "%02X", $0) }.joined(separator: " ")
+                
+                // OKOK 브로드캐스트 패킷 내 체중 / 저항 추정 추출
+                if tail.count >= 2 {
+                    let b0 = Int(tail[0])
+                    let b1 = Int(tail[1])
+                    let raw16BE = (b0 << 8) | b1
+                    let raw16LE = (b1 << 8) | b0
+                    if raw16BE > 1000 && raw16BE < 25000 {
+                        weightCandidate = Double(raw16BE) / 100.0
+                    } else if raw16LE > 1000 && raw16LE < 25000 {
+                        weightCandidate = Double(raw16LE) / 100.0
+                    }
+                }
+                if tail.count >= 8 {
+                    let rBE = (Int(tail[6]) << 8) | Int(tail[7])
+                    let rLE = (Int(tail[7]) << 8) | Int(tail[6])
+                    if rBE >= 150 && rBE <= 1500 {
+                        impedanceCandidate = rBE
+                    } else if rLE >= 150 && rLE <= 1500 {
+                        impedanceCandidate = rLE
+                    }
+                }
+                if tail.count >= 1 {
+                    isLockedCandidate = (tail[0] != 0x00)
+                }
             }
+        } else if isVirtualScale {
+            category = "scale"
+            displayName = "💻 가상 체중계 (BalansLab-Scale)"
+        } else if upperMfg.starts(with: "0600") || upperName.contains("MICROSOFT") {
+            category = "microsoft"
         } else if upperMfg.starts(with: "4C00") || upperName.contains("APPLE") || upperName.contains("MACBOOK") || upperName.contains("IPHONE") || upperName.contains("IPAD") || upperName.contains("WATCH") {
             category = "apple"
         } else if upperMfg.starts(with: "7500") || upperName.contains("SAMSUNG") || upperName.contains("TV") || upperName.contains("AIRPURIFIER") {
-            category = "home_appliance"
-        } else if (hasScaleUUID || hasScaleName || upperMfg.starts(with: "CA11")) && !upperName.contains("INBODY") {
-            category = "scale"
+            category = "samsung"
+        } else {
+            category = "other"
         }
         
         let info = BleDeviceInfo(
@@ -467,6 +510,12 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
             services: services,
             manufacturerHex: mfgHex,
             category: category,
+            isRealScale: isRealScale,
+            isVirtualScale: isVirtualScale,
+            payloadHex: payloadHex,
+            weightCandidate: weightCandidate,
+            impedanceCandidate: impedanceCandidate,
+            isLockedCandidate: isLockedCandidate,
             lastSeen: Date()
         )
         
@@ -487,16 +536,23 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
         
         return deviceOrder.compactMap { id -> [String: Any]? in
             guard let dev = devices[id] else { return nil }
-            return [
+            var dict: [String: Any] = [
                 "id": dev.id,
                 "name": dev.name,
                 "rssi": dev.rssi,
                 "services": dev.services,
                 "manufacturerHex": dev.manufacturerHex,
                 "category": dev.category,
+                "isRealScale": dev.isRealScale,
+                "isVirtualScale": dev.isVirtualScale,
+                "payloadHex": dev.payloadHex,
                 "isLive": dev.isLive,
                 "lastSeen": formatter.string(from: dev.lastSeen)
             ]
+            if let w = dev.weightCandidate { dict["weight"] = w }
+            if let imp = dev.impedanceCandidate { dict["impedance"] = imp }
+            if let lk = dev.isLockedCandidate { dict["isLocked"] = lk }
+            return dict
         }
     }
 }
@@ -507,15 +563,33 @@ class LocalHttpServer {
     var listener: NWListener?
     let device: BalansLabVirtualDevice
     let radar: BleRadarManager
-    let htmlPath: String
     
     init(port: UInt16 = DEFAULT_HTTP_PORT, device: BalansLabVirtualDevice, radar: BleRadarManager) {
         self.port = NWEndpoint.Port(rawValue: port)!
         self.device = device
         self.radar = radar
+    }
+    
+    func resolveHtmlPath() -> String {
+        let fm = FileManager.default
+        let cwd = fm.currentDirectoryPath
+        let execPath = CommandLine.arguments[0]
+        let execDir = (execPath as NSString).deletingLastPathComponent
         
-        let cwd = FileManager.default.currentDirectoryPath
-        self.htmlPath = (cwd as NSString).appendingPathComponent("plan_health_tracker/ui_balanslab_virtual_device.html")
+        let candidates = [
+            (execDir as NSString).appendingPathComponent("controller.html"),
+            (cwd as NSString).appendingPathComponent("controller.html"),
+            (cwd as NSString).appendingPathComponent("tests/ble_simulator/controller.html"),
+            (execDir as NSString).appendingPathComponent("Virtual_Scale_Controller.html"),
+            (cwd as NSString).appendingPathComponent("Virtual_Scale_Controller.html"),
+            (cwd as NSString).appendingPathComponent("plan_health_tracker/ui_balanslab_virtual_device.html")
+        ]
+        for path in candidates {
+            if fm.fileExists(atPath: path) {
+                return path
+            }
+        }
+        return (cwd as NSString).appendingPathComponent("tests/ble_simulator/controller.html")
     }
     
     func start() {
@@ -698,11 +772,12 @@ class LocalHttpServer {
         }
         
         // 9. GET / (웹 어드민 화면 서빙)
-        if method == "GET" && (path == "/" || path == "/index.html") {
-            if let htmlContent = try? String(contentsOfFile: htmlPath, encoding: .utf8) {
+        if method == "GET" && (path == "/" || path == "/index.html" || path == "/controller.html") {
+            let activePath = resolveHtmlPath()
+            if let htmlContent = try? String(contentsOfFile: activePath, encoding: .utf8) {
                 return buildResponse(status: 200, body: htmlContent, contentType: "text/html; charset=utf-8")
             } else {
-                return buildResponse(status: 200, body: "<h1>BalansLab Virtual Device</h1><p>HTML 파일 경로를 확인해주세요: \(htmlPath)</p>", contentType: "text/html; charset=utf-8")
+                return buildResponse(status: 200, body: "<h1>BalansLab Virtual Device</h1><p>HTML 파일 경로를 확인해주세요: \(activePath)</p>", contentType: "text/html; charset=utf-8")
             }
         }
         
