@@ -937,7 +937,10 @@
 
     setInterval(checkEngineStatus, 2000);
     checkEngineStatus();
-    pollRadar();
+    startRadarScan(); // 페이지 로드 시 자동으로 실시간 신호 탐색 가동
+    if (!radarPollTimer) {
+      radarPollTimer = setInterval(pollRadar, 1000);
+    }
     recalcAll();
   </script>
 </body>

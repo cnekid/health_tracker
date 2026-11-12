@@ -396,7 +396,9 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         self.bluetoothState = central.state
-        if central.state != .poweredOn && isScanning {
+        if central.state == .poweredOn {
+            startScan()
+        } else if isScanning {
             stopScan()
         }
     }

@@ -845,16 +845,19 @@
 
           <!-- 단 1줄의 핵심 안내문 -->
           <div class="space-y-0.5">
-            <div class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
-            <p class="text-[11px] text-slate-400">올라서면 자동으로 감지하여 측정됩니다.</p>
+            <div id="scaleMainGuide" class="text-xs font-bold text-slate-800">체중계에 가볍게 올라서세요</div>
+            <p id="scaleSubGuide" class="text-[11px] text-slate-400">올라서면 자동으로 감지하여 측정됩니다.</p>
             <!-- JS 호환성용 숨김 필드 -->
             <p id="scaleCountdownText" class="hidden"></p>
             <p id="scaleGuideTip" class="hidden"></p>
             <button id="scaleReconnectBtn" type="button" class="hidden"></button>
           </div>
 
-          <div class="pt-1">
-            <button onclick="closeScaleMeasureModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
+          <div class="pt-1 flex gap-2">
+            <button onclick="resetBleScaleAndScan()" class="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-600 font-semibold text-xs rounded-xl border border-blue-200 transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-arrows-rotate text-[11px]"></i>기기 다시 찾기
+            </button>
+            <button onclick="closeScaleMeasureModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition">
               닫기
             </button>
           </div>
@@ -4489,6 +4492,10 @@
       document.getElementById("scaleResultSummaryView").classList.add("hidden");
       document.getElementById("scaleWeightDisplay").innerText = "--.--";
       document.getElementById("scaleStatusText").innerText = "체중계 검색 대기";
+      const mainGuide = document.getElementById("scaleMainGuide");
+      const subGuide = document.getElementById("scaleSubGuide");
+      if (mainGuide) mainGuide.innerText = "체중계에 가볍게 올라서세요";
+      if (subGuide) subGuide.innerText = "올라서면 자동으로 감지하여 측정됩니다.";
 
       // 2) 리소스 절약용 20초 조용한 자동 종료 타이머 (화면 시각화 없음)
       if (scaleCountdownTimer) {
@@ -4500,30 +4507,39 @@
         closeScaleMeasureModal();
       }, 20000);
 
-      // 3) Web Bluetooth 실시간 상시 연결 시도 (체중계 켜지는 즉시 실시간 감지)
+      // 3) Web Bluetooth 실시간 상시 연결 시도
       startBleScaleConnection(false);
     }
 
-    async function resetBleScaleSavedDevice() {
+    async function resetBleScaleAndScan() {
+      // 1) 기존 캐시 및 연결 인스턴스 전면 초기화
       localStorage.removeItem("health_tracker_last_scale_id");
       localStorage.removeItem("health_tracker_last_scale_name");
-      if (lastBleDeviceInstance && lastBleDeviceInstance.gatt && lastBleDeviceInstance.gatt.connected) {
-        try { lastBleDeviceInstance.gatt.disconnect(); } catch (_) {}
-      }
-      try {
-        if (navigator.bluetooth && typeof navigator.bluetooth.getDevices === "function") {
-          const devs = await navigator.bluetooth.getDevices();
-          for (const d of devs) {
-            if (typeof d.forget === "function") {
-              try { await d.forget(); } catch (_) {}
-            }
-          }
-        }
-      } catch (_) {}
+      disconnectBleScale();
       lastBleDeviceInstance = null;
-      document.getElementById("scaleStatusText").innerText = "연결 정보 초기화됨 (새로 연결해주세요)";
-      showToast("체중계 연결 정보가 초기화되었습니다.");
+
+      // 2) 20초 안전 타이머 재설정
+      if (scaleCountdownTimer) {
+        clearTimeout(scaleCountdownTimer);
+        scaleCountdownTimer = null;
+      }
+      scaleCountdownTimer = setTimeout(() => {
+        closeScaleMeasureModal();
+      }, 20000);
+
+      // 3) 신선한 사용자 터치 제스처로 즉시 Bluefy 기기 선택 팝업 오픈
+      document.getElementById("scaleStatusText").innerText = "체중계 검색 중...";
+      document.getElementById("scaleWeightDisplay").innerText = "--.--";
+      const mainGuide = document.getElementById("scaleMainGuide");
+      const subGuide = document.getElementById("scaleSubGuide");
+      if (mainGuide) mainGuide.innerText = "체중계 전원(0.0kg)을 켜주세요";
+      if (subGuide) subGuide.innerText = "팝업에서 체중계 기기를 선택해 주세요.";
+
       startBleScaleConnection(true);
+    }
+
+    async function resetBleScaleSavedDevice() {
+      await resetBleScaleAndScan();
     }
 
     async function startBleScaleConnection(forceNewScan = false) {
@@ -4576,7 +4592,7 @@
           document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
         }
 
-        // 2) 이전에 권한 승인된 기기가 있는 경우: 실시간 상시 자동 연결 시도 (20초 동안 액정 켜질 때까지 상시 감지)
+        // 2) 이전에 권한 승인된 기기가 있는 경우: 빠른 무팝업 직행 연결 시도 (2초 타임아웃)
         let hasSavedCandidate = false;
         if (!device && !forceNewScan) {
           try {
@@ -4602,28 +4618,24 @@
               hasSavedCandidate = true;
               const cand = candidateDevices[0];
               if (cand && cand.gatt) {
-                document.getElementById("scaleStatusText").innerText = "체중계 검색 대기";
-
-                const modalEl = document.getElementById("scaleMeasureModal");
-                // 모달이 열려 있는 동안 체중계 액정이 켜질 때까지 300ms 초고속 루프로 실시간 연결 감지
-                while (modalEl && !modalEl.classList.contains("hidden") && (!server || !server.connected)) {
-                  try {
-                    const s = await cand.gatt.connect();
-                    if (s && s.connected) {
-                      device = cand;
-                      server = s;
-                      bleDevice = device;
-                      lastBleDeviceInstance = device;
-                      bleServer = server;
-                      device.addEventListener("gattserverdisconnected", onBleDisconnected);
-                      document.getElementById("scaleStatusText").innerText = "체중계 연결됨";
-                      break;
-                    }
-                  } catch (eCand) {
-                    try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
-                    // 체중계 액정이 아직 켜지지 않은 상태 -> 모달이 열려 있는 동안 300ms 후 즉시 재시도
-                    await new Promise(r => setTimeout(r, 300));
+                document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
+                try {
+                  const s = await Promise.race([
+                    cand.gatt.connect(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+                  ]);
+                  if (s && s.connected) {
+                    device = cand;
+                    server = s;
+                    bleDevice = device;
+                    lastBleDeviceInstance = device;
+                    bleServer = server;
+                    device.addEventListener("gattserverdisconnected", onBleDisconnected);
+                    document.getElementById("scaleStatusText").innerText = "체중계 연결됨";
                   }
+                } catch (eCand) {
+                  console.warn("기기 직행 연결 대기 초과 또는 오프라인:", cand.id, eCand);
+                  try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
                 }
               }
             }
@@ -4639,33 +4651,44 @@
           return;
         }
 
-        // 3) 저장된 기기가 없거나, 사용자가 직접 새로 연결하는 경우
+        // 3) 저장된 기기가 없거나 직행 연결 실패 시:
         if (!device || !server) {
-          document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
+          if (forceNewScan || !hasSavedCandidate) {
+            document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
-          try {
-            device = await navigator.bluetooth.requestDevice({
-              acceptAllDevices: true,
-              optionalServices: optionalScaleServices
-            });
-          } catch (filterErr) {
-            if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
-              throw filterErr;
+            try {
+              device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: optionalScaleServices
+              });
+            } catch (filterErr) {
+              if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
+                throw filterErr;
+              }
+              console.warn("기기 요청 재시도:", filterErr);
+              device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: optionalScaleServices
+              });
             }
-            console.warn("기기 요청 재시도:", filterErr);
-            device = await navigator.bluetooth.requestDevice({
-              acceptAllDevices: true,
-              optionalServices: optionalScaleServices
-            });
+
+            bleDevice = device;
+            lastBleDeviceInstance = device;
+            device.addEventListener("gattserverdisconnected", onBleDisconnected);
+
+            document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
+            server = await device.gatt.connect();
+            bleServer = server;
+          } else {
+            // 저장된 기기 직행 연결이 실패한 경우 (체중계 액정이 꺼져 있었거나 오프라인)
+            document.getElementById("scaleStatusText").innerText = "체중계 검색 대기";
+            const mainGuide = document.getElementById("scaleMainGuide");
+            const subGuide = document.getElementById("scaleSubGuide");
+            if (mainGuide) mainGuide.innerText = "체중계 전원을 켜주세요";
+            if (subGuide) subGuide.innerText = "발을 올려 액정을 켠 후 [기기 다시 찾기]를 눌러주세요.";
+            isBleConnecting = false;
+            return;
           }
-
-          bleDevice = device;
-          lastBleDeviceInstance = device;
-          device.addEventListener("gattserverdisconnected", onBleDisconnected);
-
-          document.getElementById("scaleStatusText").innerText = "체중계 연결 중...";
-          server = await device.gatt.connect();
-          bleServer = server;
         }
 
         // 정상 연결된 기기 정보 영구 기억 (다음 측정 시 원터치 직행용)
