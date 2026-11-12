@@ -788,8 +788,23 @@
               ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">👣 발 올림 감지 (Active Load)</span>'
               : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300">💤 대기 상태 (Standby)</span>';
 
+            const connStatus = dev.connectionStatus || '💤 대기 중';
+            let connBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+            if (connStatus.includes('연결 중')) connBadgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 animate-pulse';
+            if (connStatus.includes('수신 중')) connBadgeClass = 'bg-blue-100 text-blue-800 border-blue-300 animate-pulse';
+            if (connStatus.includes('수신 완료')) connBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+            const connBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${connBadgeClass}">${escapeHtml(connStatus)}</span>`;
+
+            const realWeightStr = dev.weight ? dev.weight.toFixed(2) : '--.--';
+            const realFatStr = dev.bodyFat ? dev.bodyFat.toFixed(1) + ' %' : '--';
+            const realSkelStr = dev.skeletalRate ? dev.skeletalRate.toFixed(1) + ' %' : '--';
+            const realViscStr = dev.visceralFat ? 'Lv ' + dev.visceralFat : '--';
+            const realBmrStr = dev.bmr ? dev.bmr + ' kcal' : '--';
+            const lockStatusStr = dev.isLocked ? '🔒 최종 확정' : (dev.weight ? '⏳ 측정 진행중' : '대기중');
+            const lockStatusColor = dev.isLocked ? 'text-emerald-400' : 'text-amber-400';
+
             const historyList = (dev.history && dev.history.length > 0)
-              ? dev.history.map(item => `<li class="truncate py-0.5 text-slate-600">${escapeHtml(item)}</li>`).join('')
+              ? dev.history.map(item => `<li class="truncate py-0.5 text-slate-700 font-bold">${escapeHtml(item)}</li>`).join('')
               : '<li class="text-slate-400 py-0.5">최근 패킷 변동 내역 없음</li>';
 
             return `
@@ -799,6 +814,7 @@
                     <span class="font-black text-sm text-slate-900">${escapeHtml(dev.name)}</span>
                     ${statusBadge}
                     ${eventBadge}
+                    ${connBadge}
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-[11px] text-slate-400 font-mono">고유키: ${dev.id}</span>
@@ -806,19 +822,37 @@
                   </div>
                 </div>
 
-                <!-- 실시간 신호 요약 그리드 (3분할) -->
-                <div class="grid grid-cols-3 gap-2 bg-slate-900 text-white p-2.5 rounded-lg font-mono text-center">
-                  <div class="p-1 bg-slate-800 rounded">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase">감지 이벤트</div>
-                    <div class="text-xs font-black ${isLoad ? 'text-amber-400' : 'text-emerald-400'} pt-1">${isLoad ? '👣 발 올라섬 감지' : '💤 대기 신호'}</div>
+                <!-- [실측 생체 데이터 전광판] 체중계 1:1 직접 연결 취득 수치 -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-white font-mono shadow-inner">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2 border-b border-slate-800 pb-1.5">
+                    <span class="font-bold flex items-center gap-1.5 text-emerald-400">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      실시간 1:1 GATT 실측 수치 (체중계 LCD와 100% 동일)
+                    </span>
+                    <span class="text-xs ${lockStatusColor} font-bold">${lockStatusStr}</span>
                   </div>
-                  <div class="p-1 bg-slate-800 rounded">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase">신호 세기 (RSSI)</div>
-                    <div class="text-sm font-black text-cyan-400 pt-0.5">${dev.rssi || -99} <span class="text-[10px] font-normal">dBm</span></div>
-                  </div>
-                  <div class="p-1 bg-slate-800 rounded">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase">최종 수신 시각</div>
-                    <div class="text-xs font-semibold text-slate-300 pt-1">${dev.lastSeen || '-'}</div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+                    <div class="col-span-2 sm:col-span-1 p-2 bg-slate-900/90 border border-slate-800 rounded-lg">
+                      <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">실측 체중</div>
+                      <div class="text-2xl font-black text-emerald-400 mt-0.5">${realWeightStr} <span class="text-xs font-normal text-slate-300">kg</span></div>
+                    </div>
+                    <div class="p-2 bg-slate-900/90 border border-slate-800 rounded-lg">
+                      <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">체지방률</div>
+                      <div class="text-base font-black text-cyan-400 mt-1">${realFatStr}</div>
+                    </div>
+                    <div class="p-2 bg-slate-900/90 border border-slate-800 rounded-lg">
+                      <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">골격근률</div>
+                      <div class="text-base font-black text-indigo-400 mt-1">${realSkelStr}</div>
+                    </div>
+                    <div class="p-2 bg-slate-900/90 border border-slate-800 rounded-lg">
+                      <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">내장지방</div>
+                      <div class="text-base font-black text-amber-400 mt-1">${realViscStr}</div>
+                    </div>
+                    <div class="p-2 bg-slate-900/90 border border-slate-800 rounded-lg">
+                      <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">기초대사량</div>
+                      <div class="text-base font-black text-rose-400 mt-1">${realBmrStr}</div>
+                    </div>
                   </div>
                 </div>
 
@@ -829,26 +863,26 @@
                     <span class="font-black text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 tracking-wider">${dev.payloadHex || '(신호 대기)'}</span>
                   </div>
                   <div class="text-[10px] text-slate-500 pt-0.5 border-t border-slate-200 flex justify-between">
-                    <span>* 끝자리 패턴: [E1 4F 8C C5: 발 올림 신호] vs [FC 00 E3 C5: 대기 신호]</span>
-                    <span class="truncate max-w-[200px]" title="${dev.manufacturerHex}">제조사: ${dev.manufacturerHex || '없음'}</span>
+                    <span>* 끝자리 패턴: [FF 38 D8 C5: 발 올림 신호] vs [FC 00 E3 C5: 대기 신호]</span>
+                    <span class="truncate max-w-[200px]" title="${dev.manufacturerHex}">RSSI: ${dev.rssi || -99} dBm (${dev.lastSeen || '-'})</span>
                   </div>
                 </div>
 
                 <!-- 패킷 변화 히스토리 (최근 5회) -->
                 <div class="bg-white border border-slate-200 rounded-lg p-2 text-[11px] font-mono">
                   <div class="text-[10px] font-bold text-slate-500 mb-1 flex items-center justify-between">
-                    <span>📜 패킷 변동 기록 (최근 5회)</span>
-                    <span class="text-slate-400 font-normal">상태 변화 자동 로깅</span>
+                    <span>📜 패킷 변동 및 실측 수신 기록 (최근 5회)</span>
+                    <span class="text-slate-400 font-normal">자동 로깅</span>
                   </div>
                   <ul class="space-y-0.5 divide-y divide-slate-100">
                     ${historyList}
                   </ul>
                 </div>
 
-                <!-- 수치 안내 팁 -->
+                <!-- 스마트폰 충돌 방지 안내 팁 -->
                 <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 flex items-start gap-1.5">
-                  <span class="text-blue-500 font-bold">ℹ️ 안내:</span>
-                  <span>체중계 액정(LCD) 실측 체중(kg) 및 14대 BIA 체성분 전체 데이터는 HealthTracker 앱과의 GATT(0xFFF1) 보안 연결을 통해 정밀 전달됩니다.</span>
+                  <span class="text-blue-500 font-bold">ℹ️ 동작 원리:</span>
+                  <span>스마트폰 앱과 동일하게 체중계 감지 즉시 맥북이 1:1 악수를 맺어 19B 실측 데이터를 수신하고, 확정 즉시 연결을 자동 해제하여 스마트폰 앱 측정을 방해하지 않습니다.</span>
                 </div>
               </div>
             `;
