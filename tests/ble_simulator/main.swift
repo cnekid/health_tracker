@@ -370,6 +370,8 @@ struct BleDeviceInfo {
     var isRealScale: Bool
     var isVirtualScale: Bool
     var payloadHex: String
+    var scaleEvent: String // "standby", "load", "virtual", "unknown"
+    var history: [String]
     var weightCandidate: Double?
     var impedanceCandidate: Int?
     var isLockedCandidate: Bool?
@@ -421,7 +423,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        let id = peripheral.identifier.uuidString
+        let rawId = peripheral.identifier.uuidString
         let advName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         let rawName = advName ?? peripheral.name ?? ""
         
@@ -445,17 +447,18 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
         // - 또는 UUID 접미사 44E3 + FFFF 제조사 ID
         let isRealScale = upperMfg.contains("E34439BB12AC") ||
                           upperMfg.starts(with: "FFFF00154311FFF011") ||
-                          (id.uppercased().contains("44E3") && upperMfg.starts(with: "FFFF"))
+                          (rawId.uppercased().contains("44E3") && upperMfg.starts(with: "FFFF"))
         
         // 2. 맥북 가상 체중계
         let isVirtualScale = upperName.contains("BALANSLAB-SCALE") || (upperName.contains("BALANSLAB") && !isRealScale)
         
+        // 실제 체중계는 맥OS 임의 UUID 변경에 관계없이 불변 고유 키로 매핑하여 중복 카드 생성 원천 차단
+        let canonicalId = isRealScale ? "REAL_SCALE_AC12BB3944E3" : rawId
+        
         var category = "other"
-        var displayName = rawName.isEmpty ? "이름 없음 (\(id.prefix(8)))" : rawName
+        var displayName = rawName.isEmpty ? "이름 없음 (\(rawId.prefix(8)))" : rawName
         var payloadHex = ""
-        var weightCandidate: Double? = nil
-        var impedanceCandidate: Int? = nil
-        var isLockedCandidate: Bool? = nil
+        var scaleEvent = "standby"
         
         if isRealScale {
             category = "scale"
@@ -465,34 +468,17 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
                 let tail = mfgData.subdata(in: 15..<mfgData.count)
                 payloadHex = tail.map { String(format: "%02X", $0) }.joined(separator: " ")
                 
-                // OKOK 브로드캐스트 패킷 내 체중 / 저항 추정 추출
-                if tail.count >= 2 {
-                    let b0 = Int(tail[0])
-                    let b1 = Int(tail[1])
-                    let raw16BE = (b0 << 8) | b1
-                    let raw16LE = (b1 << 8) | b0
-                    if raw16BE > 1000 && raw16BE < 25000 {
-                        weightCandidate = Double(raw16BE) / 100.0
-                    } else if raw16LE > 1000 && raw16LE < 25000 {
-                        weightCandidate = Double(raw16LE) / 100.0
-                    }
-                }
-                if tail.count >= 8 {
-                    let rBE = (Int(tail[6]) << 8) | Int(tail[7])
-                    let rLE = (Int(tail[7]) << 8) | Int(tail[6])
-                    if rBE >= 150 && rBE <= 1500 {
-                        impedanceCandidate = rBE
-                    } else if rLE >= 150 && rLE <= 1500 {
-                        impedanceCandidate = rLE
-                    }
-                }
-                if tail.count >= 1 {
-                    isLockedCandidate = (tail[0] != 0x00)
+                // 패킷 변화 감지 (대기 패킷 FC 00 E3 C5 vs 발 올림 시 변화 패킷)
+                if payloadHex.contains("FC 00 E3 C5") {
+                    scaleEvent = "standby"
+                } else if !payloadHex.isEmpty {
+                    scaleEvent = "load"
                 }
             }
         } else if isVirtualScale {
             category = "scale"
             displayName = "💻 가상 체중계 (BalansLab-Scale)"
+            scaleEvent = "virtual"
         } else if upperMfg.starts(with: "0600") || upperName.contains("MICROSOFT") {
             category = "microsoft"
         } else if upperMfg.starts(with: "4C00") || upperName.contains("APPLE") || upperName.contains("MACBOOK") || upperName.contains("IPHONE") || upperName.contains("IPAD") || upperName.contains("WATCH") {
@@ -503,8 +489,24 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
             category = "other"
         }
         
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm:ss"
+        let curTime = timeFormatter.string(from: Date())
+        
+        var history = devices[canonicalId]?.history ?? []
+        if isRealScale && !payloadHex.isEmpty {
+            let label = (scaleEvent == "load") ? "👣 발 올림 감지" : "💤 대기 신호"
+            let entry = "\(curTime) [\(label)] \(payloadHex) (\(RSSI) dBm)"
+            if history.first?.contains(payloadHex) != true {
+                history.insert(entry, at: 0)
+                if history.count > 5 {
+                    history.removeLast()
+                }
+            }
+        }
+        
         let info = BleDeviceInfo(
-            id: id,
+            id: canonicalId,
             name: displayName,
             rssi: RSSI.intValue,
             services: services,
@@ -513,21 +515,23 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
             isRealScale: isRealScale,
             isVirtualScale: isVirtualScale,
             payloadHex: payloadHex,
-            weightCandidate: weightCandidate,
-            impedanceCandidate: impedanceCandidate,
-            isLockedCandidate: isLockedCandidate,
+            scaleEvent: scaleEvent,
+            history: history,
+            weightCandidate: nil, // 오독을 유발하는 임시 계산 수치 제거
+            impedanceCandidate: nil,
+            isLockedCandidate: nil,
             lastSeen: Date()
         )
         
         // 래칭(Latching): 한 번 잡힌 순서를 보존하여 신호가 꺼져도 위치가 밀리지 않음
-        if devices[id] == nil {
+        if devices[canonicalId] == nil {
             if category == "scale" {
-                deviceOrder.insert(id, at: 0) // 체중계 후보는 최상단에 고정
+                deviceOrder.insert(canonicalId, at: 0) // 체중계 후보는 최상단에 고정
             } else {
-                deviceOrder.append(id)
+                deviceOrder.append(canonicalId)
             }
         }
-        devices[id] = info
+        devices[canonicalId] = info
     }
     
     func getRadarSnapshot() -> [[String: Any]] {
@@ -546,6 +550,8 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate {
                 "isRealScale": dev.isRealScale,
                 "isVirtualScale": dev.isVirtualScale,
                 "payloadHex": dev.payloadHex,
+                "scaleEvent": dev.scaleEvent,
+                "history": dev.history,
                 "isLive": dev.isLive,
                 "lastSeen": formatter.string(from: dev.lastSeen)
             ]

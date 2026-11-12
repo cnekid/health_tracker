@@ -4488,34 +4488,20 @@
       document.getElementById("scaleWaitingView").classList.remove("hidden");
       document.getElementById("scaleResultSummaryView").classList.add("hidden");
       document.getElementById("scaleWeightDisplay").innerText = "--.--";
-      document.getElementById("scaleStatusText").innerText = "기기 검색 중...";
+      document.getElementById("scaleStatusText").innerText = "체중계 검색 대기";
 
-      // 2) 타이머 초기화 (페어링 창 대기 고려 35초 부여, 실제 기기 연결 시 20초로 리셋)
-      scaleCountdownRemaining = 35;
-      updateScaleCountdownUI();
-
-      if (scaleCountdownTimer) clearInterval(scaleCountdownTimer);
-      scaleCountdownTimer = setInterval(() => {
-        scaleCountdownRemaining--;
-        updateScaleCountdownUI();
-        if (scaleCountdownRemaining <= 0) {
-          clearInterval(scaleCountdownTimer);
-          scaleCountdownTimer = null;
-          disconnectBleScale();
-          closeScaleMeasureModal();
-          // 알림창(alert) 없이 대기 모드 자동 종료 (사용자 경험 개선)
-        }
-      }, 1000);
-
-      // 3) Web Bluetooth 실시간 기기 연결 시도 (저장된 기기 우선 원터치 자동 연결)
-      startBleScaleConnection(false);
-    }
-
-    function updateScaleCountdownUI() {
-      const el = document.getElementById("scaleCountdownText");
-      if (el) {
-        el.innerText = `20초간 응답이 없으면 자동으로 닫힙니다 (남은 시간: ${scaleCountdownRemaining}초)`;
+      // 2) 리소스 절약용 20초 조용한 자동 종료 타이머 (화면 시각화 없음)
+      if (scaleCountdownTimer) {
+        clearTimeout(scaleCountdownTimer);
+        scaleCountdownTimer = null;
       }
+      scaleCountdownTimer = setTimeout(() => {
+        // 20초 동안 정상 데이터가 들어오지 않고 닫히지 않았을 때 리소스 보호를 위해 자동 종료
+        closeScaleMeasureModal();
+      }, 20000);
+
+      // 3) Web Bluetooth 실시간 상시 연결 시도 (체중계 켜지는 즉시 실시간 감지)
+      startBleScaleConnection(false);
     }
 
     async function resetBleScaleSavedDevice() {
@@ -4590,7 +4576,7 @@
           document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
         }
 
-        // 2) 이전에 권한 승인된 기기가 있는 경우: 빠른 무팝업 직행 연결 시도 (1.2초)
+        // 2) 이전에 권한 승인된 기기가 있는 경우: 실시간 상시 자동 연결 시도 (20초 동안 액정 켜질 때까지 상시 감지)
         let hasSavedCandidate = false;
         if (!device && !forceNewScan) {
           try {
@@ -4602,7 +4588,7 @@
               const authed = await navigator.bluetooth.getDevices();
               if (authed && authed.length > 0) {
                 const savedId = localStorage.getItem("health_tracker_last_scale_id");
-                // 직전 연결 기기를 최우선으로 단 1개만 시도 (대기 지연 최소화)
+                // 직전 연결 기기를 최우선으로 정렬
                 const sorted = authed.slice().sort((a, b) => (a.id === savedId ? -1 : (b.id === savedId ? 1 : 0)));
                 for (const d of sorted) {
                   if (!candidateDevices.some(c => c.id === d.id)) {
@@ -4616,47 +4602,44 @@
               hasSavedCandidate = true;
               const cand = candidateDevices[0];
               if (cand && cand.gatt) {
-                const candName = getFriendlyScaleName(cand);
-                document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결 중...`;
-                try {
-                  const s = await Promise.race([
-                    cand.gatt.connect(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 1200))
-                  ]);
-                  if (s && s.connected) {
-                    device = cand;
-                    server = s;
-                    bleDevice = device;
-                    lastBleDeviceInstance = device;
-                    bleServer = server;
-                    device.addEventListener("gattserverdisconnected", onBleDisconnected);
-                    document.getElementById("scaleStatusText").innerText = `${candName} 자동 연결됨`;
+                document.getElementById("scaleStatusText").innerText = "체중계 검색 대기";
+
+                const modalEl = document.getElementById("scaleMeasureModal");
+                // 모달이 열려 있는 동안 체중계 액정이 켜질 때까지 300ms 초고속 루프로 실시간 연결 감지
+                while (modalEl && !modalEl.classList.contains("hidden") && (!server || !server.connected)) {
+                  try {
+                    const s = await cand.gatt.connect();
+                    if (s && s.connected) {
+                      device = cand;
+                      server = s;
+                      bleDevice = device;
+                      lastBleDeviceInstance = device;
+                      bleServer = server;
+                      device.addEventListener("gattserverdisconnected", onBleDisconnected);
+                      document.getElementById("scaleStatusText").innerText = "체중계 연결됨";
+                      break;
+                    }
+                  } catch (eCand) {
+                    try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
+                    // 체중계 액정이 아직 켜지지 않은 상태 -> 모달이 열려 있는 동안 300ms 후 즉시 재시도
+                    await new Promise(r => setTimeout(r, 300));
                   }
-                } catch (eCand) {
-                  console.warn("기기 자동 연결 대기 초과 또는 오프라인:", cand.id, eCand);
-                  try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
                 }
               }
             }
           } catch (eAuto) {
-            console.warn("무팝업 직행 연결 처리 중 예외:", eAuto);
+            console.warn("실시간 자동 연결 처리 중 예외:", eAuto);
           }
         }
 
-        // 3) 자동 연결 기기가 오프라인/미응답인 경우:
-        // 지연 시간으로 인해 브라우저 사용자 제스처 유효기간이 지났을 수 있으므로 강제 자동 팝업 대신
-        // [체중계 연결하기] 원터치 버튼을 활성화하여 사용자의 신선한 터치로 즉시 팝업을 열도록 유도!
-        if (!device && !forceNewScan && hasSavedCandidate) {
-          document.getElementById("scaleStatusText").innerText = "체중계 전원(액정)을 켠 후 아래 연결 터치";
-          if (reconnectBtn) {
-            reconnectBtn.classList.remove("hidden");
-          }
+        // 모달이 이미 닫힌 상태라면 연결 후속 처리 중단
+        const currentModal = document.getElementById("scaleMeasureModal");
+        if (currentModal && currentModal.classList.contains("hidden")) {
           isBleConnecting = false;
           return;
         }
 
-        // 4) 저장된 기기가 없거나, 사용자가 직접 [체중계 새로 검색] 또는 [체중계 연결하기]를 누른 경우
-        // -> 실제 밸런스랩 체중계(광고 이름 없음, Chipsea FFF0) 및 가상 체중계를 모두 감지하는 acceptAllDevices 호출
+        // 3) 저장된 기기가 없거나, 사용자가 직접 새로 연결하는 경우
         if (!device || !server) {
           document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
@@ -5010,7 +4993,7 @@
     // 체중/체성분 데이터 수신 시 요약 표 표시 및 확인 대기
     function handleIncomingScaleData(data) {
       if (scaleCountdownTimer) {
-        clearInterval(scaleCountdownTimer);
+        clearTimeout(scaleCountdownTimer);
         scaleCountdownTimer = null;
       }
 
@@ -5057,7 +5040,7 @@
     function closeScaleMeasureModal() {
       document.getElementById("scaleMeasureModal").classList.add("hidden");
       if (scaleCountdownTimer) {
-        clearInterval(scaleCountdownTimer);
+        clearTimeout(scaleCountdownTimer);
         scaleCountdownTimer = null;
       }
       disconnectBleScale();
