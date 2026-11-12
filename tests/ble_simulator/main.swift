@@ -398,12 +398,12 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     var deviceOrder: [String] = [] // 순서 래칭용 (신호가 꺼져도 아래로 밀리지 않음)
     weak var virtualDevice: BalansLabVirtualDevice?
     
-    // 실제 체중계 스텔스 1:1 자동 연결용 상태
+    // 실제 체중계 스텔스 1:1 자동 연결용 상태 (아이폰 우선 연결을 위해 기본 비활성화)
     var targetScalePeripheral: CBPeripheral?
     var isConnectingScale = false
     var isConnectedScale = false
     var scaleConnectionState = "idle" // "idle", "connecting", "reading", "completed"
-    var autoConnectEnabled = true
+    var autoConnectEnabled = false
     var lastDisconnectTime = Date.distantPast
     
     func log(_ msg: String, color: String = "slate") {
@@ -485,6 +485,8 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             category = "scale"
             displayName = "⭐ 내 실제 체중계 (AC:12:BB:39:44:E3)"
             
+            let isConn = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.intValue ?? -1
+            
             if let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data, mfgData.count >= 15 {
                 let tail = mfgData.subdata(in: 15..<mfgData.count)
                 payloadHex = tail.map { String(format: "%02X", $0) }.joined(separator: " ")
@@ -498,30 +500,35 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             }
             
             // [스마트폰 앱과 동일한 스텔스 자동 1:1 직행 연결]
-            // 핵심 개선: 고강도 스캔이 라디오를 독점하면 연결이 대기되므로, 스캔을 즉시 멈추고 1:1 연결에 100% 집중!
+            // 핵심 개선: 스캔을 끄지 않고 수신 상태를 유지한 채 연결을 걸어야 CoreBluetooth가 다음 광고 패킷에서 즉시 CONNECT_REQ를 송신함!
             if autoConnectEnabled && !isConnectingScale && !isConnectedScale && Date().timeIntervalSince(lastDisconnectTime) > 2.0 {
-                isConnectingScale = true
-                scaleConnectionState = "connecting"
-                targetScalePeripheral = peripheral
-                peripheral.delegate = self
-                
-                log("🎯 [실제 체중계 감지] 1:1 연결 슬롯 확보를 위해 탐색 스캔을 일시 중지하고 즉시 체결(connect)합니다...", color: "blue")
-                stopScan() // 스캔 일시 중단!
-                centralManager.connect(peripheral, options: [CBConnectPeripheralOptionNotifyOnDisconnectionKey: true])
-                
-                // 7초 타임아웃 안전망: 연결/수신 미완료 시 스캔 자동 재개
-                DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) { [weak self] in
-                    guard let self = self, (self.isConnectingScale || self.scaleConnectionState == "reading") else { return }
-                    self.log("⚠️ [연결 타임아웃] 체중계 연결 응답 대기 초과. 탐색 스캔을 자동 재개합니다.", color: "amber")
-                    if let p = self.targetScalePeripheral {
-                        self.centralManager.cancelPeripheralConnection(p)
+                if isConn == 0 {
+                    log("⚠️ [연결 대기] 체중계가 다른 기기(스마트폰 앱 등)에 이미 연결되어 있거나 비접속 모드입니다 (isConnectable=0).", color: "amber")
+                } else {
+                    isConnectingScale = true
+                    scaleConnectionState = "connecting"
+                    targetScalePeripheral = peripheral
+                    peripheral.delegate = self
+                    
+                    log("🎯 [실제 체중계 감지] 1:1 GATT 연결 요청을 전송합니다 (스캔 수신 채널 유지 상태에서 즉시 악수 체결)...", color: "blue")
+                    centralManager.connect(peripheral, options: [CBConnectPeripheralOptionNotifyOnDisconnectionKey: true])
+                    
+                    // 7초 타임아웃 안전망: 연결/수신 미완료 시 재시도 복구
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) { [weak self] in
+                        guard let self = self, (self.isConnectingScale || self.scaleConnectionState == "reading") else { return }
+                        self.log("⚠️ [연결 타임아웃] 체중계 응답 대기 초과 (스마트폰 앱이 체중계를 점유 중인지 확인 필요).", color: "amber")
+                        if let p = self.targetScalePeripheral {
+                            self.centralManager.cancelPeripheralConnection(p)
+                        }
+                        self.isConnectingScale = false
+                        self.isConnectedScale = false
+                        self.scaleConnectionState = "idle"
+                        self.targetScalePeripheral = nil
+                        self.lastDisconnectTime = Date()
+                        if !self.isScanning {
+                            self.startScan()
+                        }
                     }
-                    self.isConnectingScale = false
-                    self.isConnectedScale = false
-                    self.scaleConnectionState = "idle"
-                    self.targetScalePeripheral = nil
-                    self.lastDisconnectTime = Date()
-                    self.startScan()
                 }
             }
         } else if isVirtualScale {
@@ -622,7 +629,6 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        guard peripheral.identifier == targetScalePeripheral?.identifier else { return }
         log("👋 [연결 종료] 체중계 1:1 세션이 종료되었습니다. 탐색 스캔을 자동 재개합니다.", color: "slate")
         isConnectingScale = false
         isConnectedScale = false
@@ -630,6 +636,14 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         targetScalePeripheral = nil
         lastDisconnectTime = Date()
         startScan()
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        if let error = error {
+            log("❌ [알림 구독 실패] 특성(\(characteristic.uuid.uuidString)): \(error.localizedDescription)", color: "rose")
+        } else {
+            log("✅ [알림 구독 성공] 특성(\(characteristic.uuid.uuidString)) isNotifying: \(characteristic.isNotifying)", color: "emerald")
+        }
     }
     
     // MARK: - CBPeripheralDelegate (서비스 및 특성 탐색, 실측 데이터 구독)
@@ -682,18 +696,34 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         if bytes.count >= 19 && bytes[0] == 0xCA {
             isLocked = (bytes[3] == 0x01)
             let rawWeight = (UInt16(bytes[5]) << 8) | UInt16(bytes[6])
-            let rawFat = (UInt16(bytes[7]) << 8) | UInt16(bytes[8])
-            let rawSkeletal = (UInt16(bytes[9]) << 8) | UInt16(bytes[10])
-            let rawVisceral = bytes[11]
-            let rawBmr = (UInt16(bytes[12]) << 8) | UInt16(bytes[13])
-            let rawWater = (UInt16(bytes[14]) << 8) | UInt16(bytes[15])
-            
             weight = Double(rawWeight) / 100.0
-            bodyFat = Double(rawFat) / 10.0
-            skeletal = Double(rawSkeletal) / 10.0
-            visceral = Int(rawVisceral)
-            bmr = Int(rawBmr)
-            water = Double(rawWater) / 10.0
+            
+            let rawImpedance = (UInt16(bytes[7]) << 8) | UInt16(bytes[8])
+            // 밸런스랩 표준: 7~8번 바이트가 BIA 임피던스 저항값(150~1500 Ω)인 경우
+            if rawImpedance > 150 && rawImpedance < 1500 {
+                let h = 176.0 // 신장 cm
+                let age = 47.0
+                let h2_r = (h * h) / Double(rawImpedance)
+                var ffm = 0.485 * h2_r + 0.338 * weight + 5.32
+                ffm = max(weight * 0.45, min(weight * 0.92, ffm))
+                let fatMass = max(1.0, weight - ffm)
+                bodyFat = (fatMass / weight) * 100.0
+                skeletal = (ffm * 0.54 / weight) * 100.0
+                water = (ffm * 0.732 / weight) * 100.0
+                let bmi = weight / ((h / 100.0) * (h / 100.0))
+                visceral = Int(max(1.0, min(30.0, (bmi - 18.5) * 0.75 + ((age - 20.0) / 10.0) * 1.1)))
+                bmr = Int(10.0 * weight + 6.25 * h - 5.0 * age + 5.0)
+            } else {
+                let rawFat = (UInt16(bytes[7]) << 8) | UInt16(bytes[8])
+                if rawFat > 0 && rawFat < 600 { bodyFat = Double(rawFat) / 10.0 }
+                let rawSkeletal = (UInt16(bytes[9]) << 8) | UInt16(bytes[10])
+                if rawSkeletal > 0 && rawSkeletal < 600 { skeletal = Double(rawSkeletal) / 10.0 }
+                visceral = Int(bytes[11])
+                let rawBmr = (UInt16(bytes[12]) << 8) | UInt16(bytes[13])
+                bmr = Int(rawBmr)
+                let rawWater = (UInt16(bytes[14]) << 8) | UInt16(bytes[15])
+                water = Double(rawWater) / 10.0
+            }
         } else if bytes.count >= 4 {
             // 2. 표준 BLE Weight Measurement 프레임
             isLocked = (bytes[1] == 0x01)
@@ -708,7 +738,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         let curTime = timeFormatter.string(from: Date())
         
         let lockStr = isLocked ? "🔒최종확정" : "⏳측정중"
-        log("✨ [체중 실측 성공!] 체중 \(String(format: "%.2f", weight))kg (\(lockStr), 체지방:\(bodyFat)%, 골격근:\(skeletal)%)", color: "emerald")
+        log("✨ [체중 실측 성공!] 체중 \(String(format: "%.2f", weight))kg (\(lockStr), 체지방:\(String(format: "%.1f", bodyFat))%, 골격근:\(String(format: "%.1f", skeletal))%)", color: isLocked ? "emerald" : "cyan")
         
         let canonicalId = "REAL_SCALE_AC12BB3944E3"
         if var dev = devices[canonicalId] {
@@ -720,6 +750,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             dev.realWaterRate = water > 0 ? water : dev.realWaterRate
             dev.realIsLocked = isLocked
             dev.lastSeen = Date()
+            dev.connectionStatus = isLocked ? "✨ 실측 수신 완료 (해제됨)" : "📥 실시간 측정 중: \(String(format: "%.2f", weight)) kg"
             
             let logEntry = "\(curTime) [✨실측수신] 체중 \(String(format: "%.2f", weight))kg (\(lockStr))"
             dev.history.insert(logEntry, at: 0)
@@ -727,7 +758,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             devices[canonicalId] = dev
         }
         
-        // 최종 고정(Lock) 데이터를 받으면 체중계와의 연결을 즉시 해제하여 스마트폰 연결 대기 허용
+        // 최종 고정(Lock) 데이터를 받으면 체중계와의 연결을 즉시 해제하고 스캔을 재개하여 스마트폰 연결 허용
         if isLocked {
             scaleConnectionState = "completed"
             if let p = targetScalePeripheral {
@@ -737,6 +768,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             isConnectingScale = false
             isConnectedScale = false
             lastDisconnectTime = Date()
+            startScan()
         }
     }
     
@@ -1029,6 +1061,7 @@ class LocalHttpServer {
 // MARK: - 메인 실행부
 let device = BalansLabVirtualDevice()
 let radar = BleRadarManager()
+radar.virtualDevice = device
 let server = LocalHttpServer(port: DEFAULT_HTTP_PORT, device: device, radar: radar)
 server.start()
 

@@ -791,7 +791,7 @@
             const connStatus = dev.connectionStatus || '💤 대기 중';
             let connBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
             if (connStatus.includes('연결 중')) connBadgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 animate-pulse';
-            if (connStatus.includes('수신 중')) connBadgeClass = 'bg-blue-100 text-blue-800 border-blue-300 animate-pulse';
+            if (connStatus.includes('수신 중') || connStatus.includes('측정 중')) connBadgeClass = 'bg-blue-100 text-blue-800 border-blue-300 animate-pulse';
             if (connStatus.includes('수신 완료')) connBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
             const connBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${connBadgeClass}">${escapeHtml(connStatus)}</span>`;
 

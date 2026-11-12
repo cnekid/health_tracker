@@ -4552,11 +4552,21 @@
       ];
 
       // 스니퍼 확인 체중계 고유 지문 전용 필터 (주변 TV, 맥북, 에어팟 등 잡기기 100% 차단)
-      const scaleFilters = [
+      // 1순위: 제조사 데이터 0xFFFF (실제 체중계의 불변 지문)
+      // 2순위: 서비스 FFF0, 181D 및 이름 접두사
+      const scaleFiltersWithMfg = [
+        { manufacturerData: [{ companyIdentifier: 0xffff }] },
         { services: [OKOK_SVC] },
         { services: [WSS_SVC] },
-        { namePrefix: "S" },
-        { namePrefix: "BalansLab" }
+        { namePrefix: "BalansLab" },
+        { namePrefix: "Scale" }
+      ];
+
+      const scaleFiltersFallback = [
+        { services: [OKOK_SVC] },
+        { services: [WSS_SVC] },
+        { namePrefix: "BalansLab" },
+        { namePrefix: "Scale" }
       ];
 
       const getFriendlyScaleName = (d) => {
@@ -4578,7 +4588,7 @@
           document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
         }
 
-        // 2) 이전에 권한 승인된 기기가 있는 경우: 체중계 전원이 켜질 때까지 백그라운드 상시 감지 루프
+        // 2) 이전에 권한 승인된 기기가 있는 경우: 체중계 켜질 때까지 안정적 낚아채기 (OS 네이티브 자동 체결)
         if (!device && !forceNewScan) {
           const candidateDevices = [];
           if (lastBleDeviceInstance && lastBleDeviceInstance.gatt) {
@@ -4606,39 +4616,31 @@
             document.getElementById("scaleStatusText").innerText = "체중계 감지 대기 중...";
             const currentModal = document.getElementById("scaleMeasureModal");
 
-            // 체중계 액정이 켜져 연결될 때까지 또는 모달이 닫힐 때까지 끈기 있게 실시간 루프 시도
-            while (isScaleConnectingLoopRunning && currentModal && !currentModal.classList.contains("hidden")) {
-              for (const cand of candidateDevices) {
-                if (!isScaleConnectingLoopRunning || (currentModal && currentModal.classList.contains("hidden"))) break;
-                if (!cand || !cand.gatt) continue;
+            // 체중계 액정이 켜져 연결될 때까지 OS 네이티브 연결 대기 (후보당 최대 8초)
+            for (const cand of candidateDevices) {
+              if (!isScaleConnectingLoopRunning || (currentModal && currentModal.classList.contains("hidden"))) break;
+              if (!cand || !cand.gatt) continue;
 
-                try {
-                  const s = await Promise.race([
-                    cand.gatt.connect(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 1500))
-                  ]);
-                  if (s && s.connected) {
-                    device = cand;
-                    server = s;
-                    bleDevice = device;
-                    lastBleDeviceInstance = device;
-                    bleServer = server;
-                    device.addEventListener("gattserverdisconnected", onBleDisconnected);
-                    document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
-                    break;
-                  }
-                } catch (eCand) {
-                  // 체중계가 아직 켜지지 않은 상태: 안전하게 정리 후 다음 턴 대기
-                  try { if (cand.gatt && typeof cand.gatt.disconnect === "function") cand.gatt.disconnect(); } catch (_) {}
+              try {
+                // 사용자가 체중계로 걸어가 발을 얹어 액정을 켤 때까지 8초간 안정적으로 대기
+                // 체중계가 켜져 BLE 신호를 쏘는 순간 iOS CoreBluetooth가 즉각 연결 체결!
+                const s = await Promise.race([
+                  cand.gatt.connect(),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
+                ]);
+                if (s && s.connected) {
+                  device = cand;
+                  server = s;
+                  bleDevice = device;
+                  lastBleDeviceInstance = device;
+                  bleServer = server;
+                  device.addEventListener("gattserverdisconnected", onBleDisconnected);
+                  document.getElementById("scaleStatusText").innerText = `${getFriendlyScaleName(device)} 연결됨`;
+                  break;
                 }
+              } catch (eCand) {
+                console.warn("후보 기기 대기 초과 또는 오프라인:", cand.id, eCand);
               }
-
-              if (device && server) {
-                break; // 연결 완료 시 감지 루프 탈출
-              }
-
-              // 다음 감지 시도 전 250ms 숨고르기
-              await new Promise(r => setTimeout(r, 250));
             }
           }
         }
@@ -4652,23 +4654,23 @@
         }
 
         // 3) 권한 승인된 기기가 없어서 최초 1회 승인이 필요한 경우:
-        //    acceptAllDevices: true 사용 금지! 스니퍼 지문 전용 필터 적용으로 주변 잡기기 원천 차단!
+        //    스니퍼 실측 지문(0xFFFF)을 필터로 사용하여 주변 잡기기(Apple, LG TV, MS 등) 원천 차단!
         if (!device || !server) {
           if (forceNewScan || (!device && !server && isScaleConnectingLoopRunning)) {
             document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
             try {
               device = await navigator.bluetooth.requestDevice({
-                filters: scaleFilters,
+                filters: scaleFiltersWithMfg,
                 optionalServices: optionalScaleServices
               });
             } catch (filterErr) {
               if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
                 throw filterErr;
               }
-              console.warn("기기 요청 필터 예외 시 재시도:", filterErr);
+              console.warn("제조사 필터 예외 시 표준 서비스 필터로 폴백:", filterErr);
               device = await navigator.bluetooth.requestDevice({
-                filters: scaleFilters,
+                filters: scaleFiltersFallback,
                 optionalServices: optionalScaleServices
               });
             }
