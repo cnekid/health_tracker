@@ -612,8 +612,8 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         isConnectedScale = true
         scaleConnectionState = "reading"
         
-        log("🤝 [1:1 연결 성공!] 체중계와 GATT 악수 완료. 전체 서비스 전수 탐색을 개시합니다...", color: "emerald")
-        // nil을 전달하여 체중계가 지원하는 모든 GATT 서비스(FFF0, 181D, FEE7 등) 와일드카드 탐색
+        log("🤝 [1:1 연결 성공!] 체중계와 GATT 악수 완료. 전파 간섭 방지를 위해 스캔을 일시 중지하고 서비스 전수 탐색을 개시합니다...", color: "emerald")
+        stopScan() // 연결 체결 후 스캔을 멈추어 1:1 GATT 데이터 수신에 라디오 대역폭 100% 집중!
         peripheral.discoverServices(nil)
     }
     

@@ -4551,22 +4551,10 @@
         "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
       ];
 
-      // 스니퍼 확인 체중계 고유 지문 전용 필터 (주변 TV, 맥북, 에어팟 등 잡기기 100% 차단)
-      // 1순위: 제조사 데이터 0xFFFF (실제 체중계의 불변 지문)
-      // 2순위: 서비스 FFF0, 181D 및 이름 접두사
-      const scaleFiltersWithMfg = [
+      // 실제 체중계 전용 스캔 필터 (맥북 유인 주범인 WSS_SVC 완전 배제)
+      const scaleFiltersTargeted = [
         { manufacturerData: [{ companyIdentifier: 0xffff }] },
-        { services: [OKOK_SVC] },
-        { services: [WSS_SVC] },
-        { namePrefix: "BalansLab" },
-        { namePrefix: "Scale" }
-      ];
-
-      const scaleFiltersFallback = [
-        { services: [OKOK_SVC] },
-        { services: [WSS_SVC] },
-        { namePrefix: "BalansLab" },
-        { namePrefix: "Scale" }
+        { services: [OKOK_SVC] }
       ];
 
       const getFriendlyScaleName = (d) => {
@@ -4660,17 +4648,20 @@
             document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
             try {
+              // 1순위: 제조사 고유 지문(0xFFFF) 및 OKOK 서비스 스캔 시도
               device = await navigator.bluetooth.requestDevice({
-                filters: scaleFiltersWithMfg,
+                filters: scaleFiltersTargeted,
                 optionalServices: optionalScaleServices
               });
             } catch (filterErr) {
               if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
                 throw filterErr;
               }
-              console.warn("제조사 필터 예외 시 표준 서비스 필터로 폴백:", filterErr);
+              // 2순위: Bluefy가 manufacturerData 필터를 미지원하여 기기를 못 찾을 경우,
+              // 광고에 서비스가 없는 실제 체중계가 검색창에 100% 나타나도록 acceptAllDevices 폴백 적용
+              console.warn("실제 체중계 탐색을 위해 스캔 옵션 확장:", filterErr);
               device = await navigator.bluetooth.requestDevice({
-                filters: scaleFiltersFallback,
+                acceptAllDevices: true,
                 optionalServices: optionalScaleServices
               });
             }
