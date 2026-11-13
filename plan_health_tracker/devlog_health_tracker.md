@@ -742,3 +742,19 @@
   3. **동작 검증:**
      * `scale_sim` 백그라운드 엔진 기동 및 HTTP API (`/api/status`, `/api/radar/start`, `/api/radar`, `/api/radar/stop`) 정상 동작 검증 완료.
 
+---
+
+### [2026-11-13 14:00] Bluefy 주변 260여개 잡기기 원천 차단 및 Chipsea 0xFFFF 순수 하드웨어 지문 단일 필터 적용 완료
+
+* **배경 및 원인 분석:**
+  1. **acceptAllDevices의 한계:** 오늘 오전 커밋(`3a0bc50`)에서 적용된 무필터 스캔으로 인해, 실내 공간의 262개 BLE 기기(Microsoft 비콘, Casambi 조명 드라이버 등)가 여과 없이 팝업에 노출되어 실제 체중계를 선택하기 어려운 문제 발생.
+  2. **과거 필터 실패 원인 규명:** 과거 커밋(`cd25adc`, `baf94a7`)에서 0개가 떴던 원인은 `companyIdentifier: 0xffff` 자체의 결함이 아니라, 필터 배열 내 `{ services: [OKOK_SVC] }`가 함께 포함되어 iOS 하드웨어 스캐너 레벨에서 광고 패킷에 서비스 UUID가 없는 실제 체중계 신호를 조기 폐기했던 것임.
+* **수정 내역:**
+  1. `health_tracker/index.html` 및 `health_tracker/plan_health_tracker/ui_health_tracker.html` 동기 수정:
+     * `acceptAllDevices: true` 완전 제거.
+     * `filters: [{ manufacturerData: [{ companyIdentifier: 0xffff }] }]` 순수 하드웨어 지문 단일 필터 적용.
+     * 1:1 악수 및 BIA 다단계 수신을 위한 `optionalServices: optionalScaleServices` 온전 유지.
+  2. **검증:**
+     * macOS JavaScriptCore(`jsc`) 구문 파싱 검사 무결성 통과 (0 error).
+
+

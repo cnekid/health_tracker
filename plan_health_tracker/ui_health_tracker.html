@@ -5068,14 +5068,15 @@
         }
 
         // 3) 권한 승인된 기기가 없어서 최초 1회 승인이 필요한 경우:
-        //    Bluefy의 iOS CoreBluetooth 한계(제조사 데이터 스캔 필터 미지원)로 인해
-        //    acceptAllDevices: true를 사용하여 전체 기기 목록을 노출 (nRF Connect로 확인한 내 체중계 고유 UUID 1회 선택)
+        //    실제 체중계 고유 지문(Chipsea 0xFFFF) 단일 필터로 주변 260여개 잡기기 원천 차단
         if (!device || !server) {
           if (forceNewScan || (!device && !server && isScaleConnectingLoopRunning)) {
-            document.getElementById("scaleStatusText").innerText = "체중계 목록 검색 중...";
+            document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
 
             device = await navigator.bluetooth.requestDevice({
-              acceptAllDevices: true,
+              filters: [{
+                manufacturerData: [{ companyIdentifier: 0xffff }]
+              }],
               optionalServices: optionalScaleServices
             });
 
