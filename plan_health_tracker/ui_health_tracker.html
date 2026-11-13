@@ -4983,12 +4983,6 @@
         "0000ffe0-0000-1000-8000-00805f9b34fb"  // Common BLE UART
       ];
 
-      // 실제 체중계 전용 스캔 필터 (맥북 유인 주범인 WSS_SVC 완전 배제)
-      const scaleFiltersTargeted = [
-        { manufacturerData: [{ companyIdentifier: 0xffff }] },
-        { services: [OKOK_SVC] }
-      ];
-
       const getFriendlyScaleName = (d) => {
         if (!d || !d.name) return "밸런스랩 체중계";
         const n = d.name;
@@ -5074,29 +5068,16 @@
         }
 
         // 3) 권한 승인된 기기가 없어서 최초 1회 승인이 필요한 경우:
-        //    스니퍼 실측 지문(0xFFFF)을 필터로 사용하여 주변 잡기기(Apple, LG TV, MS 등) 원천 차단!
+        //    Bluefy의 iOS CoreBluetooth 한계(제조사 데이터 스캔 필터 미지원)로 인해
+        //    acceptAllDevices: true를 사용하여 전체 기기 목록을 노출 (nRF Connect로 확인한 내 체중계 고유 UUID 1회 선택)
         if (!device || !server) {
           if (forceNewScan || (!device && !server && isScaleConnectingLoopRunning)) {
-            document.getElementById("scaleStatusText").innerText = "체중계 검색 중... (액정을 켜주세요)";
+            document.getElementById("scaleStatusText").innerText = "체중계 목록 검색 중...";
 
-            try {
-              // 1순위: 제조사 고유 지문(0xFFFF) 및 OKOK 서비스 스캔 시도
-              device = await navigator.bluetooth.requestDevice({
-                filters: scaleFiltersTargeted,
-                optionalServices: optionalScaleServices
-              });
-            } catch (filterErr) {
-              if (filterErr.name === "NotFoundError" || String(filterErr).includes("cancelled") || String(filterErr).includes("canceled") || String(filterErr).includes("User cancelled")) {
-                throw filterErr;
-              }
-              // 2순위: Bluefy가 manufacturerData 필터를 미지원하여 기기를 못 찾을 경우,
-              // 광고에 서비스가 없는 실제 체중계가 검색창에 100% 나타나도록 acceptAllDevices 폴백 적용
-              console.warn("실제 체중계 탐색을 위해 스캔 옵션 확장:", filterErr);
-              device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: optionalScaleServices
-              });
-            }
+            device = await navigator.bluetooth.requestDevice({
+              acceptAllDevices: true,
+              optionalServices: optionalScaleServices
+            });
 
             bleDevice = device;
             lastBleDeviceInstance = device;

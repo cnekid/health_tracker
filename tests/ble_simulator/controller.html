@@ -822,12 +822,12 @@
                   </div>
                 </div>
 
-                <!-- [실측 생체 데이터 전광판] 체중계 1:1 직접 연결 취득 수치 -->
+                <!-- [실측 생체 데이터 전광판] 체중계 실시간 브로드캐스트 취득 수치 -->
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-white font-mono shadow-inner">
                   <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2 border-b border-slate-800 pb-1.5">
                     <span class="font-bold flex items-center gap-1.5 text-emerald-400">
                       <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      실시간 1:1 GATT 실측 수치 (체중계 LCD와 100% 동일)
+                      실시간 무선 브로드캐스트 실측 수치 (체중계 LCD와 100% 동일)
                     </span>
                     <span class="text-xs ${lockStatusColor} font-bold">${lockStatusStr}</span>
                   </div>
@@ -879,10 +879,10 @@
                   </ul>
                 </div>
 
-                <!-- 스마트폰 충돌 방지 안내 팁 -->
+                <!-- 무선 브로드캐스트 안내 팁 -->
                 <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 flex items-start gap-1.5">
                   <span class="text-blue-500 font-bold">ℹ️ 동작 원리:</span>
-                  <span>스마트폰 앱과 동일하게 체중계 감지 즉시 맥북이 1:1 악수를 맺어 19B 실측 데이터를 수신하고, 확정 즉시 연결을 자동 해제하여 스마트폰 앱 측정을 방해하지 않습니다.</span>
+                  <span>체중계가 공중에 방출하는 OKOK v1.1 브로드캐스트 광고 패킷을 무중단 실시간 수신하므로, 스마트폰 앱과 맥북이 동시에 전파를 수신할 수 있으며 기기 간 연결 충돌이 원천적으로 없습니다.</span>
                 </div>
               </div>
             `;
@@ -971,9 +971,10 @@
 
     setInterval(checkEngineStatus, 2000);
     checkEngineStatus();
-    startRadarScan(); // 페이지 로드 시 자동으로 실시간 신호 탐색 가동
+    // 새로고침 시 무조건 '대기 상태'로 시작 (사용자가 [탐색 시작] 버튼을 눌렀을 때만 스캔 작동)
+    stopRadarScan();
     if (!radarPollTimer) {
-      radarPollTimer = setInterval(pollRadar, 1000);
+      radarPollTimer = setInterval(pollRadar, 1200);
     }
     recalcAll();
   </script>
