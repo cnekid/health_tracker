@@ -77,14 +77,19 @@
         <span>📡 탐색 시작</span>
       </button>
       <!-- 탐색 중단 버튼 -->
-      <button id="btnStopScan" onclick="stopScaleScan()" class="hidden px-4 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-sm">
+      <button id="btnStopScan" onclick="stopScaleScan()" class="hidden px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-sm">
         <i class="fa-solid fa-stop text-[10px]"></i>
-        <span>⏹️ 탐색 중단</span>
+        <span>⏹️ 탐색 일시중단</span>
       </button>
       <!-- 다시 측정(초기화) 버튼 -->
       <button onclick="resetScaleMeasurement()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition border border-slate-200">
         <i class="fa-solid fa-rotate-right text-slate-500 text-[11px]"></i>
         <span>🔄 다시 측정</span>
+      </button>
+      <!-- 프로그램 완전 종료 버튼 -->
+      <button onclick="exitHealthTracker()" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition border border-rose-200">
+        <i class="fa-solid fa-power-off text-rose-500 text-[11px]"></i>
+        <span>🛑 앱 완전 종료</span>
       </button>
     </div>
 
@@ -135,14 +140,20 @@
     </div>
 
     <!-- Firebase 자동 저장 알림 배너 (측정 확정 시 노출) -->
-    <div id="cloudSaveBanner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-800 transition">
+    <div id="cloudSaveBanner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-800 transition">
       <div class="flex items-center gap-2">
         <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
           <i class="fa-solid fa-check"></i>
         </span>
-        <span class="font-bold">Firebase 클라우드 자동 저장 완료</span>
+        <div>
+          <span class="font-bold">Firebase 클라우드 자동 저장 완료</span>
+          <span id="cloudSavedDocId" class="block text-[10px] font-mono text-emerald-600">scale_records</span>
+        </div>
       </div>
-      <span id="cloudSavedDocId" class="text-[11px] font-mono text-emerald-600">scale_records</span>
+      <button onclick="exitHealthTracker()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-power-off text-[11px]"></i>
+        <span>✨ 측정 완료 & 앱 종료</span>
+      </button>
     </div>
   </div>
 
@@ -614,11 +625,49 @@
       closeFirebaseSettingsModal();
     }
 
+    // --- 5-1. 프로그램 안전 종료 및 리소스 반환 ---
+    async function exitHealthTracker() {
+      if (!confirm("HealthTracker 백그라운드 프로그램을 완전히 종료하시겠습니까?\n(맥북 리소스 0% 반환, 프로세스 OFF)")) {
+        return;
+      }
+      clearInterval(pollInterval);
+      try {
+        await fetch('/api/exit', { method: 'POST' });
+      } catch (e) {
+        // 종료 시 서버 연결 끊어짐 예상됨
+      }
+      document.body.innerHTML = `
+        <div class="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div class="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl mb-4 border border-rose-500/30 shadow-lg">
+            <i class="fa-solid fa-power-off"></i>
+          </div>
+          <h1 class="text-xl font-bold mb-2">HealthTracker가 완전히 종료되었습니다</h1>
+          <p class="text-sm text-slate-300 mb-2">맥북 백그라운드 프로세스가 OFF 되었으며, 블루투스 안테나와 CPU 리소스가 0%로 반환되었습니다.</p>
+          <p class="text-xs text-slate-500 mb-6">다음에 측정하실 때 독(Dock)이나 바탕화면의 [HealthTracker] 앱 아이콘을 다시 누르시면 됩니다.</p>
+          <button onclick="window.close()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition">
+            이 탭 닫기 (Cmd + W)
+          </button>
+        </div>
+      `;
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    }
+
     // --- 6. 초기 실행 ---
     window.addEventListener('DOMContentLoaded', () => {
       initFirebase();
       pollInterval = setInterval(pollLiveScale, 300);
       pollLiveScale();
+
+      // 1클릭 실행 앱에서 진입 시 자동 탐색 시작
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('autostart') === '1') {
+        console.log('1-Click App detected: Auto-starting scale scan...');
+        setTimeout(() => {
+          startScaleScan();
+        }, 500);
+      }
     });
   </script>
 </body>

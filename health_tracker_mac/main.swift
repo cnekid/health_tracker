@@ -1206,6 +1206,18 @@ class LocalHttpServer {
             let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
             return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
         }
+
+        // 5-1. POST /api/exit (프로세스 완전 종료 - 리소스 0% 반환)
+        if method == "POST" && path.starts(with: "/api/exit") {
+            radar.stopScan()
+            radar.log("🛑 [프로세스 완전 종료] 사용자의 요청으로 HealthTracker를 안전하게 종료합니다.", color: "rose")
+            let res: [String: Any] = ["success": true, "message": "HealthTracker가 완전히 종료되었습니다."]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                exit(0)
+            }
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
+        }
         
         // 6. GET /api/radar (현재 감지된 BLE 장치 래칭 스냅샷 조회)
         if method == "GET" && path.starts(with: "/api/radar") {
