@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- 온디바이스 OCR 라이브러리 (Tesseract.js v5) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Firebase SDK (Compat CDN) & 클라우드 공통 설정 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="firebase_config.js"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * {
@@ -1517,19 +1521,210 @@
       });
     }
 
-    async function dbSaveBodyMetric(record) {
+    // ====================================================
+    // Firebase Cloud Firestore Engine & 양방향 동기화
+    // ====================================================
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyA9LwZWbiXVcE5T5-Vm6QX6pB7xa4MZVxo",
+      authDomain: "health-tracker-70637.firebaseapp.com",
+      projectId: "health-tracker-70637",
+      storageBucket: "health-tracker-70637.firebasestorage.app",
+      messagingSenderId: "740112741763",
+      appId: "1:740112741763:web:1b0ac9b2f642ff9edd72b6"
+    };
+    window.FIREBASE_CONFIG = window.FIREBASE_CONFIG || DEFAULT_FIREBASE_CONFIG;
+
+    let fbDb = null;
+    function getFirestoreDb() {
+      if (fbDb) return fbDb;
+      try {
+        const cfg = window.FIREBASE_CONFIG || DEFAULT_FIREBASE_CONFIG;
+        if (cfg && cfg.projectId && window.firebase) {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(cfg);
+          }
+          fbDb = firebase.firestore();
+          return fbDb;
+        }
+      } catch (e) {
+        console.warn("Firestore 초기화 실패:", e);
+      }
+      return null;
+    }
+
+    async function cloudSaveRecord(collectionName, record) {
+      const db = getFirestoreDb();
+      if (!db || !record) return;
+      try {
+        const docId = record.id || `${collectionName === 'scale_records' ? 'scale' : 'bp'}_${record.date}_${(record.time || '').replace(/[^0-9]/g, '')}`;
+        const payload = { ...record, id: docId };
+        if (!payload.timestamp) {
+          payload.timestamp = `${record.date}T${record.time || '00:00:00'}`;
+        }
+        await db.collection(collectionName).doc(docId).set(payload, { merge: true });
+        console.log(`[Cloud Sync] ${collectionName} 클라우드 저장 성공:`, docId);
+      } catch (err) {
+        console.warn(`[Cloud Sync] ${collectionName} 업로드 실패:`, err);
+      }
+    }
+
+    async function cloudDeleteRecord(collectionName, idOrDate) {
+      const db = getFirestoreDb();
+      if (!db || !idOrDate) return;
+      try {
+        await db.collection(collectionName).doc(idOrDate).delete();
+        const querySnap = await db.collection(collectionName).where('date', '==', idOrDate).get();
+        querySnap.forEach(doc => doc.ref.delete());
+        console.log(`[Cloud Sync] ${collectionName} 클라우드 삭제 완료:`, idOrDate);
+      } catch (err) {
+        console.warn(`[Cloud Sync] ${collectionName} 삭제 실패:`, err);
+      }
+    }
+
+    // 핸드폰의 기존 누적 건강 기록(IndexedDB)을 Firestore로 최초 1회 일괄 백업 마이그레이션
+    async function migrateLocalDataToCloudIfNeeded() {
+      const db = getFirestoreDb();
+      if (!db) return;
+      const MIGRATION_KEY = 'healthTracker_cloudMigrated_v1';
+      if (localStorage.getItem(MIGRATION_KEY)) return;
+
+      try {
+        const localBodies = await dbGetAllBodyMetrics();
+        const localBps = await dbGetAllBpMetrics();
+        if (localBodies.length === 0 && localBps.length === 0) {
+          localStorage.setItem(MIGRATION_KEY, 'true');
+          return;
+        }
+
+        const allOps = [];
+        for (const item of localBodies) {
+          const timePart = (item.time || '00:00:00').replace(/[^0-9]/g, '');
+          const docId = item.id || `scale_${item.date}_${timePart || Date.now()}`;
+          const payload = { ...item, id: docId };
+          if (!payload.timestamp) {
+            payload.timestamp = `${item.date}T${item.time || '00:00:00'}`;
+          }
+          allOps.push({
+            ref: db.collection('scale_records').doc(docId),
+            data: payload
+          });
+        }
+
+        for (const item of localBps) {
+          const timePart = (item.time || '00:00:00').replace(/[^0-9]/g, '');
+          const docId = item.id || `bp_${item.date}_${timePart || Date.now()}`;
+          const payload = { ...item, id: docId };
+          if (!payload.timestamp) {
+            payload.timestamp = `${item.date}T${item.time || '00:00:00'}`;
+          }
+          allOps.push({
+            ref: db.collection('bp_records').doc(docId),
+            data: payload
+          });
+        }
+
+        // Firestore 1회 배치 제한(500건)을 고려하여 400건 단위 청크 일괄 커밋
+        for (let i = 0; i < allOps.length; i += 400) {
+          const chunk = allOps.slice(i, i + 400);
+          const batch = db.batch();
+          chunk.forEach(op => batch.set(op.ref, op.data, { merge: true }));
+          await batch.commit();
+        }
+
+        localStorage.setItem(MIGRATION_KEY, 'true');
+        console.log(`[Cloud Migration] 기존 로컬 건강 기록 ${allOps.length}건 클라우드 일괄 백업 완료`);
+        if (allOps.length > 0 && typeof showToast === 'function') {
+          showToast(`☁️ 핸드폰의 기존 건강 기록 ${allOps.length}건이 클라우드에 백업되었습니다.`);
+        }
+      } catch (err) {
+        console.warn("[Cloud Migration] 최초 로컬 데이터 백업 중 오류:", err);
+      }
+    }
+
+    // 앱 실행(On-Open) 또는 화면 복귀 시 최신 클라우드 기록 단발성 동기화
+    let isSyncingCloud = false;
+    async function syncFromCloudOnOpen() {
+      if (isSyncingCloud) return;
+      const db = getFirestoreDb();
+      if (!db) return;
+
+      isSyncingCloud = true;
+      let updatedCount = 0;
+
+      try {
+        // 0. 핸드폰에 남아 있는 기존 과거 데이터가 있다면 클라우드로 최초 1회 자동 백업
+        await migrateLocalDataToCloudIfNeeded();
+
+        // 1. 체중계 최신 기록 동기화 (최근 15건)
+        const localBodies = await dbGetAllBodyMetrics();
+        const localBodyIds = new Set(localBodies.map(it => it.id || it.date));
+        const localBodyDates = new Set(localBodies.map(it => `${it.date}_${it.time}`));
+
+        const scaleSnap = await db.collection('scale_records')
+          .orderBy('timestamp', 'desc')
+          .limit(15)
+          .get();
+
+        for (const doc of scaleSnap.docs) {
+          const data = doc.data();
+          const checkKey = `${data.date}_${data.time}`;
+          if (!localBodyIds.has(data.id) && !localBodyDates.has(checkKey)) {
+            await dbSaveBodyMetric(data, true); // true: skipCloudSync
+            localBodyIds.add(data.id);
+            updatedCount++;
+          }
+        }
+
+        // 2. 혈압 최신 기록 동기화 (최근 15건)
+        const localBps = await dbGetAllBpMetrics();
+        const localBpIds = new Set(localBps.map(it => it.id || it.date));
+        const localBpDates = new Set(localBps.map(it => `${it.date}_${it.time}`));
+
+        const bpSnap = await db.collection('bp_records')
+          .orderBy('timestamp', 'desc')
+          .limit(15)
+          .get();
+
+        for (const doc of bpSnap.docs) {
+          const data = doc.data();
+          const checkKey = `${data.date}_${data.time}`;
+          if (!localBpIds.has(data.id) && !localBpDates.has(checkKey)) {
+            await dbSaveBpMetric(data, true); // true: skipCloudSync
+            localBpIds.add(data.id);
+            updatedCount++;
+          }
+        }
+
+        if (updatedCount > 0) {
+          await refreshAllViews();
+          if (typeof showToast === 'function') {
+            showToast(`☁️ 클라우드에서 최신 건강 기록 ${updatedCount}건이 동기화되었습니다.`);
+          }
+        }
+      } catch (err) {
+        console.warn("[Cloud Sync] On-Open 동기화 중 오류:", err);
+      } finally {
+        isSyncingCloud = false;
+      }
+    }
+
+    async function dbSaveBodyMetric(record, skipCloudSync = false) {
       if (!record.id) {
         const timePart = (record.time || new Date().toTimeString().split(" ")[0]).replace(/[^0-9]/g, "");
         record.id = `scale_${record.date}_${timePart || Date.now()}`;
       }
       const db = await openDB();
-      return new Promise((resolve, reject) => {
+      const res = await new Promise((resolve, reject) => {
         const tx = db.transaction("bodyMetrics", "readwrite");
         const store = tx.objectStore("bodyMetrics");
         store.put(record);
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
+      if (!skipCloudSync) {
+        cloudSaveRecord('scale_records', record);
+      }
+      return res;
     }
 
     async function dbGetAllBodyMetrics() {
@@ -1543,19 +1738,23 @@
       });
     }
 
-    async function dbSaveBpMetric(record) {
+    async function dbSaveBpMetric(record, skipCloudSync = false) {
       if (!record.id) {
         const timePart = (record.time || new Date().toTimeString().split(" ")[0]).replace(/[^0-9]/g, "");
         record.id = `bp_${record.date}_${timePart || Date.now()}`;
       }
       const db = await openDB();
-      return new Promise((resolve, reject) => {
+      const res = await new Promise((resolve, reject) => {
         const tx = db.transaction("bpMetrics", "readwrite");
         const store = tx.objectStore("bpMetrics");
         store.put(record);
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
+      if (!skipCloudSync) {
+        cloudSaveRecord('bp_records', record);
+      }
+      return res;
     }
 
     async function dbGetAllBpMetrics() {
@@ -1571,24 +1770,28 @@
 
     async function dbDeleteBodyMetric(id) {
       const db = await openDB();
-      return new Promise((resolve, reject) => {
+      const res = await new Promise((resolve, reject) => {
         const tx = db.transaction("bodyMetrics", "readwrite");
         const store = tx.objectStore("bodyMetrics");
         store.delete(id);
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
+      cloudDeleteRecord('scale_records', id);
+      return res;
     }
 
     async function dbDeleteBpMetric(id) {
       const db = await openDB();
-      return new Promise((resolve, reject) => {
+      const res = await new Promise((resolve, reject) => {
         const tx = db.transaction("bpMetrics", "readwrite");
         const store = tx.objectStore("bpMetrics");
         store.delete(id);
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
+      cloudDeleteRecord('bp_records', id);
+      return res;
     }
 
     // --- 휴지통 (deletedMetrics) 보관 및 10일 자동 정리 엔진 ---
@@ -5944,6 +6147,9 @@
         await dbPurgeOldDeletedMetrics(); // 10일 경과 만료된 휴지통 데이터 자동 정리
         await refreshAllViews();
 
+        // 클라우드(Firestore) 최신 기록 단발성 동기화 (On-Open)
+        syncFromCloudOnOpen();
+
         // 새로고침 전 머물던 탭 상태 완벽 복원
         const savedTab = sessionStorage.getItem('healthTracker_activeTab');
         const savedMetricKey = sessionStorage.getItem('healthTracker_metricDetailKey');
@@ -5958,6 +6164,13 @@
         }
       } catch (err) {
         console.error("초기 로드 실패:", err);
+      }
+    });
+
+    // 화면 복귀 시(백그라운드에서 다시 열렸을 때) 최신 데이터 자동 동기화
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncFromCloudOnOpen();
       }
     });
   </script>

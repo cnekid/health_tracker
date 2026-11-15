@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>HealthTracker Mac - 체중계 서비스</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.variable.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase SDK (Compat CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase 공통 설정 -->
+  <script src="/firebase_config.js"></script>
+
+  <style>
+    * {
+      font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #F8FAFC;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.06); opacity: 0.35; }
+      100% { transform: scale(0.95); opacity: 0.9; }
+    }
+    .anim-pulse-ring {
+      animation: pulse-ring 2.2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-slate-800 p-4 sm:p-6 max-w-3xl mx-auto space-y-4">
+
+  <!-- ================= 1. 상단 글로벌 헤더 (핸드폰 앱 톤앤매너 동일) ================= -->
+  <header class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-bold shadow-sm">
+        <i class="fa-solid fa-weight-scale"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">HealthTracker Mac</h1>
+          <span class="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-bluetooth text-[9px]"></i> BLE 코어 서비스
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium mt-0.5">물리 체중계 실측 연동 & Firebase 클라우드 자동 저장</p>
+      </div>
+    </div>
+
+    <!-- 우측 상태 및 설정 버튼 -->
+    <div class="flex items-center gap-2 self-end sm:self-auto">
+      <span id="macAddrBadge" class="text-[11px] font-mono font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
+        AC:12:BB:39:44:E3
+      </span>
+      <span id="firebaseStatusBadge" class="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1">
+        <i class="fa-solid fa-cloud text-[10px] text-slate-400"></i>
+        <span>클라우드 확인 중</span>
+      </span>
+      <button onclick="openFirebaseSettingsModal()" class="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+        <i class="fa-solid fa-gear text-slate-400"></i>
+        <span>설정</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= 2. 탐색 제어 액션 바 ================= -->
+  <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <!-- 탐색 시작 버튼 -->
+      <button id="btnStartScan" onclick="startScaleScan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-sm">
+        <i class="fa-solid fa-play text-[10px]"></i>
+        <span>📡 탐색 시작</span>
+      </button>
+      <!-- 탐색 중단 버튼 -->
+      <button id="btnStopScan" onclick="stopScaleScan()" class="hidden px-4 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-sm">
+        <i class="fa-solid fa-stop text-[10px]"></i>
+        <span>⏹️ 탐색 중단</span>
+      </button>
+      <!-- 다시 측정(초기화) 버튼 -->
+      <button onclick="resetScaleMeasurement()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition border border-slate-200">
+        <i class="fa-solid fa-rotate-right text-slate-500 text-[11px]"></i>
+        <span>🔄 다시 측정</span>
+      </button>
+    </div>
+
+    <!-- 스캔 상태 표시 -->
+    <div class="flex items-center gap-2 text-xs font-medium text-slate-600">
+      <span id="scanIndicatorDot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+      <span id="scanIndicatorText">탐색 대기 중 (탐색 시작을 눌러주세요)</span>
+    </div>
+  </div>
+
+  <!-- ================= 3. 메인 체중 카드 (모바일 앱 index.html 1:1 동일 디자인) ================= -->
+  <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+    <!-- 카드 헤더 (기준일 우측 정렬) -->
+    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-semibold">
+          <i class="fa-solid fa-weight-scale"></i>
+        </span>
+        <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">체중</h2>
+      </div>
+      <span id="measureTimeLabel" class="text-xs text-slate-400 font-medium">측정 시각: 대기 중</span>
+    </div>
+
+    <!-- 메인 수치 및 임피던스 디스플레이 -->
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+      <div>
+        <div class="flex items-baseline gap-2">
+          <span id="displayWeight" class="text-5xl sm:text-6xl font-black text-slate-900 tracking-tight font-mono">--.--</span>
+          <span class="text-xl font-bold text-slate-500">kg</span>
+        </div>
+        <div class="flex items-center gap-2 mt-2 text-xs font-medium text-slate-500">
+          <span>생체 저항값 (임피던스):</span>
+          <span id="displayImpedance" class="font-bold text-slate-800 font-mono text-sm">---.-</span>
+          <span>Ω</span>
+        </div>
+      </div>
+
+      <!-- 우측 상태 뱃지 및 안내 -->
+      <div class="flex flex-col sm:items-end gap-1.5">
+        <div id="statusBadge" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-2 shadow-2xs">
+          <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="statusText">체중계 신호 대기</span>
+        </div>
+        <p id="guideText" class="text-[11px] text-slate-400 font-medium">
+          [탐색 시작]을 누르고 체중계에 맨발로 올라서세요.
+        </p>
+      </div>
+    </div>
+
+    <!-- Firebase 자동 저장 알림 배너 (측정 확정 시 노출) -->
+    <div id="cloudSaveBanner" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-800 transition">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
+          <i class="fa-solid fa-check"></i>
+        </span>
+        <span class="font-bold">Firebase 클라우드 자동 저장 완료</span>
+      </div>
+      <span id="cloudSavedDocId" class="text-[11px] font-mono text-emerald-600">scale_records</span>
+    </div>
+  </div>
+
+  <!-- ================= 4. 14대 BIA 체성분 지표 요약 매트릭스 ================= -->
+  <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
+          <i class="fa-solid fa-chart-pie"></i>
+        </span>
+        <h3 class="text-sm font-bold text-slate-900">14대 BIA 체성분 측정 결과</h3>
+      </div>
+      <span class="text-[11px] text-slate-400 font-medium">임상 공식 자동 산출 (176cm, 47세, 남성)</span>
+    </div>
+
+    <!-- 지표 카드 그리드 (반응형: 2열 / 4열) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+      
+      <!-- 1. BMI -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">체질량지수 (BMI)</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricBmi" class="text-xl font-black text-slate-800 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">kg/m²</span>
+        </div>
+      </div>
+
+      <!-- 2. 체지방률 -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">체지방률</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricBodyFat" class="text-xl font-black text-amber-600 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">%</span>
+        </div>
+        <div id="metricFatKg" class="text-[10px] text-slate-400 font-mono mt-0.5">(- kg)</div>
+      </div>
+
+      <!-- 3. 골격근량 -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">골격근량</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricMuscleMass" class="text-xl font-black text-blue-600 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">kg</span>
+        </div>
+        <div id="metricMuscleRate" class="text-[10px] text-slate-400 font-mono mt-0.5">(- %)</div>
+      </div>
+
+      <!-- 4. 체수분율 -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">체수분율</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricWater" class="text-xl font-black text-cyan-600 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">%</span>
+        </div>
+        <div id="metricWaterKg" class="text-[10px] text-slate-400 font-mono mt-0.5">(- kg)</div>
+      </div>
+
+      <!-- 5. 내장지방 레벨 -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">내장지방 레벨</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricVisceral" class="text-xl font-black text-purple-600 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">Lv</span>
+        </div>
+      </div>
+
+      <!-- 6. 기초대사량 (BMR) -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">기초대사량 (BMR)</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricBmr" class="text-xl font-black text-rose-600 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">kcal</span>
+        </div>
+      </div>
+
+      <!-- 7. 제지방량 (FFM) -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">제지방량 (FFM)</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricFfm" class="text-xl font-black text-slate-700 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">kg</span>
+        </div>
+      </div>
+
+      <!-- 8. 근육량 -->
+      <div class="p-3 border border-slate-200/90 rounded-xl bg-slate-50/70">
+        <div class="text-[11px] text-slate-500 font-medium">근육량</div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="metricMuscleTotal" class="text-xl font-black text-slate-700 font-mono">--</span>
+          <span class="text-[10px] text-slate-400">kg</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= 5. 측정 기록 히스토리 (오늘 세션) ================= -->
+  <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </span>
+        <h3 class="text-xs font-bold text-slate-800">최근 측정 및 클라우드 동기화 내역</h3>
+      </div>
+      <span id="historyCount" class="text-[11px] text-slate-400 font-mono">0건</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 text-slate-500 font-semibold border-y border-slate-100">
+          <tr>
+            <th class="py-2 px-3">시각</th>
+            <th class="py-2 px-3">체중</th>
+            <th class="py-2 px-3">저항값</th>
+            <th class="py-2 px-3">BMI</th>
+            <th class="py-2 px-3">체지방률</th>
+            <th class="py-2 px-3">골격근량</th>
+            <th class="py-2 px-3 text-right">상태</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody" class="divide-y divide-slate-100 text-slate-700 font-mono">
+          <tr>
+            <td colspan="7" class="py-4 text-center text-slate-400 font-sans text-xs">아직 측정된 기록이 없습니다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= 6. Firebase 설정 모달 ================= -->
+  <div id="firebaseModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-fire"></i>
+          </span>
+          <h3 class="text-base font-bold text-slate-900">Firebase Firestore 연동 설정</h3>
+        </div>
+        <button onclick="closeFirebaseSettingsModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 leading-relaxed">
+        Firebase 콘솔 [프로젝트 설정 > 웹 앱]의 SDK 설정을 입력하시면, 브라우저에 안전하게 저장되어 실시간 클라우드 자동 저장이 활성화됩니다.
+      </p>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">API Key (apiKey)</label>
+          <input id="cfgApiKey" type="text" placeholder="AIzaSy..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:bg-white focus:outline-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Project ID (projectId)</label>
+          <input id="cfgProjectId" type="text" placeholder="my-health-app" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:bg-white focus:outline-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">App ID (appId)</label>
+          <input id="cfgAppId" type="text" placeholder="1:123456789:web:..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:bg-white focus:outline-blue-500">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveFirebaseSettingsFromModal()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-sm">
+          설정 저장 및 연동
+        </button>
+        <button onclick="closeFirebaseSettingsModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 7. JavaScript 클라이언트 로직 ================= -->
+  <script>
+    let isScanning = false;
+    let pollInterval = null;
+    let db = null;
+    let savedLockedTimestamp = null;
+    const historyList = [];
+
+    // --- 1. Firebase 초기화 ---
+    function initFirebase() {
+      try {
+        const cfg = window.FIREBASE_CONFIG;
+        if (cfg && cfg.projectId && cfg.apiKey) {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(cfg);
+          }
+          db = firebase.firestore();
+          updateFirebaseBadge(true, cfg.projectId);
+          console.log('Firebase initialized successfully for project:', cfg.projectId);
+        } else {
+          updateFirebaseBadge(false);
+        }
+      } catch (err) {
+        console.error('Firebase init error:', err);
+        updateFirebaseBadge(false);
+      }
+    }
+
+    function updateFirebaseBadge(connected, projectId = '') {
+      const el = document.getElementById('firebaseStatusBadge');
+      if (connected) {
+        el.className = "text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1";
+        el.innerHTML = `<i class="fa-solid fa-cloud-check text-[10px] text-emerald-600"></i><span>클라우드 연동됨</span>`;
+      } else {
+        el.className = "text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1";
+        el.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-500"></i><span>클라우드 미설정</span>`;
+      }
+    }
+
+    // --- 2. 스캔 제어 API 통신 ---
+    async function startScaleScan() {
+      try {
+        const res = await fetch('/api/radar/start', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          isScanning = true;
+          updateScanUi(true);
+        }
+      } catch (e) {
+        console.error('Failed to start scan:', e);
+      }
+    }
+
+    async function stopScaleScan() {
+      try {
+        const res = await fetch('/api/radar/stop', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          isScanning = false;
+          updateScanUi(false);
+        }
+      } catch (e) {
+        console.error('Failed to stop scan:', e);
+      }
+    }
+
+    async function resetScaleMeasurement() {
+      try {
+        await fetch('/api/scale/reset', { method: 'POST' });
+        savedLockedTimestamp = null;
+        document.getElementById('displayWeight').innerText = '--.--';
+        document.getElementById('displayImpedance').innerText = '---.-';
+        document.getElementById('measureTimeLabel').innerText = '측정 시각: 대기 중';
+        document.getElementById('cloudSaveBanner').classList.add('hidden');
+        resetMetricsMatrix();
+        setStatusBadge('idle');
+      } catch (e) {
+        console.error('Failed to reset scale:', e);
+      }
+    }
+
+    function updateScanUi(scanning) {
+      const btnStart = document.getElementById('btnStartScan');
+      const btnStop = document.getElementById('btnStopScan');
+      const dot = document.getElementById('scanIndicatorDot');
+      const txt = document.getElementById('scanIndicatorText');
+
+      if (scanning) {
+        btnStart.classList.add('hidden');
+        btnStop.classList.remove('hidden');
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping";
+        txt.innerText = "탐색 중... 체중계에 올라서세요";
+        txt.className = "text-emerald-700 font-bold";
+      } else {
+        btnStart.classList.remove('hidden');
+        btnStop.classList.add('hidden');
+        dot.className = "w-2.5 h-2.5 rounded-full bg-slate-300";
+        txt.innerText = "탐색 대기 중 (탐색 시작을 눌러주세요)";
+        txt.className = "text-slate-600 font-medium";
+      }
+    }
+
+    function setStatusBadge(state) {
+      const badge = document.getElementById('statusBadge');
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      const guide = document.getElementById('guideText');
+
+      if (state === 'locked') {
+        badge.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-2 shadow-2xs";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        txt.innerText = "측정 완료 (확정 🔒)";
+        guide.innerText = "측정이 완료되었습니다. 체중계에서 내려오셔도 됩니다.";
+      } else if (state === 'measuring') {
+        badge.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-2 shadow-2xs";
+        dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        txt.innerText = "측정 중 (안정화 진행 중...)";
+        guide.innerText = "움직이지 마시고 체중계 위에 정자세로 유지해 주세요.";
+      } else {
+        badge.className = "px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-2 shadow-2xs";
+        dot.className = "w-2 h-2 rounded-full bg-slate-400";
+        txt.innerText = "체중계 신호 대기";
+        guide.innerText = "[탐색 시작]을 누르고 체중계에 맨발로 올라서세요.";
+      }
+    }
+
+    function resetMetricsMatrix() {
+      ['metricBmi', 'metricBodyFat', 'metricMuscleMass', 'metricWater', 'metricVisceral', 'metricBmr', 'metricFfm', 'metricMuscleTotal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = '--';
+      });
+      document.getElementById('metricFatKg').innerText = '(- kg)';
+      document.getElementById('metricMuscleRate').innerText = '(- %)';
+      document.getElementById('metricWaterKg').innerText = '(- kg)';
+    }
+
+    // --- 3. 실시간 폴링 및 UI 갱신 ---
+    async function pollLiveScale() {
+      try {
+        const res = await fetch('/api/scale/live');
+        const data = await res.json();
+
+        if (data.isScanning !== undefined && data.isScanning !== isScanning) {
+          isScanning = data.isScanning;
+          updateScanUi(isScanning);
+        }
+
+        if (data.hasData) {
+          // 체중 및 임피던스
+          document.getElementById('displayWeight').innerText = Number(data.weight).toFixed(2);
+          document.getElementById('displayImpedance').innerText = Number(data.impedance).toFixed(1);
+          document.getElementById('measureTimeLabel').innerText = `측정 시각: ${data.timestamp || '방금'}`;
+
+          // 상태 뱃지
+          setStatusBadge(data.isLocked ? 'locked' : 'measuring');
+
+          // 14대 지표 갱신
+          document.getElementById('metricBmi').innerText = Number(data.bmi).toFixed(1);
+          document.getElementById('metricBodyFat').innerText = Number(data.bodyFat).toFixed(1);
+          document.getElementById('metricFatKg').innerText = `(${Number(data.fatMass).toFixed(1)} kg)`;
+          document.getElementById('metricMuscleMass').innerText = Number(data.muscleMass).toFixed(1);
+          document.getElementById('metricMuscleRate').innerText = `(${Number(data.muscleRate).toFixed(1)} %)`;
+          document.getElementById('metricWater').innerText = Number(data.waterRate).toFixed(1);
+          document.getElementById('metricWaterKg').innerText = `(${Number(data.waterMass).toFixed(1)} kg)`;
+          document.getElementById('metricVisceral').innerText = Number(data.visceralFat).toFixed(1);
+          document.getElementById('metricBmr').innerText = Math.round(data.bmr);
+          
+          const ffm = (Number(data.weight) - Number(data.fatMass)).toFixed(1);
+          document.getElementById('metricFfm').innerText = ffm;
+          document.getElementById('metricMuscleTotal').innerText = Number(data.muscleMass).toFixed(1);
+
+          // 측정 확정 시 Firebase 자동 업로드 (중복 저장 방지)
+          if (data.isLocked && savedLockedTimestamp !== data.timestamp) {
+            savedLockedTimestamp = data.timestamp;
+            autoSaveToFirestore(data);
+            addHistoryRow(data);
+          }
+        }
+      } catch (err) {
+        // 서버 일시 중단 시 조용히 대기
+      }
+    }
+
+    // --- 4. Firestore 자동 저장 ---
+    async function autoSaveToFirestore(scaleData) {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = now.toTimeString().slice(0, 8);
+      const docId = `scale_${dateStr.replace(/-/g, '')}_${timeStr.replace(/:/g, '')}`;
+
+      const payload = {
+        id: docId,
+        date: dateStr,
+        time: timeStr,
+        timestamp: `${dateStr}T${timeStr}`,
+        weight: Number(scaleData.weight),
+        impedance: Number(scaleData.impedance),
+        bmi: Number(scaleData.bmi),
+        bodyFat: Number(scaleData.bodyFat),
+        fatMass: Number(scaleData.fatMass),
+        muscleMass: Number(scaleData.muscleMass),
+        muscleRate: Number(scaleData.muscleRate),
+        water: Number(scaleData.waterRate),
+        waterMass: Number(scaleData.waterMass),
+        visceralFat: Number(scaleData.visceralFat),
+        bmr: Math.round(scaleData.bmr),
+        skeletalRate: Number(scaleData.muscleRate),
+        skeletalKg: Number(scaleData.muscleMass),
+        source: "맥북(BLE)",
+        createdAt: firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : now.toISOString()
+      };
+
+      if (db) {
+        try {
+          await db.collection('scale_records').doc(docId).set(payload);
+          console.log('✅ Firestore automatically saved:', docId);
+          showCloudSaveSuccess(docId);
+        } catch (err) {
+          console.error('Firestore save failed:', err);
+        }
+      } else {
+        console.warn('Firebase DB not initialized. Record saved in local session only.');
+        showCloudSaveSuccess(docId, '(로컬 세션 기록)');
+      }
+    }
+
+    function showCloudSaveSuccess(docId, extra = '') {
+      const banner = document.getElementById('cloudSaveBanner');
+      const docEl = document.getElementById('cloudSavedDocId');
+      docEl.innerText = `${docId} ${extra}`;
+      banner.classList.remove('hidden');
+    }
+
+    function addHistoryRow(data) {
+      historyList.unshift(data);
+      const tbody = document.getElementById('historyTableBody');
+      const countEl = document.getElementById('historyCount');
+      countEl.innerText = `${historyList.length}건`;
+
+      const timeOnly = (data.timestamp || '').split(' ')[1] || new Date().toTimeString().slice(0, 8);
+      const rowHtml = `
+        <tr class="hover:bg-slate-50/80 transition">
+          <td class="py-2 px-3 text-slate-500 font-sans">${timeOnly}</td>
+          <td class="py-2 px-3 font-bold text-slate-900">${Number(data.weight).toFixed(2)} kg</td>
+          <td class="py-2 px-3 text-slate-600">${Number(data.impedance).toFixed(1)} Ω</td>
+          <td class="py-2 px-3 text-slate-600">${Number(data.bmi).toFixed(1)}</td>
+          <td class="py-2 px-3 text-amber-600 font-bold">${Number(data.bodyFat).toFixed(1)}%</td>
+          <td class="py-2 px-3 text-blue-600 font-bold">${Number(data.muscleMass).toFixed(1)} kg</td>
+          <td class="py-2 px-3 text-right">
+            <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-100">
+              확정 🔒
+            </span>
+          </td>
+        </tr>
+      `;
+
+      if (historyList.length === 1) {
+        tbody.innerHTML = rowHtml;
+      } else {
+        tbody.insertAdjacentHTML('afterbegin', rowHtml);
+      }
+    }
+
+    // --- 5. Firebase 설정 모달 제어 ---
+    function openFirebaseSettingsModal() {
+      const cfg = window.FIREBASE_CONFIG || {};
+      document.getElementById('cfgApiKey').value = cfg.apiKey || '';
+      document.getElementById('cfgProjectId').value = cfg.projectId || '';
+      document.getElementById('cfgAppId').value = cfg.appId || '';
+      document.getElementById('firebaseModal').classList.remove('hidden');
+    }
+
+    function closeFirebaseSettingsModal() {
+      document.getElementById('firebaseModal').classList.add('hidden');
+    }
+
+    function saveFirebaseSettingsFromModal() {
+      const apiKey = document.getElementById('cfgApiKey').value.trim();
+      const projectId = document.getElementById('cfgProjectId').value.trim();
+      const appId = document.getElementById('cfgAppId').value.trim();
+
+      const newCfg = {
+        apiKey,
+        authDomain: `${projectId}.firebaseapp.com`,
+        projectId,
+        storageBucket: `${projectId}.appspot.com`,
+        messagingSenderId: "",
+        appId
+      };
+
+      localStorage.setItem('health_tracker_firebase_config', JSON.stringify(newCfg));
+      window.FIREBASE_CONFIG = newCfg;
+      initFirebase();
+      closeFirebaseSettingsModal();
+    }
+
+    // --- 6. 초기 실행 ---
+    window.addEventListener('DOMContentLoaded', () => {
+      initFirebase();
+      pollInterval = setInterval(pollLiveScale, 300);
+      pollLiveScale();
+    });
+  </script>
+</body>
+</html>

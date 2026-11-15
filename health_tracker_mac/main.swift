@@ -390,6 +390,22 @@ struct BleDeviceInfo {
     }
 }
 
+struct LiveScaleMeasurement {
+    var weight: Double
+    var impedance: Double
+    var isLocked: Bool
+    var bmi: Double
+    var bodyFat: Double
+    var fatMass: Double
+    var muscleMass: Double
+    var muscleRate: Double
+    var waterRate: Double
+    var waterMass: Double
+    var visceralFat: Double
+    var bmr: Int
+    var timestamp: String
+}
+
 class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var centralManager: CBCentralManager!
     var isScanning = false
@@ -397,6 +413,9 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     var devices: [String: BleDeviceInfo] = [:]
     var deviceOrder: [String] = [] // 순서 래칭용 (신호가 꺼져도 아래로 밀리지 않음)
     weak var virtualDevice: BalansLabVirtualDevice?
+    
+    // 실시간 실제 체중계 최신 측정값 저장
+    var liveScaleMeasurement: LiveScaleMeasurement? = nil
     
     // 실제 체중계 스텔스 1:1 자동 연결용 상태 (맥북 자동 1:1 체결 기본 활성화)
     var targetScalePeripheral: CBPeripheral?
@@ -419,7 +438,7 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         self.bluetoothState = central.state
-        // 기본값: 대기 모드 (웹 화면에서 [탐색 시작] 버튼을 누를 때만 스캔 개시)
+        // 기본값: 자동 스캔 완전 배제 (사용자가 웹 화면에서 [탐색 시작]을 누를 때만 동작)
         if central.state != .poweredOn && isScanning {
             stopScan()
         }
@@ -475,14 +494,16 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         let upperName = rawName.uppercased()
         let upperMfg = mfgHex.uppercased()
         
-        // 1. 사용자 실제 체중계 (AC:12:BB:39:44:E3) 100% 불변 지문 및 전방위 FFF0 매칭
+        // 1. 사용자 실제 체중계 (AC:12:BB:39:44:E3) 100% 불변 지문 및 전방위 FFF0 / C0 매칭
         let hasScaleSignature = upperMfg.contains("E34439BB12AC") ||
                                 upperMfg.starts(with: "FFFF00154311FFF011") ||
                                 upperMfg.contains("4311FFF0") ||
                                 (upperMfg.starts(with: "FFFF") && upperMfg.contains("FFF0")) ||
                                 services.contains(where: { $0.contains("FFF0") }) ||
                                 serviceDataDict.keys.contains(where: { $0.uuidString.contains("FFF0") }) ||
-                                (rawId.uppercased().contains("44E3") && upperMfg.starts(with: "FFFF"))
+                                (rawId.uppercased().contains("44E3") && upperMfg.starts(with: "FFFF")) ||
+                                (upperMfg.starts(with: "C0") && (upperMfg.contains("2C59FA161E") || upperMfg.count == 30)) ||
+                                (rawId.uppercased() == "6AF5DB2D-FF69-E10B-28D5-8B674FA79ABD")
         let isRealScale = hasScaleSignature
         
         if hasScaleSignature {
@@ -515,61 +536,105 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             displayName = "⭐ 내 실제 체중계 (AC:12:BB:39:44:E3)"
             log("📡 [체중계 신호 감지] RSSI: \(RSSI) dBm | 광고 키: [\(advertisementData.keys.joined(separator: ", "))]", color: "cyan")
             
-            if let mfgData = rawMfgData, mfgData.count >= 15 {
-                let tail = mfgData.subdata(in: 15..<mfgData.count)
-                payloadHex = tail.map { String(format: "%02X", $0) }.joined(separator: " ")
+            if let mfgData = rawMfgData {
+                payloadHex = mfgData.map { String(format: "%02X", $0) }.joined(separator: " ")
                 
-                // 패킷 변화 감지 (대기 패킷 FC 00 E3 C5 vs 발 올림 시 변화 패킷)
-                if payloadHex.contains("FC 00 E3 C5") {
-                    scaleEvent = "standby"
-                    scaleConnStatus = "💤 대기 신호 수신 중 (0.00kg)"
-                } else if !payloadHex.isEmpty {
+                // [Chipsea C0 15바이트 실시간 동적 측정 패킷 정밀 디코딩]
+                if mfgData.count == 15 && mfgData[0] == 0xC0 {
                     scaleEvent = "load"
-                    scaleConnStatus = "👣 발 올림 감지 (실측 분석 중...)"
-                }
-                
-                // [OKOK v1.1 브로드캐스트 실시간 무중단 디코딩]
-                // 1:1 연결을 맺지 않고 광고 패킷에 실시간 무게를 실어 방출하므로 스캔을 절대 끄지 않고 연속 디코딩!
-                let (weight, isLocked, candidates) = decodeOkOkBroadcast(data: mfgData, serviceData: serviceDataDict)
-                if let w = weight {
+                    let rawWeight = (UInt16(mfgData[2]) << 8) | UInt16(mfgData[3])
+                    let rawImp = (UInt16(mfgData[4]) << 8) | UInt16(mfgData[5])
+                    let status = mfgData[8]
+                    let isLocked = (status == 0x25)
+                    
+                    let w = Double(rawWeight) / 100.0
+                    let imp = Double(rawImp) / 10.0
+                    
                     if w > 10.0 {
-                        parsedRealWeight = w
-                        parsedRealIsLocked = isLocked
-                        scaleConnStatus = isLocked ? "✨ 실측 성공 (\(String(format: "%.2f", w))kg, 🔒확정)" : "📥 실측 중 (\(String(format: "%.2f", w))kg)"
-                        
-                        let lockStr = isLocked ? "🔒확정" : "⏳측정중"
-                        log("🎯 [실제 체중 수신!] \(String(format: "%.2f", w))kg (\(lockStr)) | 페이로드: [\(payloadHex)] | 디코딩: [\(candidates.joined(separator: ", "))]", color: isLocked ? "emerald" : "cyan")
-                        
-                        // 밸런스랩 표준 BIA 체성분 연산 (176cm, 47세 기준)
+                        // Lukaski & Janssen BIA 임상 공식 연산 (신장 176cm, 나이 47, 남성)
                         let h = 176.0
                         let age = 47.0
-                        let bmi = w / ((h / 100.0) * (h / 100.0))
-                        let bmr = Int(10.0 * w + 6.25 * h - 5.0 * age + 5.0)
-                        let bodyFat = max(5.0, min(50.0, 1.20 * bmi + 0.23 * age - 16.2))
-                        let skeletal = max(20.0, min(55.0, (w * (1.0 - bodyFat / 100.0) * 0.54 / w) * 100.0))
-                        let water = max(40.0, min(75.0, (w * (1.0 - bodyFat / 100.0) * 0.732 / w) * 100.0))
-                        let visceral = Int(max(1.0, min(30.0, (bmi - 18.5) * 0.75 + ((age - 20.0) / 10.0) * 1.1)))
+                        let hM = h / 100.0
+                        let bmi = round((w / (hM * hM)) * 10) / 10.0
                         
-                        parsedRealBodyFat = bodyFat
-                        parsedRealSkeletalRate = skeletal
-                        parsedRealVisceralFat = visceral
-                        parsedRealBmr = bmr
-                        parsedRealWaterRate = water
+                        var ffm = w * 0.70
+                        var fatMass = w * 0.30
+                        var bodyFat = 30.0
+                        var smm = ffm * 0.54
+                        var tbw = ffm * 0.732
+                        
+                        if imp > 150 && imp < 1500 {
+                            let h2_r = (h * h) / imp
+                            ffm = 0.485 * h2_r + 0.338 * w + 5.32
+                            ffm = max(w * 0.45, min(w * 0.92, ffm))
+                            fatMass = max(1.0, w - ffm)
+                            bodyFat = (fatMass / w) * 100.0
+                            smm = ffm * 0.54
+                            tbw = ffm * 0.732
+                        }
+                        
+                        let smmRate = (smm / w) * 100.0
+                        let tbwRate = (tbw / w) * 100.0
+                        let baseVf = (bmi - 18.5) * 0.75 + ((age - 20.0) / 10.0) * 1.1
+                        let vf = max(1.0, min(30.0, baseVf))
+                        let bmr = Int(round(10.0 * w + 6.25 * h - 5.0 * age + 5.0))
+                        
+                        let timeFormatter = DateFormatter()
+                        timeFormatter.dateFormat = "HH:mm:ss"
+                        let curTime = timeFormatter.string(from: Date())
+                        
+                        let m = LiveScaleMeasurement(
+                            weight: round(w * 100) / 100.0,
+                            impedance: round(imp * 10) / 10.0,
+                            isLocked: isLocked,
+                            bmi: round(bmi * 10) / 10.0,
+                            bodyFat: round(bodyFat * 10) / 10.0,
+                            fatMass: round(fatMass * 10) / 10.0,
+                            muscleMass: round(smm * 10) / 10.0,
+                            muscleRate: round(smmRate * 10) / 10.0,
+                            waterRate: round(tbwRate * 10) / 10.0,
+                            waterMass: round(tbw * 10) / 10.0,
+                            visceralFat: round(vf * 10) / 10.0,
+                            bmr: bmr,
+                            timestamp: curTime
+                        )
+                        self.liveScaleMeasurement = m
+                        
+                        parsedRealWeight = m.weight
+                        parsedRealBodyFat = m.bodyFat
+                        parsedRealSkeletalRate = m.muscleRate
+                        parsedRealVisceralFat = Int(m.visceralFat)
+                        parsedRealBmr = m.bmr
+                        parsedRealWaterRate = m.waterRate
+                        parsedRealIsLocked = isLocked
+                        
+                        let lockStr = isLocked ? "🔒확정완료" : "⏳측정중"
+                        scaleConnStatus = isLocked ? "✨ 실측 완료 (\(String(format: "%.2f", w))kg, 🔒확정)" : "📥 실측 중 (\(String(format: "%.2f", w))kg)"
+                        log("🎯 [실측 C0 수신] 체중: \(String(format: "%.2f", w))kg, 저항: \(String(format: "%.1f", imp))Ω (\(lockStr))", color: isLocked ? "emerald" : "cyan")
                     } else {
                         scaleConnStatus = "💤 대기 신호 수신 중 (0.00kg)"
                     }
+                } else if mfgData.count >= 15 {
+                    let tail = mfgData.subdata(in: 15..<mfgData.count)
+                    let tailHex = tail.map { String(format: "%02X", $0) }.joined(separator: " ")
+                    if tailHex.contains("FC 00 E3 C5") {
+                        scaleEvent = "standby"
+                        scaleConnStatus = "💤 대기 신호 수신 중 (0.00kg)"
+                    } else if !tailHex.isEmpty {
+                        scaleEvent = "load"
+                        scaleConnStatus = "👣 발 올림 감지 (실측 분석 중...)"
+                    }
+                    
+                    let (weight, isLocked, candidates) = decodeOkOkBroadcast(data: mfgData, serviceData: serviceDataDict)
+                    if let w = weight, w > 10.0 {
+                        parsedRealWeight = w
+                        parsedRealIsLocked = isLocked
+                        scaleConnStatus = isLocked ? "✨ 실측 성공 (\(String(format: "%.2f", w))kg, 🔒확정)" : "📥 실측 중 (\(String(format: "%.2f", w))kg)"
+                        let lockStr = isLocked ? "🔒확정" : "⏳측정중"
+                        log("🎯 [실제 체중 수신!] \(String(format: "%.2f", w))kg (\(lockStr)) | 디코딩: [\(candidates.joined(separator: ", "))]", color: isLocked ? "emerald" : "cyan")
+                    }
                 } else {
                     log("📡 [체중계 패킷 수신] 페이로드: [\(payloadHex)] (RSSI: \(RSSI) dBm)", color: "cyan")
-                }
-                
-                // [스텔스 1:1 GATT 악수] 체중계가 연결 가능한 상태면 백그라운드에서 정밀 소수점 및 BIA 19바이트 프레임 직접 취득
-                let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue ?? true
-                if isConnectable && !isConnectedScale && !isConnectingScale && Date().timeIntervalSince(lastDisconnectTime) > 1.5 {
-                    isConnectingScale = true
-                    targetScalePeripheral = peripheral
-                    peripheral.delegate = self
-                    log("⚡ [스텔스 1:1 악수 시도] 체중계와 GATT 연결 체결 시도 (정밀 소수점 및 BIA 프레임 취득용)...", color: "amber")
-                    centralManager.connect(peripheral, options: [CBConnectPeripheralOptionNotifyOnDisconnectionKey: true])
                 }
             }
         } else if isVirtualScale {
@@ -655,23 +720,27 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         guard peripheral.identifier == targetScalePeripheral?.identifier else { return }
-        log("❌ [1:1 연결 실패] 사유: \(error?.localizedDescription ?? "알 수 없음"). 스캔을 재개합니다.", color: "rose")
+        log("❌ [1:1 연결 실패] 사유: \(error?.localizedDescription ?? "알 수 없음").", color: "rose")
         isConnectingScale = false
         isConnectedScale = false
         scaleConnectionState = "idle"
         targetScalePeripheral = nil
         lastDisconnectTime = Date()
-        startScan()
+        if self.isScanning {
+            startScan()
+        }
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        log("👋 [연결 종료] 체중계 1:1 세션이 종료되었습니다. 탐색 스캔을 자동 재개합니다.", color: "slate")
+        log("👋 [연결 종료] 체중계 1:1 세션이 종료되었습니다.", color: "slate")
         isConnectingScale = false
         isConnectedScale = false
         scaleConnectionState = "idle"
         targetScalePeripheral = nil
         lastDisconnectTime = Date()
-        startScan()
+        if self.isScanning {
+            startScan()
+        }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
@@ -932,6 +1001,9 @@ class LocalHttpServer {
         let execDir = (execPath as NSString).deletingLastPathComponent
         
         let candidates = [
+            (execDir as NSString).appendingPathComponent("monitor.html"),
+            (cwd as NSString).appendingPathComponent("monitor.html"),
+            (cwd as NSString).appendingPathComponent("health_tracker_mac/monitor.html"),
             (execDir as NSString).appendingPathComponent("controller.html"),
             (cwd as NSString).appendingPathComponent("controller.html"),
             (cwd as NSString).appendingPathComponent("tests/ble_simulator/controller.html"),
@@ -944,7 +1016,7 @@ class LocalHttpServer {
                 return path
             }
         }
-        return (cwd as NSString).appendingPathComponent("tests/ble_simulator/controller.html")
+        return (cwd as NSString).appendingPathComponent("health_tracker_mac/monitor.html")
     }
     
     func start() {
@@ -1011,6 +1083,52 @@ class LocalHttpServer {
                let jsonStr = String(data: jsonData, encoding: .utf8) {
                 return buildResponse(status: 200, body: jsonStr, contentType: "application/json")
             }
+        }
+        
+        // 1-1. GET /api/scale/live (실제 체중계 실시간 측정값 조회)
+        if method == "GET" && path.starts(with: "/api/scale/live") {
+            if let m = radar.liveScaleMeasurement {
+                let res: [String: Any] = [
+                    "success": true,
+                    "hasData": true,
+                    "weight": m.weight,
+                    "impedance": m.impedance,
+                    "isLocked": m.isLocked,
+                    "bmi": m.bmi,
+                    "bodyFat": m.bodyFat,
+                    "fatMass": m.fatMass,
+                    "muscleMass": m.muscleMass,
+                    "muscleRate": m.muscleRate,
+                    "waterRate": m.waterRate,
+                    "waterMass": m.waterMass,
+                    "visceralFat": m.visceralFat,
+                    "bmr": m.bmr,
+                    "timestamp": m.timestamp
+                ]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: res),
+                   let jsonStr = String(data: jsonData, encoding: .utf8) {
+                    return buildResponse(status: 200, body: jsonStr, contentType: "application/json")
+                }
+            } else {
+                let res: [String: Any] = [
+                    "success": true,
+                    "hasData": false,
+                    "isScanning": radar.isScanning
+                ]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: res),
+                   let jsonStr = String(data: jsonData, encoding: .utf8) {
+                    return buildResponse(status: 200, body: jsonStr, contentType: "application/json")
+                }
+            }
+        }
+        
+        // 1-2. POST /api/scale/reset (실제 체중계 측정값 초기화)
+        if method == "POST" && path.starts(with: "/api/scale/reset") {
+            radar.liveScaleMeasurement = nil
+            radar.log("🔄 [측정 초기화] 실측 데이터 리셋 완료", color: "cyan")
+            let res: [String: Any] = ["success": true, "message": "초기화되었습니다."]
+            let resData = (try? JSONSerialization.data(withJSONObject: res)) ?? Data()
+            return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
         }
         
         // 2. POST /api/send (체중계 올라섬 및 측정 발송)
@@ -1126,8 +1244,24 @@ class LocalHttpServer {
             return buildResponse(status: 200, body: String(data: resData, encoding: .utf8) ?? "{}", contentType: "application/json")
         }
         
+        // 8-1. GET /firebase_config.js (공통 Firebase 설정 파일 서빙)
+        if method == "GET" && path.starts(with: "/firebase_config.js") {
+            let fm = FileManager.default
+            let cwd = fm.currentDirectoryPath
+            let candidates = [
+                (cwd as NSString).appendingPathComponent("firebase_config.js"),
+                (cwd as NSString).appendingPathComponent("health_tracker_mac/firebase_config.js")
+            ]
+            for p in candidates {
+                if let js = try? String(contentsOfFile: p, encoding: .utf8) {
+                    return buildResponse(status: 200, body: js, contentType: "application/javascript; charset=utf-8")
+                }
+            }
+            return buildResponse(status: 200, body: "// Firebase config not created yet\nwindow.FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;", contentType: "application/javascript; charset=utf-8")
+        }
+        
         // 9. GET / (웹 어드민 화면 서빙)
-        if method == "GET" && (path == "/" || path == "/index.html" || path == "/controller.html") {
+        if method == "GET" && (path == "/" || path == "/index.html" || path == "/monitor.html" || path == "/controller.html") {
             let activePath = resolveHtmlPath()
             if let htmlContent = try? String(contentsOfFile: activePath, encoding: .utf8) {
                 return buildResponse(status: 200, body: htmlContent, contentType: "text/html; charset=utf-8")
