@@ -1440,6 +1440,23 @@
   <!-- ================= 자바스크립트 엔진 ================= -->
   <script>
     // ----------------------------------------------------
+    // 0. 공통 날짜/시간 헬퍼 (로컬 타임존 KST 기준)
+    // ----------------------------------------------------
+    function getLocalDateString(d = new Date()) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getLocalTimeString(d = new Date()) {
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    // ----------------------------------------------------
     // 1. IndexedDB 로컬 데이터베이스 엔진
     // ----------------------------------------------------
     const DB_NAME = "HealthTrackerDB_v6";
@@ -1680,7 +1697,15 @@
         await migrateLocalDataToCloudIfNeeded();
 
         // 1. 체중계 최신 기록 동기화 (최근 15건) 및 동일 세션(90초 이내) 중복 자동 정리
+        // [타임존 오차 보정] 이전에 UTC 오차로 잘못 저장되었던 11월 15일 06:20분 측정 기록 자동 정리
         const rawLocalBodies = await dbGetAllBodyMetrics();
+        const faultyIndex = rawLocalBodies.findIndex(it => it.id === 'scale_20261115_062053' || (it.date === '2026-11-15' && it.time && it.time.startsWith('06:20')));
+        if (faultyIndex !== -1) {
+          const faultyItem = rawLocalBodies[faultyIndex];
+          await dbDeleteBodyMetric(faultyItem.id || faultyItem.date);
+          rawLocalBodies.splice(faultyIndex, 1);
+          updatedCount++;
+        }
         rawLocalBodies.sort((a, b) => (a.timestamp || a.date).localeCompare(b.timestamp || b.date));
         const deduplicatedBodies = [];
         for (const item of rawLocalBodies) {
@@ -4609,8 +4634,8 @@
 
     function openWeightManualModal() {
       const now = new Date();
-      document.getElementById('weightManualDate').value = now.toISOString().split('T')[0];
-      document.getElementById('weightManualTime').value = now.toTimeString().split(' ')[0].slice(0, 5);
+      document.getElementById('weightManualDate').value = getLocalDateString(now);
+      document.getElementById('weightManualTime').value = getLocalTimeString(now).slice(0, 5);
       
       const latest = cachedBodyList.length > 0 ? cachedBodyList[cachedBodyList.length - 1] : null;
       const initW = latest ? latest.weight : 80.30;
@@ -4753,8 +4778,8 @@
     // ----------------------------------------------------
     function openBpManualModal() {
       const now = new Date();
-      document.getElementById('bpManualDate').value = now.toISOString().split('T')[0];
-      document.getElementById('bpManualTime').value = now.toTimeString().split(' ')[0].slice(0, 5);
+      document.getElementById('bpManualDate').value = getLocalDateString(now);
+      document.getElementById('bpManualTime').value = getLocalTimeString(now).slice(0, 5);
 
       const latest = cachedBpList.length > 0 ? cachedBpList[cachedBpList.length - 1] : null;
       if (latest) {
@@ -5299,8 +5324,8 @@
       const now = new Date();
       const record = {
         id: "scale_" + now.getTime(),
-        date: now.toISOString().split("T")[0],
-        time: now.toTimeString().split(" ")[0],
+        date: getLocalDateString(now),
+        time: getLocalTimeString(now),
         ...metrics,
         deltaWeight: cachedBodyList.length > 0 ? +(weight - cachedBodyList[cachedBodyList.length - 1].weight).toFixed(2) : 0,
         source: "BLE체중계",
@@ -6039,8 +6064,8 @@
 
       closeOcrVerifyModal();
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().split(' ')[0];
+      const dateStr = getLocalDateString(now);
+      const timeStr = getLocalTimeString(now);
 
       const bpRecord = {
         id: `bp_${dateStr}_${timeStr.replace(/:/g, '')}`,
@@ -6137,7 +6162,7 @@
           exportedAt: new Date().toISOString()
         };
         const jsonStr = JSON.stringify(exportObj, null, 2);
-        const filename = `HealthTracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        const filename = `HealthTracker_Backup_${getLocalDateString(new Date())}.json`;
         const blob = new Blob([jsonStr], { type: "application/json" });
 
         // 1. 모바일 환경(iOS Safari / Bluefy 등): Web Share API 지원 시 시스템 공유 창 호출
