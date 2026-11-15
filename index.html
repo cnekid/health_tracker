@@ -1655,10 +1655,28 @@
         // 0. 핸드폰에 남아 있는 기존 과거 데이터가 있다면 클라우드로 최초 1회 자동 백업
         await migrateLocalDataToCloudIfNeeded();
 
-        // 1. 체중계 최신 기록 동기화 (최근 15건)
-        const localBodies = await dbGetAllBodyMetrics();
-        const localBodyIds = new Set(localBodies.map(it => it.id || it.date));
-        const localBodyDates = new Set(localBodies.map(it => `${it.date}_${it.time}`));
+        // 1. 체중계 최신 기록 동기화 (최근 15건) 및 동일 세션(90초 이내) 중복 자동 정리
+        const rawLocalBodies = await dbGetAllBodyMetrics();
+        rawLocalBodies.sort((a, b) => (a.timestamp || a.date).localeCompare(b.timestamp || b.date));
+        const deduplicatedBodies = [];
+        for (const item of rawLocalBodies) {
+          const itemTime = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+          const isDup = deduplicatedBodies.some(existing => {
+            if (existing.date !== item.date) return false;
+            if (Math.abs(Number(existing.weight) - Number(item.weight)) > 0.1) return false;
+            const existTime = existing.timestamp ? new Date(existing.timestamp).getTime() : 0;
+            return itemTime > 0 && existTime > 0 && Math.abs(itemTime - existTime) <= 90 * 1000;
+          });
+          if (isDup) {
+            await dbDeleteBodyMetric(item.id || item.date);
+            updatedCount++;
+          } else {
+            deduplicatedBodies.push(item);
+          }
+        }
+
+        const localBodyIds = new Set(deduplicatedBodies.map(it => it.id || it.date));
+        const localBodyDates = new Set(deduplicatedBodies.map(it => `${it.date}_${it.time}`));
 
         const scaleSnap = await db.collection('scale_records')
           .orderBy('timestamp', 'desc')
@@ -1668,9 +1686,18 @@
         for (const doc of scaleSnap.docs) {
           const data = doc.data();
           const checkKey = `${data.date}_${data.time}`;
-          if (!localBodyIds.has(data.id) && !localBodyDates.has(checkKey)) {
+          const dataTime = data.timestamp ? new Date(data.timestamp).getTime() : 0;
+          const isDup = deduplicatedBodies.some(existing => {
+            if (existing.date !== data.date) return false;
+            if (Math.abs(Number(existing.weight) - Number(data.weight)) > 0.1) return false;
+            const existTime = existing.timestamp ? new Date(existing.timestamp).getTime() : 0;
+            return dataTime > 0 && existTime > 0 && Math.abs(dataTime - existTime) <= 90 * 1000;
+          });
+
+          if (!localBodyIds.has(data.id) && !localBodyDates.has(checkKey) && !isDup) {
             await dbSaveBodyMetric(data, true); // true: skipCloudSync
             localBodyIds.add(data.id);
+            deduplicatedBodies.push(data);
             updatedCount++;
           }
         }

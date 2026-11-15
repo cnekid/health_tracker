@@ -334,7 +334,7 @@
     let isScanning = false;
     let pollInterval = null;
     let db = null;
-    let savedLockedTimestamp = null;
+    let isCurrentLockUploaded = false;
     const historyList = [];
 
     // --- 1. Firebase 초기화 ---
@@ -398,7 +398,7 @@
     async function resetScaleMeasurement() {
       try {
         await fetch('/api/scale/reset', { method: 'POST' });
-        savedLockedTimestamp = null;
+        isCurrentLockUploaded = false;
         document.getElementById('displayWeight').innerText = '--.--';
         document.getElementById('displayImpedance').innerText = '---.-';
         document.getElementById('measureTimeLabel').innerText = '측정 시각: 대기 중';
@@ -500,11 +500,16 @@
           document.getElementById('metricFfm').innerText = ffm;
           document.getElementById('metricMuscleTotal').innerText = Number(data.muscleMass).toFixed(1);
 
-          // 측정 확정 시 Firebase 자동 업로드 (중복 저장 방지)
-          if (data.isLocked && savedLockedTimestamp !== data.timestamp) {
-            savedLockedTimestamp = data.timestamp;
-            autoSaveToFirestore(data);
-            addHistoryRow(data);
+          // 측정 확정 시 Firebase 자동 업로드 (단일 세션 1회만 업로드하는 세션 래치)
+          if (data.isLocked) {
+            if (!isCurrentLockUploaded) {
+              isCurrentLockUploaded = true;
+              autoSaveToFirestore(data);
+              addHistoryRow(data);
+            }
+          } else {
+            // 체중계에서 내려오거나 측정 중일 때 래치 해제 (다음 측정 준비)
+            isCurrentLockUploaded = false;
           }
         }
       } catch (err) {

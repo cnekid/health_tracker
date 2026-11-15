@@ -579,9 +579,14 @@ class BleRadarManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
                         let vf = max(1.0, min(30.0, baseVf))
                         let bmr = Int(round(10.0 * w + 6.25 * h - 5.0 * age + 5.0))
                         
-                        let timeFormatter = DateFormatter()
-                        timeFormatter.dateFormat = "HH:mm:ss"
-                        let curTime = timeFormatter.string(from: Date())
+                        let curTime: String
+                        if isLocked, let prev = self.liveScaleMeasurement, prev.isLocked, !prev.timestamp.isEmpty {
+                            curTime = prev.timestamp
+                        } else {
+                            let timeFormatter = DateFormatter()
+                            timeFormatter.dateFormat = "HH:mm:ss"
+                            curTime = timeFormatter.string(from: Date())
+                        }
                         
                         let m = LiveScaleMeasurement(
                             weight: round(w * 100) / 100.0,
