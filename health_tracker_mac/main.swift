@@ -1064,7 +1064,8 @@ class LocalHttpServer {
         guard tokens.count >= 2 else { return buildResponse(status: 400, body: "Bad Request") }
         
         let method = String(tokens[0])
-        let path = String(tokens[1])
+        let rawPath = String(tokens[1])
+        let path = rawPath.components(separatedBy: "?").first ?? rawPath
         
         if method == "OPTIONS" {
             return buildResponse(status: 204, body: "", contentType: "text/plain")

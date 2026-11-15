@@ -1,17 +1,21 @@
 #!/bin/bash
-
 PROJECT_DIR="/Users/moses/myfolder/Project/health_tracker"
 BIN="$PROJECT_DIR/health_tracker_mac/health_tracker_mac"
 
-if ! lsof -i :8765 -sTCP:LISTEN >/dev/null 2>&1; then
-    cd "$PROJECT_DIR"
-    "$BIN" > /dev/null 2>&1 &
-    for i in {1..25}; do
-        if lsof -i :8765 -sTCP:LISTEN >/dev/null 2>&1; then
-            break
-        fi
-        sleep 0.2
-    done
+if lsof -i :8765 -sTCP:LISTEN >/dev/null 2>&1; then
+    open "http://localhost:8765/?autostart=1"
+    exit 0
 fi
 
-open "http://localhost:8765?autostart=1"
+cd "$PROJECT_DIR"
+(
+    for i in {1..30}; do
+        if lsof -i :8765 -sTCP:LISTEN >/dev/null 2>&1; then
+            open "http://localhost:8765/?autostart=1"
+            break
+        fi
+        sleep 0.1
+    done
+) &
+
+exec "$BIN"
