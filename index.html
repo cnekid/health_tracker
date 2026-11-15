@@ -1581,23 +1581,7 @@
     // ====================================================
     // Firebase Cloud Firestore Engine & 양방향 동기화
     // ====================================================
-    // [1단계 임시 주입기] 핸드폰 접속 즉시 기기 로컬스토리지에 Firebase 설정 자동 보관
-    const INJECT_CONFIG = {
-      apiKey: "AIzaSyA9LwZWbiXVcE5T5-Vm6QX6pB7xa4MZVxo",
-      authDomain: "health-tracker-70637.firebaseapp.com",
-      projectId: "health-tracker-70637",
-      storageBucket: "health-tracker-70637.firebasestorage.app",
-      messagingSenderId: "740112741763",
-      appId: "1:740112741763:web:1b0ac9b2f642ff9edd72b6"
-    };
-    try {
-      localStorage.setItem('health_tracker_firebase_config', JSON.stringify(INJECT_CONFIG));
-      window.FIREBASE_CONFIG = INJECT_CONFIG;
-      console.log("☁️ [1단계] Firebase 설정이 기기 로컬스토리지에 안전하게 저장되었습니다.");
-    } catch (e) {
-      console.warn("로컬 스토리지 주입 실패:", e);
-    }
-
+    // [보안 격리] 저장소에 API 키를 노출하지 않으며, 각 기기의 로컬스토리지(localStorage)에 보관된 설정만 안전하게 참조합니다.
     let fbDb = null;
     function getFirestoreDb() {
       if (fbDb) return fbDb;
@@ -6342,13 +6326,6 @@
 
         // 클라우드(Firestore) 최신 기록 단발성 동기화 (On-Open)
         syncFromCloudOnOpen();
-
-        // [1단계 안내 토스트] 기기 내부 로컬 저장 완료 알림
-        setTimeout(() => {
-          if (typeof showToast === 'function') {
-            showToast("☁️ [1단계 완료] 기기에 Firebase 연동 키 저장이 완료되었습니다!");
-          }
-        }, 800);
 
         // 새로고침 전 머물던 탭 상태 완벽 복원
         const savedTab = sessionStorage.getItem('healthTracker_activeTab');
