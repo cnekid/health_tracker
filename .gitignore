@@ -14,6 +14,9 @@ tests/ble_simulator/balanslab_device
 record/
 *.json
 
+# Firebase 클라우드 개인 인증 설정 (보안 보호 - GitHub 업로드 금지)
+firebase_config.js
+
 # 과제 제출용 로컬 폴더
 과제 제출(1112)/
 

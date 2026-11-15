@@ -61,6 +61,10 @@
         <i class="fa-solid fa-cloud text-[10px] text-slate-400"></i>
         <span>클라우드 확인 중</span>
       </span>
+      <button onclick="openIphoneSyncModal()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+        <i class="fa-solid fa-qrcode text-emerald-600"></i>
+        <span>아이폰 연동 QR</span>
+      </button>
       <button onclick="openFirebaseSettingsModal()" class="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
         <i class="fa-solid fa-gear text-slate-400"></i>
         <span>설정</span>
@@ -326,6 +330,46 @@
           닫기
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= 6-1. 아이폰 1초 원터치 연동 QR 모달 ================= -->
+  <div id="iphoneSyncModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-mobile-screen"></i>
+          </span>
+          <h3 class="text-base font-bold text-slate-900">아이폰 1초 연동 QR코드</h3>
+        </div>
+        <button onclick="closeIphoneSyncModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed text-left">
+        아이폰 카메라로 아래 QR코드를 비추면, <strong>GitHub에 비밀키를 올리지 않고 사용자 기기에만</strong> 안전하게 클라우드 연동이 즉시 완료됩니다.
+      </p>
+
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+        <img id="iphoneSyncQrImg" src="" alt="아이폰 연동 QR코드" class="w-48 h-48 rounded-xl shadow-xs bg-white p-2 border border-slate-100 object-contain" />
+        <span class="text-[11px] text-slate-400 mt-2 font-medium">아이폰 기본 카메라 앱으로 스캔하세요</span>
+      </div>
+
+      <div class="space-y-1.5 pt-1 text-left">
+        <label class="block text-[11px] font-semibold text-slate-500">직접 링크 복사 (동일 네트워크/브라우저용)</label>
+        <div class="flex gap-1.5">
+          <input id="iphoneSyncUrlDisplay" type="text" readonly class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-mono text-slate-600 select-all" />
+          <button onclick="copyIphoneSyncUrl()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition">
+            복사
+          </button>
+        </div>
+      </div>
+
+      <button onclick="closeIphoneSyncModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition border border-slate-200">
+        닫기
+      </button>
     </div>
   </div>
 
@@ -642,6 +686,43 @@
       window.FIREBASE_CONFIG = newCfg;
       initFirebase();
       closeFirebaseSettingsModal();
+    }
+
+    // --- 5-0. 아이폰 연동 QR 모달 제어 ---
+    function openIphoneSyncModal() {
+      const cfg = window.FIREBASE_CONFIG;
+      if (!cfg || !cfg.apiKey || !cfg.projectId) {
+        alert("Firebase 설정이 로드되지 않았습니다. 먼저 설정을 완료해주세요.");
+        return;
+      }
+      const b64 = btoa(JSON.stringify(cfg));
+      const syncUrl = `https://cnekid.github.io/health_tracker/#fb=${b64}`;
+      const qrImg = document.getElementById('iphoneSyncQrImg');
+      if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(syncUrl)}`;
+      }
+      const urlInput = document.getElementById('iphoneSyncUrlDisplay');
+      if (urlInput) {
+        urlInput.value = syncUrl;
+      }
+      document.getElementById('iphoneSyncModal').classList.remove('hidden');
+    }
+
+    function closeIphoneSyncModal() {
+      document.getElementById('iphoneSyncModal').classList.add('hidden');
+    }
+
+    function copyIphoneSyncUrl() {
+      const input = document.getElementById('iphoneSyncUrlDisplay');
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          alert('아이폰 연동 URL이 클립보드에 복사되었습니다.');
+        }).catch(() => {
+          input.select();
+          document.execCommand('copy');
+          alert('아이폰 연동 URL이 클립보드에 복사되었습니다.');
+        });
+      }
     }
 
     // --- 5-1. 프로그램 안전 종료 및 리소스 반환 ---

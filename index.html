@@ -576,6 +576,22 @@
             <input type="file" id="jsonBackupFileInput" accept=".json,application/json" class="hidden" onchange="handleJsonBackupFile(event)" />
           </div>
         </div>
+
+        <!-- 클라우드(Firebase) 동기화 상태 카드 -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-900 block">클라우드(Firebase) 동기화</span>
+            <span id="mobileFirebaseBadge" class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">확인 중</span>
+          </div>
+          <p id="mobileFirebaseDesc" class="text-[11px] text-slate-500 leading-normal font-normal">
+            맥북과 아이폰 간 실시간 체중/혈압 자동 동기화를 위한 설정입니다.
+          </p>
+          <div class="flex gap-2 pt-0.5">
+            <button onclick="openMobileFirebaseSettingsModal()" class="w-full py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95">
+              <i class="fa-solid fa-cloud text-slate-500"></i> 클라우드 연동 관리
+            </button>
+          </div>
+        </div>
       </section>
 
     </div>
@@ -1565,7 +1581,8 @@
     // ====================================================
     // Firebase Cloud Firestore Engine & 양방향 동기화
     // ====================================================
-    const DEFAULT_FIREBASE_CONFIG = {
+    // [1단계 임시 주입기] 핸드폰 접속 즉시 기기 로컬스토리지에 Firebase 설정 자동 보관
+    const INJECT_CONFIG = {
       apiKey: "AIzaSyA9LwZWbiXVcE5T5-Vm6QX6pB7xa4MZVxo",
       authDomain: "health-tracker-70637.firebaseapp.com",
       projectId: "health-tracker-70637",
@@ -1573,14 +1590,20 @@
       messagingSenderId: "740112741763",
       appId: "1:740112741763:web:1b0ac9b2f642ff9edd72b6"
     };
-    window.FIREBASE_CONFIG = window.FIREBASE_CONFIG || DEFAULT_FIREBASE_CONFIG;
+    try {
+      localStorage.setItem('health_tracker_firebase_config', JSON.stringify(INJECT_CONFIG));
+      window.FIREBASE_CONFIG = INJECT_CONFIG;
+      console.log("☁️ [1단계] Firebase 설정이 기기 로컬스토리지에 안전하게 저장되었습니다.");
+    } catch (e) {
+      console.warn("로컬 스토리지 주입 실패:", e);
+    }
 
     let fbDb = null;
     function getFirestoreDb() {
       if (fbDb) return fbDb;
       try {
-        const cfg = window.FIREBASE_CONFIG || DEFAULT_FIREBASE_CONFIG;
-        if (cfg && cfg.projectId && window.firebase) {
+        const cfg = window.FIREBASE_CONFIG || JSON.parse(localStorage.getItem('health_tracker_firebase_config') || 'null');
+        if (cfg && cfg.projectId && cfg.apiKey && window.firebase) {
           if (!firebase.apps.length) {
             firebase.initializeApp(cfg);
           }
@@ -6319,6 +6342,13 @@
 
         // 클라우드(Firestore) 최신 기록 단발성 동기화 (On-Open)
         syncFromCloudOnOpen();
+
+        // [1단계 안내 토스트] 기기 내부 로컬 저장 완료 알림
+        setTimeout(() => {
+          if (typeof showToast === 'function') {
+            showToast("☁️ [1단계 완료] 기기에 Firebase 연동 키 저장이 완료되었습니다!");
+          }
+        }, 800);
 
         // 새로고침 전 머물던 탭 상태 완벽 복원
         const savedTab = sessionStorage.getItem('healthTracker_activeTab');
