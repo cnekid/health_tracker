@@ -105,6 +105,30 @@
           </span>
         </div>
 
+        <!-- 클라우드 신규 동기화 & Apple 건강(단축어) 반영 알림 배너 -->
+        <div id="cloudSyncHealthKitBanner" class="hidden bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-3 shadow-md space-y-2 transition-all duration-300">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white text-sm shrink-0">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+              </span>
+              <div>
+                <p class="text-xs font-bold leading-tight flex items-center gap-1.5">
+                  <span>맥북 측정 데이터 도착</span>
+                  <span class="text-[9px] bg-white/25 px-1.5 py-0.5 rounded-full font-medium">Cloud</span>
+                </p>
+                <p id="cloudSyncHealthKitDesc" class="text-[11px] text-blue-100 leading-tight mt-0.5">체중 --.- kg</p>
+              </div>
+            </div>
+            <button onclick="dismissHealthKitBanner()" class="text-white/70 hover:text-white p-1 text-xs" aria-label="닫기">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <button onclick="syncPendingRecordToHealthKit()" class="w-full py-2 bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-heart-pulse text-rose-500"></i> Apple 건강앱에 지금 반영
+          </button>
+        </div>
+
         <!-- 1) 체중 카드 (모바일 1화면 최적화 컴팩트) -->
         <div class="bg-white border border-slate-200/90 rounded-2xl px-3 py-2 shadow-sm space-y-1.5">
           <!-- 카드 헤더 (기준일 우측 끝 정렬) -->
@@ -1728,11 +1752,96 @@
             showToast(`☁️ 클라우드에서 최신 건강 기록 ${updatedCount}건이 동기화되었습니다.`);
           }
         }
+
+        // 최신 맥북 측정 기록 중 Apple 건강(단축어) 미반영 건이 있다면 상단 배너 표시
+        checkAndShowHealthKitSyncBanner(deduplicatedBodies);
       } catch (err) {
         console.warn("[Cloud Sync] On-Open 동기화 중 오류:", err);
       } finally {
         isSyncingCloud = false;
       }
+    }
+
+    // ----------------------------------------------------
+    // 클라우드 동기화 ➔ Apple 건강(단축어) 알림 배너 모듈
+    // ----------------------------------------------------
+    let pendingHealthKitPayload = null;
+    let pendingHealthKitDocId = null;
+
+    function checkAndShowHealthKitSyncBanner(bodyList) {
+      if (!bodyList || bodyList.length === 0) return;
+      const sorted = [...bodyList].sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date));
+      const latest = sorted[0];
+      if (!latest) return;
+
+      const lastSyncedId = localStorage.getItem('healthTracker_lastSyncedHealthKitId');
+      if (latest.id && latest.id === lastSyncedId) return;
+      if (latest.syncedHealthKit === true) return;
+
+      // 최근 48시간 이내의 기록인 경우만 배너 표시 (오래된 과거 기록 무분별 노출 방지)
+      const latestTime = latest.timestamp ? new Date(latest.timestamp).getTime() : new Date(latest.date).getTime();
+      const now = Date.now();
+      if (latestTime > 0 && (now - latestTime) > 48 * 60 * 60 * 1000) return;
+
+      showCloudSyncHealthKitBanner(latest);
+    }
+
+    function showCloudSyncHealthKitBanner(record) {
+      if (!record) return;
+      pendingHealthKitDocId = record.id;
+      pendingHealthKitPayload = {
+        type: "scale",
+        weight: Number(Number(record.weight).toFixed(2)),
+        bodyFat: record.bodyFat ? Number(Number(record.bodyFat).toFixed(1)) : null,
+        bmi: record.bmi ? Number(Number(record.bmi).toFixed(1)) : null,
+        muscleMass: record.muscleMass ? Number(Number(record.muscleMass).toFixed(1)) : null,
+        timestamp: record.timestamp || `${record.date}T${record.time || '00:00:00'}`
+      };
+
+      const descEl = document.getElementById('cloudSyncHealthKitDesc');
+      if (descEl) {
+        const timeStr = record.time ? ` (${record.time.slice(0, 5)})` : '';
+        const fatStr = record.bodyFat ? ` · 체지방 ${Number(record.bodyFat).toFixed(1)}%` : '';
+        descEl.innerText = `체중 ${Number(record.weight).toFixed(2)} kg${fatStr}${timeStr}`;
+      }
+      const banner = document.getElementById('cloudSyncHealthKitBanner');
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function dismissHealthKitBanner() {
+      if (pendingHealthKitDocId) {
+        localStorage.setItem('healthTracker_lastSyncedHealthKitId', pendingHealthKitDocId);
+      }
+      const banner = document.getElementById('cloudSyncHealthKitBanner');
+      if (banner) {
+        banner.classList.add('hidden');
+      }
+    }
+
+    async function syncPendingRecordToHealthKit() {
+      if (!pendingHealthKitPayload) return;
+      const targetId = pendingHealthKitDocId;
+      if (targetId) {
+        localStorage.setItem('healthTracker_lastSyncedHealthKitId', targetId);
+        try {
+          const localBodies = await dbGetAllBodyMetrics();
+          const found = localBodies.find(b => b.id === targetId || b.date === targetId);
+          if (found) {
+            found.syncedHealthKit = true;
+            await dbSaveBodyMetric(found, true);
+          }
+        } catch (e) {
+          console.warn("로컬 syncedHealthKit 플래그 업데이트 실패:", e);
+        }
+      }
+      dismissHealthKitBanner();
+
+      if (typeof showToast === 'function') {
+        showToast("📲 Apple 건강앱으로 데이터를 전송합니다...");
+      }
+      syncToAppleHealth(pendingHealthKitPayload);
     }
 
     async function dbSaveBodyMetric(record, skipCloudSync = false) {
@@ -4620,6 +4729,9 @@
       };
 
       await dbSaveBodyMetric(record);
+      if (record.id) {
+        localStorage.setItem('healthTracker_lastSyncedHealthKitId', record.id);
+      }
       closeWeightManualModal();
       await refreshAllViews();
 
@@ -5246,6 +5358,9 @@
       if (!pendingScaleData) return;
       const dataToSave = { ...pendingScaleData, syncedHealthKit: true };
       await dbSaveBodyMetric(dataToSave);
+      if (dataToSave.id) {
+        localStorage.setItem('healthTracker_lastSyncedHealthKitId', dataToSave.id);
+      }
       await refreshAllViews();
       closeScaleMeasureModal();
       showToast(`✅ 체중 ${dataToSave.weight.toFixed(2)} kg 및 생체 데이터가 저장되었습니다.`);
@@ -5962,6 +6077,9 @@
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (!isIOS) {
         console.log("📲 Apple Health 단축어 호출 (시뮬레이션):", payload);
+        if (typeof showToast === 'function') {
+          showToast("📲 (PC/Mac) Apple 건강앱 전송 테스트가 완료되었습니다.");
+        }
         return;
       }
 

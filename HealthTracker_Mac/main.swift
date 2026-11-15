@@ -1008,6 +1008,7 @@ class LocalHttpServer {
         let candidates = [
             (execDir as NSString).appendingPathComponent("monitor.html"),
             (cwd as NSString).appendingPathComponent("monitor.html"),
+            (cwd as NSString).appendingPathComponent("HealthTracker_Mac/monitor.html"),
             (cwd as NSString).appendingPathComponent("health_tracker_mac/monitor.html"),
             (execDir as NSString).appendingPathComponent("controller.html"),
             (cwd as NSString).appendingPathComponent("controller.html"),
@@ -1021,7 +1022,7 @@ class LocalHttpServer {
                 return path
             }
         }
-        return (cwd as NSString).appendingPathComponent("health_tracker_mac/monitor.html")
+        return (cwd as NSString).appendingPathComponent("HealthTracker_Mac/monitor.html")
     }
     
     func start() {
@@ -1268,6 +1269,7 @@ class LocalHttpServer {
             let cwd = fm.currentDirectoryPath
             let candidates = [
                 (cwd as NSString).appendingPathComponent("firebase_config.js"),
+                (cwd as NSString).appendingPathComponent("HealthTracker_Mac/firebase_config.js"),
                 (cwd as NSString).appendingPathComponent("health_tracker_mac/firebase_config.js")
             ]
             for p in candidates {

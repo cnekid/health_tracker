@@ -9,7 +9,7 @@
     <key>CFBundleIdentifier</key>
     <string>com.moses.healthtracker</string>
     <key>CFBundleName</key>
-    <string>HealthTracker</string>
+    <string>HealthTracker_Mac</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

@@ -5,6 +5,7 @@ Thumbs.db
 샘플 사진/
 
 # Build artifacts
+HealthTracker_Mac/health_tracker_mac
 health_tracker_mac/health_tracker_mac
 tests/ble_simulator/scale_sim
 tests/ble_simulator/balanslab_device
